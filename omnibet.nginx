@@ -3,7 +3,7 @@ server {
     server_name _; 
 
     # Serve the compiled React Frontend
-    root /home/ubuntu/OmniBet AI/frontend/dist;
+    root "/home/ubuntu/OmniBet-AI/frontend/dist";
     index index.html;
 
     # Handle React Router natively

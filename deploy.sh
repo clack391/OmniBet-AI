@@ -21,7 +21,7 @@ echo ">> Building React Frontend..."
 cd frontend
 npm install
 # Build with absolute path mapping so Nginx can reverse proxy
-npm run build
+VITE_API_URL=/api npm run build
 cd ..
 
 # 3. Setup Python Backend Environment

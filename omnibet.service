@@ -5,9 +5,9 @@ After=network.target
 [Service]
 User=ubuntu
 Group=www-data
-WorkingDirectory=/home/ubuntu/OmniBet AI
-Environment="PATH=/home/ubuntu/OmniBet AI/.venv/bin"
-ExecStart=/home/ubuntu/OmniBet AI/.venv/bin/uvicorn src.api.main:app --host 127.0.0.1 --port 8000
+WorkingDirectory=/home/ubuntu/OmniBet-AI
+Environment="PATH=/home/ubuntu/OmniBet-AI/.venv/bin"
+ExecStart=/home/ubuntu/OmniBet-AI/.venv/bin/uvicorn src.api.main:app --host 127.0.0.1 --port 8000
 Restart=always
 RestartSec=3
 
