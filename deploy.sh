@@ -34,6 +34,9 @@ pip install -r requirements.txt
 
 # 4. Configure Nginx Reverse Proxy
 echo ">> Configuring Nginx..."
+# Grant Nginx permission to traverse the home directory
+sudo chmod 755 /home/ubuntu
+
 sudo cp omnibet.nginx /etc/nginx/sites-available/omnibet
 sudo ln -sf /etc/nginx/sites-available/omnibet /etc/nginx/sites-enabled/
 # Remove default nginx welcome page
