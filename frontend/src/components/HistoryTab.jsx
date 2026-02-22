@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -9,8 +9,13 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const [loading, setLoading] = useState(true);
     const [gradingIds, setGradingIds] = useState([]);
 
+    // AI Accumulator State
+    const [bestPicks, setBestPicks] = useState(null);
+    const [generatingPicks, setGeneratingPicks] = useState(false);
+
     useEffect(() => {
         fetchHistory();
+        fetchBestPicks();
     }, []);
 
     const fetchHistory = async () => {
@@ -32,6 +37,43 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                 setHistory([]);
             } catch (err) {
                 console.error("Failed to clear history:", err);
+            }
+        }
+    };
+
+    const fetchBestPicks = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/best-picks`);
+            if (response.data && response.data.picks) {
+                setBestPicks(response.data);
+            } else {
+                setBestPicks(null);
+            }
+        } catch (err) {
+            console.error("Failed to fetch best picks:", err);
+        }
+    };
+
+    const handleGenerateBestPicks = async () => {
+        setGeneratingPicks(true);
+        try {
+            const response = await axios.post(`${API_URL}/generate-best-picks`);
+            setBestPicks(response.data);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to generate best picks. Make sure you have history saved!");
+        } finally {
+            setGeneratingPicks(false);
+        }
+    };
+
+    const handleClearBestPicks = async () => {
+        if (window.confirm("Are you sure you want to delete the AI Accumulator?")) {
+            try {
+                await axios.delete(`${API_URL}/best-picks`);
+                setBestPicks(null);
+            } catch (err) {
+                console.error("Failed to clear best picks:", err);
             }
         }
     };
@@ -58,6 +100,20 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
         }
     };
 
+    const handleDeletePrediction = async (e, match_id) => {
+        // Prevent clicking the card behind the button
+        e.stopPropagation();
+
+        try {
+            await axios.delete(`${API_URL}/history/${match_id}`);
+            // Filter out the deleted match from React state instantly
+            setHistory(prevHistory => prevHistory.filter(item => item.match_id !== match_id));
+        } catch (err) {
+            console.error("Failed to delete prediction:", err);
+            alert("Failed to delete prediction from database.");
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex justify-center items-center py-20">
@@ -76,15 +132,91 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                     <p className="text-sm text-gray-400 mt-1">Saved AI analyses from your database.</p>
                 </div>
 
-                {history.length > 0 && (
+                <div className="flex items-center gap-3">
                     <button
-                        onClick={handleClearHistory}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+                        onClick={handleGenerateBestPicks}
+                        disabled={generatingPicks || history.length === 0}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-lg font-bold shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
-                        <Trash2 className="w-4 h-4" /> Clear History
+                        {generatingPicks ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Zap className="w-4 h-4 fill-current" />
+                        )}
+                        {generatingPicks ? 'Analyzing Picks...' : 'AI Accumulator Builder'}
                     </button>
-                )}
+
+                    {history.length > 0 && (
+                        <button
+                            onClick={handleClearHistory}
+                            className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" /> Clear
+                        </button>
+                    )}
+                </div>
             </div>
+
+            {/* AI Accumulator Section */}
+            {bestPicks && bestPicks.picks && bestPicks.picks.length > 0 && (
+                <div className="mb-8 p-6 bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-2xl relative overflow-hidden">
+                    {/* Decorative Background Icon */}
+                    <Zap className="absolute -right-10 -bottom-10 w-64 h-64 text-amber-500/5 rotate-12 pointer-events-none" />
+
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Zap className="w-6 h-6 text-amber-500 fill-amber-500" />
+                                <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-orange-400">
+                                    AI Master Accumulator
+                                </h3>
+                            </div>
+                            <p className="text-amber-100/80 text-sm max-w-3xl leading-relaxed">
+                                {bestPicks.master_reasoning}
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleClearBestPicks}
+                            className="p-2 text-amber-500/50 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+                            title="Clear Best Picks"
+                        >
+                            <XCircle className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 relative z-10">
+                        {bestPicks.picks.map((pick, idx) => (
+                            <div key={idx} className="bg-gray-900/80 backdrop-blur-md border border-amber-500/20 rounded-xl p-4 flex gap-4 hover:border-amber-500/40 transition-colors">
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="text-xs text-amber-500/70 font-mono">
+                                            {new Date(pick.match_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                        </div>
+                                    </div>
+                                    <h4 className="font-bold text-white text-md mb-2">{pick.teams}</h4>
+
+                                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3">
+                                        <span className="text-xs text-amber-500 mr-2 font-bold">SAFEST TIP:</span>
+                                        <span className="text-sm font-black text-amber-400">{pick.safe_bet_tip}</span>
+                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-amber-300 font-mono">
+                                            {pick.confidence}%
+                                        </span>
+                                    </div>
+
+                                    <ul className="space-y-1">
+                                        {pick.reasoning && pick.reasoning.map((r, i) => (
+                                            <li key={i} className="text-xs text-gray-400 flex gap-2">
+                                                <span className="text-amber-500 mt-0.5">•</span>
+                                                {r}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {history.length === 0 ? (
                 <div className="text-center py-12 text-gray-500 bg-gray-900/50 rounded-lg border border-dashed border-gray-700">
@@ -104,7 +236,16 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
 
                                 {/* Info Box */}
                                 <div className="flex-1">
-                                    <div className="text-xs text-gray-400 font-mono mb-1">{item.match_date}</div>
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="text-xs text-gray-400 font-mono">{item.match_date}</div>
+                                        <button
+                                            onClick={(e) => handleDeletePrediction(e, item.match_id)}
+                                            className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                            title="Delete Prediction"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                     <h3 className="text-lg font-bold text-white">{item.teams || "Unknown Match"}</h3>
                                     <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
                                         <span className="text-xs text-gray-400 mr-2">TIP:</span>

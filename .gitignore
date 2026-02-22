@@ -1,2 +1,6 @@
 /.env
-/.venv
+/.venvomnibet.db
+.venv
+.omnibet.db
+.key
+omnibet.db

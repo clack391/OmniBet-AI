@@ -31,6 +31,13 @@ def init_db():
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ai_best_picks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            accumulator_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
     conn.commit()
     conn.close()
@@ -149,6 +156,17 @@ def clear_predictions():
     finally:
         conn.close()
 
+def delete_prediction(match_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM predictions WHERE match_id = ?', (match_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error deleting prediction {match_id}: {e}")
+    finally:
+        conn.close()
+
 def update_prediction_result(match_id: int, actual_result: str, is_correct: bool):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -191,6 +209,50 @@ def save_fixtures_cache(date_str: str, data: dict):
         conn.commit()
     except Exception as e:
         print(f"Error saving cache: {e}")
+    finally:
+        conn.close()
+
+def save_best_picks(data: dict):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT INTO ai_best_picks (accumulator_json)
+            VALUES (?)
+        ''', (json.dumps(data),))
+        conn.commit()
+    except Exception as e:
+        print(f"Error saving accumulator: {e}")
+    finally:
+        conn.close()
+
+def get_best_picks():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        # Get the most recent one
+        cursor.execute('SELECT accumulator_json, created_at FROM ai_best_picks ORDER BY created_at DESC LIMIT 1')
+        row = cursor.fetchone()
+        if row:
+            data = json.loads(row[0])
+            data['created_at'] = row[1]
+            return data
+        return None
+    except Exception as e:
+        print(f"Error reading accumulator: {e}")
+        return None
+    finally:
+        conn.close()
+
+def clear_best_picks():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM ai_best_picks')
+        cursor.execute("DELETE FROM sqlite_sequence WHERE name='ai_best_picks'")
+        conn.commit()
+    except Exception as e:
+        print(f"Error clearing accumulators: {e}")
     finally:
         conn.close()
 

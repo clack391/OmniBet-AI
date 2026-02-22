@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 import chromadb
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -225,3 +226,61 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
         print(f"Risk Manager Error: {e}")
         # Fallback to the initial prediction if the second agent fails
         return initial_prediction_json
+
+def generate_best_picks(saved_predictions: list) -> dict:
+    prompt = f"""
+    You are a Chief Risk Officer building the ultimate, safest sports accumulator.
+    
+    ### Task
+    Review the following JSON list of analyzed matches. Your goal is to filter out the risky ones and return ONLY the absolute safest, highest-confidence matches (aim for the top 30-50% safest picks).
+    
+    ### Matches to Analyze:
+    {json.dumps(saved_predictions)}
+    
+    ### Output Format
+    Return ONLY valid JSON matching this exact structure:
+    {{
+        "master_reasoning": "Explain the overarching theme of why these specific matches were chosen and why the others were rejected. Be analytical and professional.",
+        "picks": [
+            {{
+                "match_id": 12345,
+                "teams": "Home vs Away",
+                "match_date": "YYYY-MM-DDTHH:MM:SSZ",
+                "safe_bet_tip": "The approved safe tip",
+                "confidence": 95,
+                "home_logo": "url_if_exists",
+                "away_logo": "url_if_exists",
+                "reasoning": ["Brief reason 1", "Brief reason 2"]
+            }}
+        ]
+    }}
+    """
+    
+    try:
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("API Key is missing")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.2, # Slight creativity for master_reasoning, but mostly deterministic 
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
+        response.raise_for_status()
+        
+        response_json = response.json()
+        raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
+        
+        return json.loads(raw_text)
+        
+    except Exception as e:
+        print(f"Error generating best picks: {e}")
+        return {
+            "master_reasoning": "Failed to generate AI accumulator due to an error.",
+            "picks": []
+        }

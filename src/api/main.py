@@ -3,8 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Dict, Any
 from pydantic import BaseModel
 from src.services.sports_api import get_fixtures_by_date, get_match_stats, fetch_match_context, fetch_latest_odds, fetch_match_h2h, fetch_team_form
-from src.rag.pipeline import predict_match, risk_manager_review
-from src.database.db import save_prediction, get_accuracy_stats, get_cached_prediction, get_all_predictions, clear_predictions, update_prediction_result
+from src.rag.pipeline import predict_match, risk_manager_review, generate_best_picks
+from src.database.db import (
+    save_prediction, 
+    get_accuracy_stats, 
+    get_cached_prediction, 
+    get_all_predictions, 
+    clear_predictions, 
+    update_prediction_result,
+    delete_prediction,
+    save_best_picks,
+    get_best_picks,
+    clear_best_picks
+)
 from src.services.grader import fetch_result_with_ai
 
 app = FastAPI()
@@ -48,6 +59,38 @@ def history():
 def clear_history():
     clear_predictions()
     return {"message": "Prediction history cleared."}
+
+@app.delete("/history/{match_id}")
+def delete_single_history(match_id: int):
+    delete_prediction(match_id)
+    return {"status": "deleted", "match_id": match_id}
+
+@app.post("/generate-best-picks")
+def create_best_picks():
+    # 1. Get all saved history
+    saved_predictions = get_all_predictions()
+    
+    # 2. If nothing to analyze, return early
+    if not saved_predictions:
+        raise HTTPException(status_code=400, detail="No predictions in history to analyze.")
+        
+    # 3. Call the Gemini Chief Risk Officer Agent
+    best_picks_json = generate_best_picks(saved_predictions)
+    
+    # 4. Save to DB
+    save_best_picks(best_picks_json)
+    
+    return best_picks_json
+
+@app.get("/best-picks")
+def read_best_picks():
+    picks = get_best_picks()
+    return picks or {}
+
+@app.delete("/best-picks")
+def delete_best_picks():
+    clear_best_picks()
+    return {"status": "cleared"}
 
 @app.post("/grade-history")
 def grade_history(request: GradeRequest):
