@@ -20,7 +20,7 @@ model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, news_context: list, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None):
+def predict_match(team_a: str, team_b: str, match_stats: dict, news_context: list, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None):
 
     # JIT Vectorization
     # Sanitize collection name: Only allow alphanumeric, underscores, and hyphens. Max 63 chars for safety.
@@ -93,6 +93,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, news_context: lis
     ### Recent Team Form (Last 5 Matches Derived Stats)
     Home Team ({team_a}): {json.dumps(home_form, indent=2) if home_form else "N/A"}
     Away Team ({team_b}): {json.dumps(away_form, indent=2) if away_form else "N/A"}
+    
+    ### League Standings
+    Home Team ({team_a}): {json.dumps(home_standings, indent=2) if home_standings else "N/A"}
+    Away Team ({team_b}): {json.dumps(away_standings, indent=2) if away_standings else "N/A"}
     
     ### Recent News (Injury/Suspension Context)
     {context_text}

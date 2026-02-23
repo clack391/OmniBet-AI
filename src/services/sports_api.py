@@ -3,6 +3,7 @@ import time
 import os
 import json
 import google.generativeai as genai
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from src.utils.rate_limiter import rate_limit
 from src.database.db import get_cached_fixtures, save_fixtures_cache
@@ -15,6 +16,10 @@ BASE_URL = "https://api.football-data.org/v4"
 # Initialize Gemini for Fallbacks
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 model = genai.GenerativeModel("gemini-3-flash-preview")
+
+# Cache for league standings with TTL 
+# Structure: { competition_id: {"data": [...], "fetched_at": datetime} }
+standings_cache = {}
 
 @rate_limit(calls_per_minute=10)
 def get_fixtures_by_date(start_date: str, end_date: str):
@@ -42,8 +47,8 @@ def get_fixtures_by_date(start_date: str, end_date: str):
         # Inject team logos into the raw API response for the frontend
         if 'matches' in data:
             for match in data['matches']:
-                match['home_logo'] = match.get('homeTeam', {}).get('crest')
-                match['away_logo'] = match.get('awayTeam', {}).get('crest')
+                match['home_logo'] = match.get('homeTeam', {}).get('crest', '').replace("http://", "https://") if match.get('homeTeam', {}).get('crest') else None
+                match['away_logo'] = match.get('awayTeam', {}).get('crest', '').replace("http://", "https://") if match.get('awayTeam', {}).get('crest') else None
                 
         # 3. Save processed data to Cache
         save_fixtures_cache(start_date, data)
@@ -294,3 +299,75 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team"):
     except Exception as e:
         print(f"Error fetching team form for {team_name}: {e}")
         return None
+
+@rate_limit(calls_per_minute=10)
+def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
+    """
+    Fetch league standings for a specific team.
+    Uses a 12-hour Time-To-Live (TTL) dictionary cache to minimize API calls.
+    Defaults to 2021 (Premier League).
+    """
+    global standings_cache
+    
+    # 1. Check TTL Cache
+    if competition_id in standings_cache:
+        cache_entry = standings_cache[competition_id]
+        time_since_fetch = datetime.now() - cache_entry["fetched_at"]
+        
+        if time_since_fetch < timedelta(hours=12):
+            print(f"✅ Loading standings for Comp {competition_id} from 12-Hour Cache (Age: {time_since_fetch})")
+            standings_data = cache_entry["data"]
+        else:
+            print(f"♻️ Cache for Comp {competition_id} expired. Fetching fresh standings...")
+            standings_data = None
+    else:
+        standings_data = None
+
+    # 2. Fetch from API if Cache Miss or Expired
+    if not standings_data:
+        url = f"{BASE_URL}/competitions/{competition_id}/standings"
+        headers = {"X-Auth-Token": API_KEY}
+        
+        try:
+            print(f"🌐 Fetching fresh table for Comp {competition_id} from API...")
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            # Extract the actual standings array (usually Total table)
+            if 'standings' in data and len(data['standings']) > 0:
+                standings_data = data['standings'][0].get('table', [])
+                
+                # Update Cache with Data and Timestamp
+                standings_cache[competition_id] = {
+                    "data": standings_data,
+                    "fetched_at": datetime.now()
+                }
+            else:
+                return {} # Invalid data format
+                
+        except Exception as e:
+            print(f"Error fetching standings: {e}")
+            # If the API fails but we have stale cache, use the stale cache as a fallback!
+            if competition_id in standings_cache:
+                print("⚠️ API failed. Falling back to stale standings cache.")
+                standings_data = standings_cache[competition_id]["data"]
+            else:
+                return {}
+
+    # 3. Find and Return the Specific Team's Stats
+    for team_row in standings_data:
+        if team_row.get("team", {}).get("id") == team_id:
+            return {
+                "position": team_row.get("position"),
+                "playedGames": team_row.get("playedGames"),
+                "won": team_row.get("won"),
+                "draw": team_row.get("draw"),
+                "lost": team_row.get("lost"),
+                "points": team_row.get("points"),
+                "goalsFor": team_row.get("goalsFor"),
+                "goalsAgainst": team_row.get("goalsAgainst"),
+                "goalDifference": team_row.get("goalDifference")
+            }
+            
+    return {} # Team not found in that competition
