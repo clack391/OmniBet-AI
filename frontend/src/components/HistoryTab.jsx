@@ -4,6 +4,11 @@ import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap } from 'lucide
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const api = axios.create({
+    baseURL: API_URL,
+    timeout: 300000 // 5 minutes
+});
+
 const HistoryTab = ({ onSelectHistoryItem }) => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,7 +26,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const fetchHistory = async () => {
         setLoading(true);
         try {
-            const response = await axios.get(`${API_URL}/history`);
+            const response = await api.get(`/history`);
             setHistory(response.data);
         } catch (err) {
             console.error("Failed to fetch history:", err);
@@ -33,7 +38,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const handleClearHistory = async () => {
         if (window.confirm("Are you sure you want to delete all prediction history?")) {
             try {
-                await axios.delete(`${API_URL}/history`);
+                await api.delete(`/history`);
                 setHistory([]);
             } catch (err) {
                 console.error("Failed to clear history:", err);
@@ -43,7 +48,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
 
     const fetchBestPicks = async () => {
         try {
-            const response = await axios.get(`${API_URL}/best-picks`);
+            const response = await api.get(`/best-picks`);
             if (response.data && response.data.picks) {
                 setBestPicks(response.data);
             } else {
@@ -57,7 +62,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const handleGenerateBestPicks = async () => {
         setGeneratingPicks(true);
         try {
-            const response = await axios.post(`${API_URL}/generate-best-picks`);
+            const response = await api.post(`/generate-best-picks`);
             setBestPicks(response.data);
         } catch (err) {
             console.error(err);
@@ -70,7 +75,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const handleClearBestPicks = async () => {
         if (window.confirm("Are you sure you want to delete the AI Accumulator?")) {
             try {
-                await axios.delete(`${API_URL}/best-picks`);
+                await api.delete(`/best-picks`);
                 setBestPicks(null);
             } catch (err) {
                 console.error("Failed to clear best picks:", err);
@@ -81,7 +86,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const handleGradePrediction = async (match_id) => {
         setGradingIds(prev => [...prev, match_id]);
         try {
-            const response = await axios.post(`${API_URL}/grade-history`, { match_id });
+            const response = await api.post(`/grade-history`, { match_id });
             const gradedResult = response.data.graded_result;
 
             // Update local state to reflect the new grade instantly
@@ -105,7 +110,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
         e.stopPropagation();
 
         try {
-            await axios.delete(`${API_URL}/history/${match_id}`);
+            await api.delete(`/history/${match_id}`);
             // Filter out the deleted match from React state instantly
             setHistory(prevHistory => prevHistory.filter(item => item.match_id !== match_id));
         } catch (err) {

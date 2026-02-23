@@ -7,6 +7,11 @@ import { useBetSlip } from '../context/BetSlipContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const api = axios.create({
+    baseURL: API_URL,
+    timeout: 300000 // 5 minutes
+});
+
 const Dashboard = () => {
     const { addToSlip } = useBetSlip();
     const [date, setDate] = useState('');
@@ -52,7 +57,7 @@ const Dashboard = () => {
             nextDateObj.setDate(currentDateObj.getDate() + 1);
             const nextDate = nextDateObj.toISOString().split('T')[0];
 
-            const response = await axios.get(`${API_URL}/fixtures`, {
+            const response = await api.get(`/fixtures`, {
                 params: {
                     start_date: date,
                     end_date: nextDate
@@ -95,7 +100,7 @@ const Dashboard = () => {
         setPredictions([]);
 
         try {
-            const response = await axios.post(`${API_URL}/predict-batch`, {
+            const response = await api.post(`/predict-batch`, {
                 match_ids: selectedMatches.map(m => m.id)
             });
             setPredictions(response.data);
@@ -114,7 +119,7 @@ const Dashboard = () => {
         setPredictions([]);
 
         try {
-            const response = await axios.post(`${API_URL}/predict-batch`, {
+            const response = await api.post(`/predict-batch`, {
                 match_ids: selectedMatches.map(m => m.id)
             });
 
