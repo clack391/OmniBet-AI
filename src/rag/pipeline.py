@@ -1,56 +1,22 @@
 import os
 import json
 import requests
-import chromadb
 import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialize ChromaDB (Ephemeral for JIT)
-chroma_client = chromadb.Client()
-
 # Initialize Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a standard stable model compatible with the free tier/broad availability
-# User requested "Gemini 3 flash preview"
+# We use gemini-3-flash-preview for stable Google Search Grounding support 
 MODEL_NAME = "gemini-3-flash-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, news_context: list, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None):
-
-    # JIT Vectorization
-    # Sanitize collection name: Only allow alphanumeric, underscores, and hyphens. Max 63 chars for safety.
-    import re
-    safe_team_a = re.sub(r'[^a-zA-Z0-9]', '', team_a.lower())
-    safe_team_b = re.sub(r'[^a-zA-Z0-9]', '', team_b.lower())
-    collection_name = f"match_{safe_team_a}_{safe_team_b}"[:63]
-    try:
-        chroma_client.delete_collection(collection_name)
-    except:
-        pass
-        
-    collection = chroma_client.create_collection(name=collection_name)
-    
-    if news_context:
-        collection.add(
-            documents=news_context,
-            ids=[str(i) for i in range(len(news_context))]
-        )
-        # Updated query to use team names more broadly if needed
-        results = collection.query(
-            query_texts=[f"injury suspension {team_a} {team_b}"],
-            n_results=min(len(news_context), 3)
-        )
-        if results['documents']:
-             context_text = "\n".join(results['documents'][0])
-        else:
-             context_text = "No relevant news found in context."
-    else:
-        context_text = "No recent injury or suspension news found."
+def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None):
 
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
@@ -90,16 +56,13 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, news_context: lis
     ### Head-to-Head & Form (Historical Context)
     {json.dumps(h2h_data, indent=2) if h2h_data else "No H2H data available."}
     
-    ### Recent Team Form (Last 5 Matches Derived Stats)
-    Home Team ({team_a}): {json.dumps(home_form, indent=2) if home_form else "N/A"}
-    Away Team ({team_b}): {json.dumps(away_form, indent=2) if away_form else "N/A"}
+    ### The Fortress Effect: Isolated Venue Form (Last 5 Matches)
+    Home Team ({team_a}) Form AT HOME: {json.dumps(home_form, indent=2) if home_form else "N/A"}
+    Away Team ({team_b}) Form AWAY FROM HOME: {json.dumps(away_form, indent=2) if away_form else "N/A"}
     
     ### League Standings
     Home Team ({team_a}): {json.dumps(home_standings, indent=2) if home_standings else "N/A"}
     Away Team ({team_b}): {json.dumps(away_standings, indent=2) if away_standings else "N/A"}
-    
-    ### Recent News (Injury/Suspension Context)
-    {context_text}
     
     ### Market Odds (Implied Probability Context)
     {json.dumps(odds_data, indent=2) if odds_data else "No live odds available."}
@@ -127,11 +90,15 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, news_context: lis
     3. **Mathematical Synthesis**:
        - Weigh probabilities of ALL 12 markets against each other.
        - **Cross-Reference**:
-         - *Form vs Odds*: Find value where form contradicts high odds.
+         - *The Fortress Effect*: Strongly factor in the isolated home vs away form. A team might be great generally, but terrible on the road.
+         - *Form vs Odds*: Find value where isolated form contradicts high odds.
          - *H2H vs Current Form*: Prioritize CURRENT FORM.
          - *News Impact*: Downgrade team significantly if key players missing.
     
-    4. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. First, analyze the offensive stats vs defensive stats. Second, factor in the NewsAPI injury reports. Third, evaluate the implied probability of the Vegas odds.
+    4. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
+       - FIRST: Use your built-in Google Search tool to look up current injuries, suspensions, and absent players for {team_a} and {team_b} right now (e.g., "injuries suspension {team_a} vs {team_b} today"). Base your confidence on who is actually starting or missing.
+       - SECOND: Analyze the offensive stats vs defensive stats and The Fortress Effect.
+       - THIRD: Evaluate the implied probability of the Vegas odds.
     
     5. **Select the SINGLE Safest Tip**:
        - Compare the calculated confidence of the best outcome from EACH of the 12 markets.
@@ -156,22 +123,46 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, news_context: lis
             "Correct_Score": "Prediction: [Score]. [Reasoning...]",
             "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]"
         }},
-        "safe_bet_tip": "The Single Best Prediction",
-        "confidence": 85,
-        "reasoning": ["point 1", "point 2", "point 3"]
     }}
     """
-    
     try:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.0, # Keep deterministic
-                response_mime_type="application/json"
-            )
-        )
-        return json.loads(response.text)
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("API Key is missing")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "tools": [{"google_search": {}}],
+            "generationConfig": {
+                "temperature": 0.0,
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
+        response.raise_for_status()
+        
+        # When using search grounding, the response might have multiple parts
+        data = response.json()
+        candidates = data.get('candidates', [])
+        if not candidates:
+            raise ValueError("No candidates returned")
+            
+        parts = candidates[0].get('content', {}).get('parts', [])
+        
+        text_content = ""
+        for part in parts:
+            if 'text' in part:
+                text_content += part['text']
+                
+        return json.loads(text_content)
     except Exception as e:
+        print(f"Gemini API Error in predict_match: {e}")
+        try:
+             print(f"Raw Response: {response.text}")
+        except:
+             pass
         return {
             "error": str(e),
             "match": f"{team_a} vs {team_b}",

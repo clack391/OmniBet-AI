@@ -73,47 +73,6 @@ def get_match_stats(match_id: int):
     except requests.exceptions.RequestException as e:
         return {"error": str(e)}
 
-def fetch_match_context(team_a: str, team_b: str):
-    """
-    Fetch news articles from the last 14 days regarding the teams,
-    specifically focusing on injuries or suspensions.
-    """
-    from datetime import datetime, timedelta
-    
-    news_api_key = os.getenv("NEWS_API_KEY")
-    if not news_api_key:
-        return []
-
-    # Calculate date 14 days ago
-    start_date = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
-    
-    url = "https://newsapi.org/v2/everything"
-    # Updated query to be more specific and avoid broad matches
-    query = f'+"{team_a}" +"{team_b}" AND (injury OR suspension OR missing OR doubtful)'
-    
-    params = {
-        "q": query,
-        "from": start_date,
-        "sortBy": "relevancy",
-        "apiKey": news_api_key,
-        "language": "en"
-    }
-    
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Extract relevant fields
-        articles = []
-        for article in data.get("articles", [])[:5]: # Limit to top 5 articles to save tokens
-            articles.append(f"Title: {article['title']}. Description: {article['description']}")
-            
-        return articles
-    except Exception as e:
-        print(f"Error fetching news: {e}")
-        return []
-
 def fetch_latest_odds(team_a: str, team_b: str):
     """
     Fetch latest odds from The Odds API.
@@ -190,10 +149,11 @@ def fetch_match_h2h(match_id: int):
         return None
 
 @rate_limit(calls_per_minute=10)
-def fetch_team_form(team_id: int, team_name: str = "Unknown Team"):
+def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = None):
     """
     Fetch last 5 completed matches for a team to derive form.
     Calculates: Avg Goals Scored, Avg Goals Conceded, Clean Sheets, Form String (W-D-L).
+    Accepts an optional 'venue' parameter ("HOME" or "AWAY") to filter matches.
     """
     url = f"{BASE_URL}/teams/{team_id}/matches"
     headers = {"X-Auth-Token": API_KEY}
@@ -201,6 +161,9 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team"):
         "status": "FINISHED",
         "limit": 5
     }
+    
+    if venue:
+        params["venue"] = venue
     
     try:
         response = requests.get(url, headers=headers, params=params)
@@ -260,11 +223,12 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team"):
     except requests.exceptions.HTTPError as e:
         if e.response.status_code == 403:
             # 403 Free Tier Restriction: Fallback to Gemini
+            venue_context = f"specifically for matches played at {venue} " if venue else ""
             print(f"403 Blocked for {team_name}. Falling back to Gemini...")
             
             prompt = f"""
             The football-data.org API blocked access to recent match history for the team: "{team_name}".
-            Act as an expert football statistician. Based on your general knowledge of this team's typical performance level and recent standing, fabricate a realistic but highly educated estimate for their last 5 matches.
+            Act as an expert football statistician. Based on your general knowledge of this team's typical performance level and recent standing, fabricate a realistic but highly educated estimate for their last 5 matches {venue_context}.
             
             Return ONLY valid JSON matching this exact structure:
             {{

@@ -5,7 +5,6 @@ from pydantic import BaseModel
 from src.services.sports_api import (
     get_fixtures_by_date,
     get_match_stats,
-    fetch_match_context,
     fetch_latest_odds,
     fetch_match_h2h,
     fetch_team_form,
@@ -180,9 +179,6 @@ def predict_batch(request: MatchBatchRequest):
             results.append({"match_id": match_id, "error": f"Parsing error: {str(e)}"})
             continue
 
-        # 3. Get News Context
-        news = fetch_match_context(home_team, away_team)
-
         # 4. Get Head-to-Head Data (New)
         # Adds ~6s latency but crucial for "AI" analysis
         h2h_data = fetch_match_h2h(match_id)
@@ -200,8 +196,8 @@ def predict_batch(request: MatchBatchRequest):
         home_id = stats.get("homeTeam", {}).get("id")
         away_id = stats.get("awayTeam", {}).get("id")
 
-        home_form = fetch_team_form(home_id, team_name=home_team) if home_id else None
-        away_form = fetch_team_form(away_id, team_name=away_team) if away_id else None
+        home_form = fetch_team_form(home_id, team_name=home_team, venue="HOME") if home_id else None
+        away_form = fetch_team_form(away_id, team_name=away_team, venue="AWAY") if away_id else None
 
         # 7. Get League Standings
         competition_id = stats.get("competition", {}).get("id", 2021) # Default to EPL if missing
@@ -222,7 +218,6 @@ def predict_batch(request: MatchBatchRequest):
             home_team,
             away_team,
             stats,
-            news,
             odds,
             h2h_data,
             home_form,
