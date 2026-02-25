@@ -16,22 +16,26 @@ model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None):
+def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, match_date: str = None):
 
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
+    is_historical = False
     try:
-        match_date = match_stats.get('utcDate')
         if match_date:
             # Parse ISO8601 string (e.g. 2026-02-19T00:30:00Z)
             match_dt = datetime.fromisoformat(match_date.replace("Z", "+00:00"))
             now_dt = datetime.now(timezone.utc)
             duration = (now_dt - match_dt).total_seconds() / 3600
             
+            # Strict Backtesting Mode: If match started in the past, disable Live Search to prevent cheating
+            if duration > 0:
+                is_historical = True
+                
             if match_stats.get('status') == 'IN_PLAY' and duration > 4:
                 is_stale = True
     except Exception as e:
-        print(f"Error checking stale date: {e}")
+        print(f"Error parse match_date: {e}")
 
     # Construct Prompt
     stale_warning = ""
@@ -96,7 +100,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
          - *News Impact*: Downgrade team significantly if key players missing.
     
     4. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
-       - FIRST: Use your built-in Google Search tool to look up current injuries, suspensions, and absent players for {team_a} and {team_b} right now (e.g., "injuries suspension {team_a} vs {team_b} today"). Base your confidence on who is actually starting or missing.
+       - FIRST: If you have Google Search access, look up current injuries, suspensions, and absent players for {team_a} and {team_b} right now. Base your confidence on who is actually starting or missing.
        - SECOND: Analyze the offensive stats vs defensive stats and The Fortress Effect.
        - THIRD: Evaluate the implied probability of the Vegas odds.
     
@@ -141,14 +145,20 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             raise ValueError("API Key is missing")
             
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        
+        # Build payload dynamically to support Strict Backtesting Mode
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "tools": [{"google_search": {}}],
             "generationConfig": {
                 "temperature": 0.0,
                 "responseMimeType": "application/json"
             }
         }
+        
+        if is_historical:
+            print(f"🛡️ Strict Backtesting Mode: Disabling Google Search for past match {team_a} vs {team_b}")
+        else:
+            payload["tools"] = [{"google_search": {}}]
         
         response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
         response.raise_for_status()

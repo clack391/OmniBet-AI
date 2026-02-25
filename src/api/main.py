@@ -213,7 +213,10 @@ def predict_batch(request: MatchBatchRequest):
         if 'match' in stats and 'score' in stats['match']:
             del stats['match']['score']
 
-        # 9. Predict (Agent 1)
+        # 9. Extract Match Date for Anti-Cheating Backtest Mode
+        match_date = stats.get('match', {}).get('utcDate') or stats.get('utcDate')
+
+        # 10. Predict (Agent 1)
         initial_prediction = predict_match(
             home_team,
             away_team,
@@ -223,20 +226,21 @@ def predict_batch(request: MatchBatchRequest):
             home_form,
             away_form,
             home_standings,
-            away_standings
+            away_standings,
+            match_date=match_date
         )
 
-        # 10. Risk Manager Review (Agent 2)
+        # 11. Risk Manager Review (Agent 2)
         final_prediction = risk_manager_review(initial_prediction)
 
         # 11. Prepare Output logos
         final_prediction['home_logo'] = stats.get('homeTeam', {}).get('crest', '').replace("http://", "https://") if stats.get('homeTeam', {}).get('crest') else None
         final_prediction['away_logo'] = stats.get('awayTeam', {}).get('crest', '').replace("http://", "https://") if stats.get('awayTeam', {}).get('crest') else None
 
-        # 9. Save to DB
+        # 13. Save to DB
         # Add match_id and match_date to prediction object if missing for DB consistency
         final_prediction['match_id'] = match_id
-        final_prediction['match_date'] = stats.get('match', {}).get('utcDate') or stats.get('utcDate')
+        final_prediction['match_date'] = match_date
         save_prediction(final_prediction)
         
         results.append(final_prediction)

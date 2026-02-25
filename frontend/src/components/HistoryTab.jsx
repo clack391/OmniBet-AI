@@ -242,7 +242,9 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 {/* Info Box */}
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start mb-1">
-                                        <div className="text-xs text-gray-400 font-mono">{item.match_date}</div>
+                                        <div className="text-xs text-gray-400 font-mono">
+                                            {new Date(item.match_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                        </div>
                                         <button
                                             onClick={(e) => handleDeletePrediction(e, item.match_id)}
                                             className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
