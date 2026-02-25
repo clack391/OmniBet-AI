@@ -202,7 +202,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
 
                                     <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3">
                                         <span className="text-xs text-amber-500 mr-2 font-bold">SAFEST TIP:</span>
-                                        <span className="text-sm font-black text-amber-400">{pick.safe_bet_tip}</span>
+                                        <span className="text-sm font-black text-amber-400">{pick.chosen_tip || pick.safe_bet_tip}</span>
                                         <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-amber-300 font-mono">
                                             {pick.confidence}%
                                         </span>
@@ -252,12 +252,23 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                         </button>
                                     </div>
                                     <h3 className="text-lg font-bold text-white">{item.teams || "Unknown Match"}</h3>
-                                    <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-slate-700">
-                                        <span className="text-xs text-gray-400 mr-2">TIP:</span>
-                                        <span className="text-sm font-semibold text-accent-green">{item.safe_bet_tip}</span>
-                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-gray-300 font-mono">
-                                            {item.confidence}%
-                                        </span>
+                                    <div className="flex flex-col gap-2 mt-2">
+                                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-emerald-500/20 w-fit">
+                                            <span className="text-xs text-emerald-400 mr-2 font-bold">SAFEST TIP:</span>
+                                            <span className="text-sm font-semibold text-emerald-300">{item.primary_pick?.tip || item.safe_bet_tip}</span>
+                                            <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-emerald-200 font-mono">
+                                                {item.primary_pick?.confidence || item.confidence}%
+                                            </span>
+                                        </div>
+                                        {item.alternative_pick && (
+                                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-amber-500/20 w-fit">
+                                                <span className="text-xs text-amber-500 mr-2 font-bold">VALUE BET:</span>
+                                                <span className="text-sm font-semibold text-amber-400">{item.alternative_pick.tip}</span>
+                                                <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-amber-200 font-mono">
+                                                    {item.alternative_pick.confidence}%
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                     {item.actual_result && (
                                         <div className="mt-2 text-sm text-gray-300">

@@ -100,9 +100,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - SECOND: Analyze the offensive stats vs defensive stats and The Fortress Effect.
        - THIRD: Evaluate the implied probability of the Vegas odds.
     
-    5. **Select the SINGLE Safest Tip**:
+    5. **Select the Dual Expert Tips**:
        - Compare the calculated confidence of the best outcome from EACH of the 12 markets.
-       - The `safe_bet_tip` must be the one with the HIGHEST statistical probability.
+       - **Primary Pick**: Must be the absolute SAFEST mathematical bet (e.g., Double Chance, over 1.5 goals, +1.5 handicap). Treat this as the banker.
+       - **Alternative Pick**: Must be a VALUE bet. Slightly riskier but offers significantly better odds (e.g., Match Winner, Exact Goals, or BTTS).
     
     ### Output Format
     Return ONLY valid JSON with this exact structure:
@@ -123,6 +124,15 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             "Correct_Score": "Prediction: [Score]. [Reasoning...]",
             "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]"
         }},
+        "primary_pick": {{
+            "tip": "The Safest Banker Prediction",
+            "confidence": 85
+        }},
+        "alternative_pick": {{
+            "tip": "The Higher ROI Value Prediction",
+            "confidence": 65
+        }},
+        "reasoning": ["point 1", "point 2", "point 3"]
     }}
     """
     try:
@@ -166,7 +176,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         return {
             "error": str(e),
             "match": f"{team_a} vs {team_b}",
-            "safe_bet_tip": "Analysis Failed"
+            "primary_pick": {"tip": "Analysis Failed", "confidence": 0},
+            "alternative_pick": {"tip": "Analysis Failed", "confidence": 0}
         }
 
 def risk_manager_review(initial_prediction_json: dict) -> dict:
@@ -176,33 +187,41 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
     """
     prompt = f"""
     Act as a strict, mathematically-driven Sports Betting Risk Manager.
-    Your job is to review the following initial AI prediction and evaluate if the `safe_bet_tip` is truly safe.
+    Your job is to review the following initial AI prediction's two picks (`primary_pick` and `alternative_pick`) to evaluate if they are truly safe and viable.
     
     ### Initial Prediction
     {json.dumps(initial_prediction_json, indent=2)}
     
     ### RISK MANAGEMENT RULES
-    1. **Scrutinize the `safe_bet_tip`**: Is it too aggressive? 
+    1. **Scrutinize the `primary_pick` (The Banker)**: Is it too aggressive? 
        - If it predicts a pure Match Winner (e.g., "Home Win"), but the `step_by_step_reasoning` or `confidence` suggests it's a tight game, DOWNGRADE it.
-       - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records. If not, downgrade it.
+       - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records.
        - If the tip is already very safe (e.g., "Over 1.5 Goals" or "Double Chance"), you may approve it.
-       - **CRITICAL**: If you downgrade the tip, you MUST choose the safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section (e.g., 1X2, Match_Goals, BTTS, Team_Goals, Double_Chance, DNB, Asian_Handicap, First_Half_Goals, Second_Half_Goals, HT_FT, Correct_Score, Team_Exact_Goals).
+       - **CRITICAL**: If you downgrade the tip, you MUST choose the safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section.
        
-    2. **Update the JSON**:
-       - If you downgrade the tip, rewrite the `safe_bet_tip` to the safer option AND set `"is_downgraded": true`.
-       - If you approve the exact same initial tip, set `"is_downgraded": false`.
-       - Adjust the `confidence` score (usually a safer bet has higher confidence, but lower payout).
-       - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tip.
+    2. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
+       - A value bet can be risky, but it must be backed by the data. If it predicts an Away win for a heavily outmatched Away team playing on the road, downgrade it to something slightly safer but still valuable (like Asian Handicap).
+
+    3. **Update the JSON**:
+       - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
+       - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips.
+       - Set `"is_downgraded": true` if you had to change the `primary_pick`, otherwise `false`.
        - Update the `reasoning` array to reflect your defensive mindset.
        
     ### Output Format
     Return ONLY valid JSON. It MUST EXACTLY MATCH this schema:
     {{
-        "step_by_step_reasoning": "Risk Manager's evaluation of the original tip...",
+        "step_by_step_reasoning": "Risk Manager's evaluation of the original tips...",
         "match": "{initial_prediction_json.get('match')}",
         "full_analysis": {json.dumps(initial_prediction_json.get('full_analysis', {}))},
-        "safe_bet_tip": "The Final, Approved Safe Bet",
-        "confidence": 90,
+        "primary_pick": {{
+            "tip": "The Final, Approved Safe Bet",
+            "confidence": 90
+        }},
+        "alternative_pick": {{
+            "tip": "The Final, Approved Value Bet",
+            "confidence": 65
+        }},
         "is_downgraded": true,
         "reasoning": ["Risk Manager point 1", "Risk Manager point 2"]
     }}
@@ -227,7 +246,9 @@ def generate_best_picks(saved_predictions: list) -> dict:
     You are a Chief Risk Officer building the ultimate, safest sports accumulator.
     
     ### Task
-    Review the following JSON list of analyzed matches. Your goal is to filter out the risky ones and return ONLY the absolute safest, highest-confidence matches (aim for the top 30-50% safest picks).
+    Review the following JSON list of analyzed matches. Each match now contains a `primary_pick` (the safest bet) and an `alternative_pick` (the value bet).
+    Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip (either the primary or alternative) that balances supreme safety with reasonable accumulator odds.
+    Return ONLY the absolute safest, highest-confidence matches for the master parlay.
     
     ### Matches to Analyze:
     {json.dumps(saved_predictions)}
@@ -235,13 +256,13 @@ def generate_best_picks(saved_predictions: list) -> dict:
     ### Output Format
     Return ONLY valid JSON matching this exact structure:
     {{
-        "master_reasoning": "Explain the overarching theme of why these specific matches were chosen and why the others were rejected. Be analytical and professional.",
+        "master_reasoning": "Explain the overarching theme of why these specific matches and specific tips were chosen.",
         "picks": [
             {{
                 "match_id": 12345,
                 "teams": "Home vs Away",
                 "match_date": "YYYY-MM-DDTHH:MM:SSZ",
-                "safe_bet_tip": "The approved safe tip",
+                "chosen_tip": "The singular tip you selected from either the primary or alternative options",
                 "confidence": 95,
                 "home_logo": "url_if_exists",
                 "away_logo": "url_if_exists",

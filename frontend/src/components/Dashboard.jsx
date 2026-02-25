@@ -129,10 +129,12 @@ const Dashboard = () => {
             // Auto-add safe bets to the context
             results.forEach(prediction => {
                 if (!prediction.error) {
+                    const tipToAdd = prediction.primary_pick?.tip || prediction.safe_bet_tip || "Unknown Tip";
                     const bet = {
                         match_id: prediction.match_id || Math.random(),
                         match: prediction.match,
-                        selection: prediction.safe_bet_tip,
+                        selection: tipToAdd,
+                        type: 'Primary',
                         odds: 1.85 // Mock odds as placeholder
                     };
                     addToSlip(bet);

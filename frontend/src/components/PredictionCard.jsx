@@ -12,14 +12,24 @@ const PredictionCard = ({ prediction }) => {
     // Parse teams safely
     const [homeTeam, awayTeam] = prediction.match.split(' vs ');
 
-    const handleAdd = () => {
+    const handleAdd = (pickObj, type) => {
+        // Fallback for legacy predictions still using safe_bet_tip string
+        const tipStr = typeof pickObj === 'string' ? pickObj : pickObj?.tip;
+        if (!tipStr) return;
+
         const bet = {
             match_id: prediction.match_id || Math.random(),
             match: prediction.match,
-            selection: prediction.safe_bet_tip,
-            odds: 1.85 // Mock odds as placeholder if not in data
+            selection: tipStr,
+            type: type, // 'Primary' or 'Value'
+            odds: type === 'Value' ? 2.50 : 1.85 // Mock odds
         };
         addToSlip(bet);
+    };
+
+    // Helper to check if a specific pick is added
+    const isPickAdded = (tipStr) => {
+        return betSlip.some(bet => bet.match_id === prediction.match_id && bet.selection === tipStr);
     };
 
     // Helper to get insight icon
@@ -71,11 +81,6 @@ const PredictionCard = ({ prediction }) => {
                                 </div>
                             )}
 
-                            {/* Confidence Badge */}
-                            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-accent-green/10 border border-accent-green/20 glow-green">
-                                <Bolt className="w-4 h-4 text-accent-green" />
-                                <span className="text-xs font-bold text-accent-green uppercase tracking-wide">{prediction.confidence}% Confidence</span>
-                            </div>
                         </div>
                     </div>
 
@@ -122,30 +127,87 @@ const PredictionCard = ({ prediction }) => {
                     </div>
                 </div>
 
-                {/* Primary Expert Pick Section */}
+                {/* Dual Expert Picks Section */}
                 <div className="relative z-10 px-6 py-2">
                     <div className="bg-slate-800/40 border border-white/5 rounded-xl p-5 glass-panel">
-                        <div className="flex justify-between items-start mb-2">
-                            <div className="flex flex-col">
-                                <span className="text-primary text-xs font-bold uppercase tracking-wider mb-1">AI Expert Pick</span>
-                                <div className="flex items-baseline gap-2">
-                                    <h1 className="text-2xl font-black text-white tracking-tight">{prediction.safe_bet_tip}</h1>
-                                </div>
-                            </div>
+                        <div className="flex justify-between items-start mb-4">
+                            <span className="text-primary text-xs font-bold uppercase tracking-wider">AI Expert Picks</span>
                             <div className="flex items-center gap-1">
                                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                                 <span className="text-[10px] text-red-400 font-bold uppercase">Live Analysis</span>
                             </div>
                         </div>
-                        <div className="mt-4">
-                            <button
-                                onClick={handleAdd}
-                                disabled={isAdded}
-                                className={`group w-full h-12 flex items-center justify-center gap-2 transition-all duration-200 rounded-lg shadow-lg font-bold text-base ${isAdded ? 'bg-accent-green/20 text-accent-green cursor-default' : 'bg-primary hover:bg-primary/90 active:scale-[0.98] glow-primary text-white'}`}
-                            >
-                                {isAdded ? <Check className="w-5 h-5" /> : <Plus className="w-5 h-5 group-hover:hidden" />}
-                                <span>{isAdded ? 'Bet Added' : 'Add to Slip'}</span>
-                            </button>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Primary Safe Pick */}
+                            <div className="bg-slate-900/60 border border-emerald-500/20 rounded-lg p-4 flex flex-col justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                        <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Primary Safe Bet</span>
+                                    </div>
+                                    <h2 className="text-lg font-black text-white leading-tight mb-2">
+                                        {prediction.primary_pick?.tip || prediction.safe_bet_tip}
+                                    </h2>
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-emerald-500 rounded-full"
+                                                style={{ width: `${prediction.primary_pick?.confidence || prediction.confidence || 0}%` }}
+                                            ></div>
+                                        </div>
+                                        <span className="text-xs font-bold text-emerald-400">{prediction.primary_pick?.confidence || prediction.confidence}%</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => handleAdd(prediction.primary_pick?.tip || prediction.safe_bet_tip, 'Primary')}
+                                    disabled={isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)}
+                                    className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)
+                                        ? 'bg-emerald-500/10 text-emerald-500 cursor-default border border-emerald-500/20'
+                                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+                                        }`}
+                                >
+                                    {isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                    <span>{isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip) ? 'Added' : 'Add Banker'}</span>
+                                </button>
+                            </div>
+
+                            {/* Alternative Value Pick */}
+                            {prediction.alternative_pick && (
+                                <div className="bg-slate-900/60 border border-amber-500/20 rounded-lg p-4 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <Target className="w-4 h-4 text-amber-400" />
+                                            <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">Value Alternative</span>
+                                        </div>
+                                        <h2 className="text-lg font-black text-white leading-tight mb-2">
+                                            {prediction.alternative_pick.tip}
+                                        </h2>
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-amber-500 rounded-full"
+                                                    style={{ width: `${prediction.alternative_pick.confidence}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-xs font-bold text-amber-400">{prediction.alternative_pick.confidence}%</span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleAdd(prediction.alternative_pick.tip, 'Value')}
+                                        disabled={isPickAdded(prediction.alternative_pick.tip)}
+                                        className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.alternative_pick.tip)
+                                            ? 'bg-amber-500/10 text-amber-500 cursor-default border border-amber-500/20'
+                                            : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20'
+                                            }`}
+                                    >
+                                        {isPickAdded(prediction.alternative_pick.tip) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                        <span>{isPickAdded(prediction.alternative_pick.tip) ? 'Added' : 'Add Value Bet'}</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

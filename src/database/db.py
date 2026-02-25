@@ -55,8 +55,8 @@ def save_prediction(data: dict):
             data.get('match_date'),
             data.get('match'),
             json.dumps(data),  # Save the entire prediction object!
-            data.get('safe_bet_tip'),
-            data.get('confidence')
+            data.get('primary_pick', {}).get('tip', 'Analysis Failed'),
+            data.get('primary_pick', {}).get('confidence', 0)
         ))
         conn.commit()
     except Exception as e:
@@ -130,11 +130,14 @@ def get_all_predictions():
             full_pred['actual_result'] = db_data['actual_result']
             full_pred['is_correct'] = db_data['is_correct']
             
-            # Safety: in case safe_bet_tip isn't in full_pred text
-            if 'safe_bet_tip' not in full_pred:
-                full_pred['safe_bet_tip'] = db_data['safe_bet_tip']
-            if 'confidence' not in full_pred:
-                full_pred['confidence'] = db_data['confidence']
+            # Safety: in case primary_pick isn't neatly in full_pred text
+            if 'primary_pick' not in full_pred:
+                full_pred['primary_pick'] = {
+                    "tip": db_data['safe_bet_tip'],
+                    "confidence": db_data['confidence']
+                }
+            if 'alternative_pick' not in full_pred:
+                 full_pred['alternative_pick'] = None
                 
             results.append(full_pred)
         return results

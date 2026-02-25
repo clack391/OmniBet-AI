@@ -8,3 +8,10 @@ omnibet.db
 __pycache__/
 
 README.me
+test_dual_picks.log
+test_dual_picks.py
+test_output.json
+src/services/__pycache__/sports_api.cpython-312.pyc
+test_dual_picks.pid
+src/rag/__pycache__/pipeline.cpython-312.pyc
+src/database/__pycache__/db.cpython-312.pyc
