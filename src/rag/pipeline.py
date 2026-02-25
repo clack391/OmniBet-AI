@@ -97,10 +97,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
          - *The Fortress Effect*: Strongly factor in the isolated home vs away form. A team might be great generally, but terrible on the road.
          - *Form vs Odds*: Find value where isolated form contradicts high odds.
          - *H2H vs Current Form*: Prioritize CURRENT FORM.
-         - *News Impact*: Downgrade team significantly if key players missing.
+         - *CRITICAL NEWS IMPACT*: If Google Search reveals a Top Goalscorer, Star Player, or Captain is missing/injured, you MUST drastically reduce the confidence of goal-heavy markets (like Over 1.5 Team Goals or Match Winner). This is non-negotiable.
     
     4. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
-       - FIRST: If you have Google Search access, look up current injuries, suspensions, and absent players for {team_a} and {team_b} right now. Base your confidence on who is actually starting or missing.
+       - FIRST: If you have Google Search access, explicitly search for: "injuries starting lineup {team_a} vs {team_b} today". You MUST verify if the top strikers and captains are playing. If they are absent, explicitly state this in your reasoning and aggressively lower your confidence for that team.
        - SECOND: Analyze the offensive stats vs defensive stats and The Fortress Effect.
        - THIRD: Evaluate the implied probability of the Vegas odds.
     
@@ -112,7 +112,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     ### Output Format
     Return ONLY valid JSON with this exact structure:
     {{
-        "step_by_step_reasoning": "Write your 3-step internal thought process here before filling out the rest of the JSON.",
+        "step_by_step_reasoning": "Sentence 1 MUST state exactly who is injured/missing from the starting lineups based on your search. Sentence 2 MUST state how this changes your confidence. Then write your normal thought process.",
         "match": "{team_a} vs {team_b}",
         "full_analysis": {{
             "1X2": "Prediction: [Home/Draw/Away]. [Reasoning...]",
@@ -199,11 +199,12 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
     Act as a strict, mathematically-driven Sports Betting Risk Manager.
     Your job is to review the following initial AI prediction's two picks (`primary_pick` and `alternative_pick`) to evaluate if they are truly safe and viable.
     
-    ### Initial Prediction
+    ### Initial Prediction & Primary Agent's Notes
     {json.dumps(initial_prediction_json, indent=2)}
     
     ### RISK MANAGEMENT RULES
     1. **Scrutinize the `primary_pick` (The Banker)**: Is it too aggressive? 
+       - **HONOR INJURY NEWS**: Read the `step_by_step_reasoning` above VERY carefully. If the primary agent discovered that a top striker or captain is injured/missing via Google Search, you MUST ruthlessly downgrade goal-dependent picks (like Over 1.5 Team Goals or Match Winner). Do not assume a team will easily score without their best players.
        - If it predicts a pure Match Winner (e.g., "Home Win"), but the `step_by_step_reasoning` or `confidence` suggests it's a tight game, DOWNGRADE it.
        - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records.
        - If the tip is already very safe (e.g., "Over 1.5 Goals" or "Double Chance"), you may approve it.
