@@ -9,6 +9,15 @@ def init_db():
     cursor = conn.cursor()
     
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE,
+            password_hash TEXT,
+            role TEXT DEFAULT 'user'
+        )
+    ''')
+    
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             match_id INTEGER UNIQUE,

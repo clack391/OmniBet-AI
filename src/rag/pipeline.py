@@ -97,22 +97,22 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
          - *The Fortress Effect*: Strongly factor in the isolated home vs away form. A team might be great generally, but terrible on the road.
          - *Form vs Odds*: Find value where isolated form contradicts high odds.
          - *H2H vs Current Form*: Prioritize CURRENT FORM.
-         - *CRITICAL NEWS IMPACT*: If Google Search reveals a Top Goalscorer, Star Player, or Captain is missing/injured, you MUST drastically reduce the confidence of goal-heavy markets (like Over 1.5 Team Goals or Match Winner). This is non-negotiable.
+         - *CRITICAL NEWS IMPACT*: If Google Search reveals a Top Goalscorer, Star Player, or Captain is missing/injured or recently left the club in a transfer, you MUST drastically reduce the confidence of goal-heavy markets (like Over 1.5 Team Goals or Match Winner). This is non-negotiable.
     
     4. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
-       - FIRST: If you have Google Search access, explicitly search for: "injuries starting lineup {team_a} vs {team_b} today". You MUST verify if the top strikers and captains are playing. If they are absent, explicitly state this in your reasoning and aggressively lower your confidence for that team.
+       - FIRST: If you have Google Search access, explicitly search for: "latest team news, recent player transfers, injuries, and starting lineups for {team_a} vs {team_b} today". You MUST verify if the top strikers and captains are playing or if they left the club. If they are absent, explicitly state this in your reasoning and aggressively lower your confidence for that team.
        - SECOND: Analyze the offensive stats vs defensive stats and The Fortress Effect.
        - THIRD: Evaluate the implied probability of the Vegas odds.
     
-    5. **Select the Dual Expert Tips**:
+    5. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:
        - Compare the calculated confidence of the best outcome from EACH of the 12 markets.
-       - **Primary Pick**: Must be the absolute SAFEST mathematical bet (e.g., Double Chance, over 1.5 goals, +1.5 handicap). Treat this as the banker.
-       - **Alternative Pick**: Must be a VALUE bet. Slightly riskier but offers significantly better odds (e.g., Match Winner, Exact Goals, or BTTS).
+       - **Primary Pick**: Must be the absolute SAFEST mathematical bet. To ensure consistency across runs, if multiple markets are identically safe, default to the BASE MARKETS in this strict priority order: 1) Double Chance, 2) Over/Under 1.5 Goals, 3) Draw No Bet. Treat this as the banker. Do not jump to niche markets like "Team Exact Goals" for the primary pick.
+       - **Alternative Pick**: Must be a VALUE bet. Slightly riskier but offers significantly better odds (e.g., Match Winner, Exact Goals, or BTTS). If multiple value bets tie, default to Match Winner.
     
     ### Output Format
     Return ONLY valid JSON with this exact structure:
     {{
-        "step_by_step_reasoning": "Sentence 1 MUST state exactly who is injured/missing from the starting lineups based on your search. Sentence 2 MUST state how this changes your confidence. Then write your normal thought process.",
+        "step_by_step_reasoning": "Sentence 1 MUST state exactly who is injured/missing/transferred from the starting lineups based on your search. Sentence 2 MUST state how this changes your confidence. Then write your normal thought process.",
         "match": "{team_a} vs {team_b}",
         "full_analysis": {{
             "1X2": "Prediction: [Home/Draw/Away]. [Reasoning...]",
@@ -160,8 +160,12 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         else:
             payload["tools"] = [{"google_search": {}}]
         
+        print(f"🧠 [Agent 1] Generating analysis for {team_a} vs {team_b} (Searching web if future match)...")
+        request_start = datetime.now()
         response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
         response.raise_for_status()
+        request_end = datetime.now()
+        print(f"✅ [Agent 1] Analysis finished in {(request_end - request_start).total_seconds():.2f}s")
         
         # When using search grounding, the response might have multiple parts
         data = response.json()
@@ -238,7 +242,13 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
     }}
     """
     
+    import time
+    
     try:
+        print(f"⏳ [Agent 2] Pausing 5 seconds to clear Gemini API Rate Limits...")
+        time.sleep(5)
+        print(f"🔎 [Agent 2] Risk Manager is now reviewing {initial_prediction_json.get('match')}...")
+        rm_start = datetime.now()
         response = model.generate_content(
             prompt,
             generation_config=genai.types.GenerationConfig(
@@ -246,6 +256,8 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
                 response_mime_type="application/json"
             )
         )
+        rm_end = datetime.now()
+        print(f"✅ [Agent 2] Risk review completed in {(rm_end - rm_start).total_seconds():.2f}s")
         return json.loads(response.text)
     except Exception as e:
         print(f"Risk Manager Error: {e}")
@@ -284,6 +296,8 @@ def generate_best_picks(saved_predictions: list) -> dict:
     """
     
     try:
+        print(f"🏆 [Risk Officer] Building the safest master accumulator. Please wait...")
+        master_start = datetime.now()
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("API Key is missing")
@@ -292,13 +306,15 @@ def generate_best_picks(saved_predictions: list) -> dict:
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
-                "temperature": 0.2, # Slight creativity for master_reasoning, but mostly deterministic 
+                "temperature": 0.0, # Strict determinism for master parlay selection
                 "responseMimeType": "application/json"
             }
         }
         
         response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
         response.raise_for_status()
+        master_end = datetime.now()
+        print(f"✅ [Risk Officer] Master parlay crafted in {(master_end - master_start).total_seconds():.2f}s")
         
         response_json = response.json()
         raw_text = response_json['candidates'][0]['content']['parts'][0]['text']

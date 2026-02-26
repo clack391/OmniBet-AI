@@ -1,7 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import List, Dict, Any
 from pydantic import BaseModel
+import sqlite3
+import json
+import os
+import requests
 from src.services.sports_api import (
     get_fixtures_by_date,
     get_match_stats,
@@ -12,6 +17,7 @@ from src.services.sports_api import (
 )
 from src.rag.pipeline import predict_match, risk_manager_review, generate_best_picks
 from src.database.db import (
+    DB_NAME,
     save_prediction,
     get_accuracy_stats,
     get_cached_prediction,
@@ -24,14 +30,29 @@ from src.database.db import (
     clear_best_picks
 )
 from src.services.grader import fetch_result_with_ai
+from src.utils.auth import get_password_hash, verify_password, create_access_token, get_admin_user
 
 app = FastAPI()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+class UserRegister(BaseModel):
+    username: str
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+    role: str
 
 class MatchBatchRequest(BaseModel):
     match_ids: List[int]
 
 class GradeRequest(BaseModel):
     match_id: int
+
+class TelegramShareRequest(BaseModel):
+    bets: List[Dict[str, Any]]
 
 origins = [
     "http://localhost:3000",
@@ -45,6 +66,51 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.post("/register", response_model=Token)
+def register_user(user: UserRegister):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        # Check if username exists
+        cursor.execute("SELECT id FROM users WHERE username = ?", (user.username,))
+        if cursor.fetchone():
+            raise HTTPException(status_code=400, detail="Username already registered")
+            
+        hashed_password = get_password_hash(user.password)
+        role = "user"
+        
+        cursor.execute(
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            (user.username, hashed_password, role)
+        )
+        conn.commit()
+        
+        access_token = create_access_token(data={"sub": user.username, "role": role})
+        return {"access_token": access_token, "token_type": "bearer", "role": role}
+    finally:
+        conn.close()
+
+@app.post("/login", response_model=Token)
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT password_hash, role FROM users WHERE username = ?", (form_data.username,))
+        row = cursor.fetchone()
+        
+        if not row or not verify_password(form_data.password, row[0]):
+            raise HTTPException(
+                status_code=401,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            
+        role = row[1]
+        access_token = create_access_token(data={"sub": form_data.username, "role": role})
+        return {"access_token": access_token, "token_type": "bearer", "role": role}
+    finally:
+        conn.close()
 
 @app.get("/fixtures")
 def fixtures(start_date: str, end_date: str):
@@ -63,17 +129,17 @@ def history():
     return get_all_predictions()
 
 @app.delete("/history")
-def clear_history():
+def clear_history(current_user: dict = Depends(get_admin_user)):
     clear_predictions()
     return {"message": "Prediction history cleared."}
 
 @app.delete("/history/{match_id}")
-def delete_single_history(match_id: int):
+def delete_single_history(match_id: int, current_user: dict = Depends(get_admin_user)):
     delete_prediction(match_id)
     return {"status": "deleted", "match_id": match_id}
 
 @app.post("/generate-best-picks")
-def create_best_picks():
+def create_best_picks(current_user: dict = Depends(get_admin_user)):
     # 1. Get all saved history
     saved_predictions = get_all_predictions()
 
@@ -95,12 +161,47 @@ def read_best_picks():
     return picks or {}
 
 @app.delete("/best-picks")
-def delete_best_picks():
+def delete_best_picks(current_user: dict = Depends(get_admin_user)):
     clear_best_picks()
     return {"status": "cleared"}
 
+@app.post("/share-betslip")
+def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(get_admin_user)):
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not telegram_token or not chat_id:
+        raise HTTPException(status_code=500, detail="Telegram credentials missing in .env")
+
+    # Format the message
+    message = "🔥 *NEW AI ACCUMULATOR* 🔥\n\n"
+    
+    for bet in request.bets:
+        match_str = bet.get("match", "Unknown Match")
+        selection = bet.get("selection", "Unknown Selection")
+        
+        message += f"⚽ *{match_str}*\n"
+        message += f"👉 Tip: _{selection}_\n\n"
+        
+    message += "⚡ _Generated by OmniBet AI JIT RAG Engine_"
+
+    # Send to Telegram
+    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown"
+    }
+
+    response = requests.post(url, json=payload)
+    
+    if response.status_code != 200:
+        raise HTTPException(status_code=500, detail=f"Failed to send to Telegram: {response.text}")
+
+    return {"status": "success", "message": "Betslip shared to Telegram!"}
+
 @app.post("/grade-history")
-def grade_history(request: GradeRequest):
+def grade_history(request: GradeRequest, current_user: dict = Depends(get_admin_user)):
     prediction = get_cached_prediction(request.match_id)
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found in history.")
@@ -141,7 +242,7 @@ def grade_history(request: GradeRequest):
     }
 
 @app.post("/predict-batch")
-def predict_batch(request: MatchBatchRequest):
+def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_admin_user)):
     results = []
 
     for match_id in request.match_ids:

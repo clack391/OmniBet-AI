@@ -6,7 +6,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
     baseURL: API_URL,
-    timeout: 300000 // 5 minutes
+    timeout: 600000 // 10 minutes
+});
+
+// Axios Request Interceptor to inject JWT token
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
 });
 
 const HistoryTab = ({ onSelectHistoryItem }) => {

@@ -16,3 +16,4 @@ test_dual_picks.pid
 src/rag/__pycache__/pipeline.cpython-312.pyc
 src/database/__pycache__/db.cpython-312.pyc
 test_search.py
+add_admin.py

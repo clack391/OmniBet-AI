@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap } from 'lucide-react';
+import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert } from 'lucide-react';
 import PredictionCard from './PredictionCard';
 import HistoryTab from './HistoryTab';
 import { useBetSlip } from '../context/BetSlipContext';
@@ -9,7 +9,16 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
     baseURL: API_URL,
-    timeout: 300000 // 5 minutes
+    timeout: 600000 // 10 minutes
+});
+
+// Axios Request Interceptor to inject JWT token
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
 });
 
 const Dashboard = () => {
@@ -22,6 +31,62 @@ const Dashboard = () => {
     const [predictions, setPredictions] = useState([]);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
+
+    // Admin Auth State
+    const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+    const [showLoginModal, setShowLoginModal] = useState(false);
+    const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+    const [loginLoading, setLoginLoading] = useState(false);
+    const [loginError, setLoginError] = useState('');
+
+    // Axios Response Interceptor to handle expired/invalid tokens globally
+    useEffect(() => {
+        const interceptor = api.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+                    localStorage.removeItem('token');
+                    setIsLoggedIn(false);
+                    setShowLoginModal(true); // Prompt them to log back in
+                }
+                return Promise.reject(error);
+            }
+        );
+        return () => api.interceptors.response.eject(interceptor);
+    }, []);
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoginLoading(true);
+        setLoginError('');
+        try {
+            const formData = new URLSearchParams();
+            formData.append('username', loginForm.username);
+            formData.append('password', loginForm.password);
+
+            const response = await axios.post(`${API_URL}/login`, formData, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            });
+
+            if (response.data.role !== 'admin') {
+                setLoginError("This account does not have admin privileges.");
+                return;
+            }
+
+            localStorage.setItem('token', response.data.access_token);
+            setIsLoggedIn(true);
+            setShowLoginModal(false);
+        } catch (err) {
+            setLoginError(err.response?.data?.detail || "Login failed.");
+        } finally {
+            setLoginLoading(false);
+        }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        setIsLoggedIn(false);
+    };
 
     const handleSelectHistoryItem = (item) => {
         // The backend now returns the fully hydrated Prediction object exactly as it was generated
@@ -160,6 +225,25 @@ const Dashboard = () => {
                         <Trophy className="text-blue-400" /> OmniBet AI
                     </h1>
                     <div className="text-sm text-gray-400 mt-1">JIT RAG Powered Engine</div>
+                </div>
+
+                {/* Admin Auth Controls */}
+                <div className="flex bg-gray-900 rounded-lg p-1">
+                    {isLoggedIn ? (
+                        <button
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors border border-gray-700 rounded-md"
+                        >
+                            <LogOut className="w-4 h-4" /> Admin Logout
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => setShowLoginModal(true)}
+                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:text-white transition-colors bg-emerald-900/20 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-md"
+                        >
+                            <ShieldAlert className="w-4 h-4" /> Admin Access
+                        </button>
+                    )}
                 </div>
 
                 {/* Tab Navigation */}
@@ -341,6 +425,65 @@ const Dashboard = () => {
                         ))}
                     </div>
                 </main>
+            )}
+
+            {/* Admin Login Modal */}
+            {showLoginModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
+                        <button
+                            onClick={() => !loginLoading && setShowLoginModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                        >
+                            ×
+                        </button>
+
+                        <div className="mb-6 text-center">
+                            <ShieldAlert className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+                            <h3 className="text-xl font-bold text-white">Admin Authentication</h3>
+                            <p className="text-sm text-gray-400 mt-1">Please log in to perform this action.</p>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            {loginError && (
+                                <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
+                                    {loginError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                                <input
+                                    type="text"
+                                    value={loginForm.username}
+                                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                                <input
+                                    type="password"
+                                    value={loginForm.password}
+                                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loginLoading}
+                                className="w-full py-2.5 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-4"
+                            >
+                                {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+                                Login
+                            </button>
+                        </form>
+                    </div>
+                </div>
             )}
         </div>
     );
