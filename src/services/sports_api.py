@@ -181,7 +181,8 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = 
             "wins": 0,
             "draws": 0,
             "losses": 0,
-            "form_sequence": []
+            "form_sequence": [],
+            "recent_scorelines": []
         }
         
         for m in matches:
@@ -190,10 +191,14 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = 
             
             p_goals = m['score']['fullTime']['home'] if is_home else m['score']['fullTime']['away']
             o_goals = m['score']['fullTime']['away'] if is_home else m['score']['fullTime']['home']
+            opponent_name = m['awayTeam']['shortName'] if is_home else m['homeTeam']['shortName']
             
             # Handle potential None values in score
             if p_goals is None or o_goals is None:
                 continue
+                
+            # Ground the AI with explicit factual scorelines
+            stats["recent_scorelines"].append(f"vs {opponent_name}: {p_goals}-{o_goals}")
                 
             stats["goals_scored"] += p_goals
             stats["goals_conceded"] += o_goals
@@ -239,6 +244,7 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = 
                 "draws": int, 
                 "losses": int, 
                 "form_sequence": ["W", "D", "L", "W", "D"], 
+                "recent_scorelines": ["vs Team: 1-1", "vs Team: 2-0", "vs Team: 0-1", "vs Team: 3-3", "vs Team: 0-0"],
                 "goals_scored_avg": float, 
                 "goals_conceded_avg": float, 
                 "form_string": "W-D-L-W-D"

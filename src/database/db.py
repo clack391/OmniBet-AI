@@ -159,6 +159,7 @@ def get_all_predictions():
             
             # Decorate the full prediction with DB-specific metadata used by HistoryTab
             full_pred['id'] = db_data['id']
+            full_pred['match_id'] = db_data['match_id']
             full_pred['match_date'] = db_data['match_date']
             full_pred['teams'] = db_data['teams']
             full_pred['actual_result'] = db_data['actual_result']
@@ -185,17 +186,11 @@ def clear_predictions():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        # Hide predictions that belong to any group
-        cursor.execute('''
-            UPDATE predictions 
-            SET visible_in_history = 0 
-            WHERE match_id IN (SELECT match_id FROM group_matches)
-        ''')
-        # Delete predictions that don't belong to any group
-        cursor.execute('''
-            DELETE FROM predictions 
-            WHERE match_id NOT IN (SELECT match_id FROM group_matches)
-        ''')
+        # User requested a strict hard delete for all predictions
+        cursor.execute('DELETE FROM group_matches')
+        cursor.execute('DELETE FROM ai_best_picks')
+        cursor.execute('DELETE FROM predictions')
+        conn.commit()
         conn.commit()
     except Exception as e:
         print(f"Error clearing history: {e}")
@@ -206,6 +201,9 @@ def delete_prediction(match_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
+        # User requested a strict hard delete across all associations
+        cursor.execute('DELETE FROM group_matches WHERE match_id = ?', (match_id,))
+        cursor.execute('DELETE FROM ai_best_picks WHERE match_id = ?', (match_id,))
         cursor.execute('DELETE FROM predictions WHERE match_id = ?', (match_id,))
         conn.commit()
     except Exception as e:
@@ -356,6 +354,10 @@ def delete_group(group_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
+        # Strict hard delete: wipe the underlying predictions and best picks associated with this group first
+        cursor.execute('DELETE FROM predictions WHERE match_id IN (SELECT match_id FROM group_matches WHERE group_id = ?)', (group_id,))
+        cursor.execute('DELETE FROM ai_best_picks WHERE match_id IN (SELECT match_id FROM group_matches WHERE group_id = ?)', (group_id,))
+        # Then delete the group routing data
         cursor.execute('DELETE FROM group_matches WHERE group_id = ?', (group_id,))
         cursor.execute('DELETE FROM prediction_groups WHERE id = ?', (group_id,))
         conn.commit()
@@ -369,6 +371,8 @@ def add_match_to_group(group_id: int, match_id: int):
     cursor = conn.cursor()
     try:
         cursor.execute('INSERT OR IGNORE INTO group_matches (group_id, match_id) VALUES (?, ?)', (group_id, match_id))
+        # Hide the match from the main Prediction History Tab automatically
+        cursor.execute('UPDATE predictions SET visible_in_history = 0 WHERE match_id = ?', (match_id,))
         conn.commit()
         return True
     except Exception as e:
@@ -381,7 +385,10 @@ def remove_match_from_group(group_id: int, match_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
+        # Strict hard delete: wipe from the entire database, not just the group link
         cursor.execute('DELETE FROM group_matches WHERE group_id = ? AND match_id = ?', (group_id, match_id))
+        cursor.execute('DELETE FROM ai_best_picks WHERE match_id = ?', (match_id,))
+        cursor.execute('DELETE FROM predictions WHERE match_id = ?', (match_id,))
         conn.commit()
         return True
     except Exception as e:

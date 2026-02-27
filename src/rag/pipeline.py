@@ -11,8 +11,8 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a standard stable model compatible with the free tier/broad availability
-# We use gemini-3-flash-preview for stable Google Search Grounding support 
-MODEL_NAME = "gemini-3-flash-preview" 
+# We use gemini-3.1-pro-preview for deeper analytical reasoning and Google Search Grounding support 
+MODEL_NAME = "gemini-3.1-pro-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
@@ -83,6 +83,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Competition Isolation & The First Leg Anchor**: Explicitly separate domestic league form from cup/continental form. IF THIS IS A CUP OR CONTINENTAL MATCH, YOU MUST USE GOOGLE SEARCH TO FIND OUT IF THIS IS A 2ND-LEG TIE. If a team is leading on aggregate, they do not need to win; they will play highly conservative, suffocating football. Do not blindly predict the favorite to win if a draw advances them. 
        - **Motivation & Fatigue**: Actively deduce or search for rest days, schedule congestion, or heavy travel distances.
        - **Expected Goals (xG)**: Favor teams with high underlying xG creation over teams that are just getting lucky finishes. Flag dangerous underdogs.
+       - **ANTI-HALLUCINATION & ENTITY RESOLUTION**: When reading Google Search headlines, you MUST be hyper-vigilant about who a statistic belongs to. DO NOT accidentally map an individual opposing player's statistic (e.g., "Saka ends 15-match drought") to the entire team you are analyzing. Strictly verify matching nouns and adjectives.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -233,6 +234,7 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
        - **HONOR INJURY NEWS**: Read the `step_by_step_reasoning` above. If the primary agent discovered injuries to top strikers, you MUST ruthlessly downgrade goal-dependent picks.
        - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. If the primary pick completely fails in "Scenario B (The Underdog Disruption)", it is NOT a safe banker. Downgrade it!
        - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records without pure luck.
+       - **CRITICAL INSTRUCTION - CONFLICT RESOLUTION**: Before finalizing your analysis, cross-reference all statistics you are about to output. If any two data points contradict each other (e.g., claiming a team has not scored in 10 games, but also referencing a goal they scored last week), you must discard the older or more extreme statistic. Your final narrative must be 100% logically consistent.
        - **CRITICAL**: If you downgrade the tip, you MUST choose the safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section (like Double Chance or Draw No Bet).
        
     3. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
@@ -240,6 +242,7 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
 
     4. **Update the JSON**:
        - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
+       - **GRID HARMONIZATION**: You must rewrite the 12-market `full_analysis` block. If you kept the original tips, just copy the original `full_analysis`. IF YOU DOWNGRADED a tip (e.g., from 'Away Win' to 'Draw No Bet'), you MUST completely overwrite the `full_analysis` grid to perfectly harmonize with your new defensive logic (e.g., updating Asian Handicap to 0.0, Correct Score to a draw, BTTS to No). DO NOT leave contradictory aggressive markets if you predicted a defensive stalemate.
        - Preserve the `scenario_analysis` object exactly as the primary agent wrote it, so the user can read those scenarios.
        - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips based on the Bias Check and Scenarios.
        - Set `"is_downgraded": true` if you had to change the `primary_pick`, otherwise `false`.
@@ -252,7 +255,20 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
         "step_by_step_reasoning": "Risk Manager's evaluation of the original tips...",
         "scenario_analysis": {json.dumps(initial_prediction_json.get('scenario_analysis', {}))},
         "match": "{initial_prediction_json.get('match')}",
-        "full_analysis": {json.dumps(initial_prediction_json.get('full_analysis', {}))},
+        "full_analysis": {{
+            "1X2": "Prediction: [Home/Draw/Away]. [Reasoning...]",
+            "Match_Goals": "Prediction: [Over/Under]. [Reasoning...]",
+            "BTTS": "Prediction: [Yes/No]. [Reasoning...]",
+            "Team_Goals": "Prediction: [Team + O/U]. [Reasoning...]",
+            "Double_Chance": "Prediction: [1X/X2/12]. [Reasoning...]",
+            "DNB": "Prediction: [Home/Away]. [Reasoning...]",
+            "Asian_Handicap": "Prediction: [Pick]. [Reasoning...]",
+            "First_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
+            "Second_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
+            "HT_FT": "Prediction: [Pick]. [Reasoning...]",
+            "Correct_Score": "Prediction: [Score]. [Reasoning...]",
+            "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]"
+        }},
         "primary_pick": {{
             "tip": "The Final, Approved Safe Bet",
             "confidence": 90,
@@ -332,7 +348,7 @@ def generate_best_picks(saved_predictions: list) -> dict:
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
