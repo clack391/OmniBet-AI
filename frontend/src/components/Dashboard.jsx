@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert } from 'lucide-react';
+import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen } from 'lucide-react';
 import PredictionCard from './PredictionCard';
 import HistoryTab from './HistoryTab';
+import GroupsTab from './GroupsTab';
 import { useBetSlip } from '../context/BetSlipContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
     baseURL: API_URL,
-    timeout: 600000 // 10 minutes
+    timeout: 1800000 // 30 minutes
 });
 
 // Axios Request Interceptor to inject JWT token
@@ -194,13 +195,17 @@ const Dashboard = () => {
             // Auto-add safe bets to the context
             results.forEach(prediction => {
                 if (!prediction.error) {
-                    const tipToAdd = prediction.primary_pick?.tip || prediction.safe_bet_tip || "Unknown Tip";
+                    const primaryPick = prediction.primary_pick;
+                    const tipToAdd = primaryPick?.tip || prediction.safe_bet_tip || "Unknown Tip";
+                    const oddsToAdd = primaryPick?.odds ? parseFloat(primaryPick.odds) : 1.85;
+
                     const bet = {
                         match_id: prediction.match_id || Math.random(),
                         match: prediction.match,
+                        match_date: prediction.match_date,
                         selection: tipToAdd,
                         type: 'Primary',
-                        odds: 1.85 // Mock odds as placeholder
+                        odds: oddsToAdd
                     };
                     addToSlip(bet);
                 }
@@ -247,20 +252,29 @@ const Dashboard = () => {
                 </div>
 
                 {/* Tab Navigation */}
-                <div className="flex bg-gray-900 rounded-lg p-1 border border-gray-700">
+                <div className="flex bg-gray-900 rounded-lg p-1 border border-gray-700 overflow-x-auto custom-scrollbar whitespace-nowrap">
                     <button
                         onClick={() => setActiveTab('calendar')}
-                        className={`px-4 py-2 rounded-md font-medium text-sm transition-all ${activeTab === 'calendar'
-                            ? 'bg-gray-800 text-purple-400 shadow-sm'
+                        className={`px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-1.5 ${activeTab === 'calendar'
+                            ? 'bg-gray-800 text-purple-400 shadow-sm border border-gray-700'
                             : 'text-gray-400 hover:text-white'
                             }`}
                     >
-                        📅 Calendar
+                        <Calendar className="w-4 h-4" /> Calendar
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('groups')}
+                        className={`px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-1.5 ${activeTab === 'groups'
+                            ? 'bg-gray-800 text-blue-400 shadow-sm border border-gray-700'
+                            : 'text-gray-400 hover:text-white'
+                            }`}
+                    >
+                        <FolderOpen className="w-4 h-4" /> Groups
                     </button>
                     <button
                         onClick={() => setActiveTab('history')}
-                        className={`px-4 py-2 rounded-md font-medium text-sm transition-all ${activeTab === 'history'
-                            ? 'bg-gray-800 text-purple-400 shadow-sm'
+                        className={`px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-1.5 ${activeTab === 'history'
+                            ? 'bg-gray-800 text-indigo-400 shadow-sm border border-gray-700'
                             : 'text-gray-400 hover:text-white'
                             }`}
                     >
@@ -270,6 +284,7 @@ const Dashboard = () => {
             </header>
 
             {activeTab === 'history' && <HistoryTab onSelectHistoryItem={handleSelectHistoryItem} />}
+            {activeTab === 'groups' && <GroupsTab onSelectHistoryItem={handleSelectHistoryItem} />}
 
             {activeTab === 'calendar' && (
                 <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">

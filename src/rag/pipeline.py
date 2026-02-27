@@ -1,5 +1,6 @@
 import os
 import json
+import re
 import requests
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -76,8 +77,19 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - 'TIMED'/'SCHEDULED'/'UPCOMING' -> Match NOT started.
        - 'IN_PLAY'/'PAUSED' (with >0 score or recent start) -> Live Prediction.
        - **Ignore 0-0 score** if Stale Data Warning is present.
-    
-    2. **Analyze the following 12 Core Betting Markets**:
+       
+    2. **DYNAMIC WEIGHTING & DATA SEARCH FALLBACK**:
+       - If any critical data block above says "No data available." or "N/A" (especially Odds or Standings), you MUST use Google Search to fetch recent team news, historical results, or odds.
+       - **Competition Isolation & The First Leg Anchor**: Explicitly separate domestic league form from cup/continental form. IF THIS IS A CUP OR CONTINENTAL MATCH, YOU MUST USE GOOGLE SEARCH TO FIND OUT IF THIS IS A 2ND-LEG TIE. If a team is leading on aggregate, they do not need to win; they will play highly conservative, suffocating football. Do not blindly predict the favorite to win if a draw advances them. 
+       - **Motivation & Fatigue**: Actively deduce or search for rest days, schedule congestion, or heavy travel distances.
+       - **Expected Goals (xG)**: Favor teams with high underlying xG creation over teams that are just getting lucky finishes. Flag dangerous underdogs.
+
+    3. **GAME STATE SIMULATION**:
+       Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
+       - **Scenario A (The Expected Script)**: If the pre-match favorite (or Home team) scores first within 30 minutes, how does the opponent historically respond? Do they have the tactical discipline to avoid a blowout, or do they collapse?
+       - **Scenario B (The Underdog Disruption)**: If the underdog (or Away team) scores first against the run of play, what happens? Does the favorite have the attacking metrics to break down a low block, or do they leave themselves vulnerable to devastating counter-attacks?
+
+    4. **Analyze the following 12 Core Betting Markets**:
        - **Match Winner (1X2)**: Home, Draw, or Away?
        - **Match Total Goals**: Over/Under 2.5?
        - **BTTS**: Both Teams To Score (Yes/No)?
@@ -87,32 +99,34 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Asian Handicap**: e.g. Home -0.5, Away +1.5.
        - **First Half Goals**: Over/Under 0.5 or 1.5.
        - **Second Half Goals**: Over/Under 0.5 or 1.5.
-       - **HT/FT**: Half Time/Full Time result (e.g. Home/Home, Draw/Away).
+       - **HT/FT**: Half Time/Full Time result.
        - **Correct Score**: Exact final score prediction.
        - **Team Exact Goals**: Exact number of goals scored by Home or Away team.
 
-    3. **Mathematical Synthesis**:
+    5. **Mathematical Synthesis**:
        - Weigh probabilities of ALL 12 markets against each other.
        - **Cross-Reference**:
-         - *The Fortress Effect*: Strongly factor in the isolated home vs away form. A team might be great generally, but terrible on the road.
-         - *Form vs Odds*: Find value where isolated form contradicts high odds.
-         - *H2H vs Current Form*: Prioritize CURRENT FORM.
-         - *CRITICAL NEWS IMPACT*: If Google Search reveals a Top Goalscorer, Star Player, or Captain is missing/injured or recently left the club in a transfer, you MUST drastically reduce the confidence of goal-heavy markets (like Over 1.5 Team Goals or Match Winner). This is non-negotiable.
+         - *The Fortress Effect*: Strongly factor in the isolated home vs away form. 
+         - *CRITICAL NEWS IMPACT*: If Google Search reveals a Top Goalscorer, Star Player, or Captain is missing/injured or recently left the club in a transfer, you MUST drastically reduce the confidence of goal-heavy markets.
     
-    4. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
-       - FIRST: If you have Google Search access, explicitly search for: "latest team news, recent player transfers, injuries, and starting lineups for {team_a} vs {team_b} today". You MUST verify if the top strikers and captains are playing or if they left the club. If they are absent, explicitly state this in your reasoning and aggressively lower your confidence for that team.
-       - SECOND: Analyze the offensive stats vs defensive stats and The Fortress Effect.
-       - THIRD: Evaluate the implied probability of the Vegas odds.
-    
-    5. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:
-       - Compare the calculated confidence of the best outcome from EACH of the 12 markets.
-       - **Primary Pick**: Must be the absolute SAFEST mathematical bet. To ensure consistency across runs, if multiple markets are identically safe, default to the BASE MARKETS in this strict priority order: 1) Double Chance, 2) Over/Under 1.5 Goals, 3) Draw No Bet. Treat this as the banker. Do not jump to niche markets like "Team Exact Goals" for the primary pick.
-       - **Alternative Pick**: Must be a VALUE bet. Slightly riskier but offers significantly better odds (e.g., Match Winner, Exact Goals, or BTTS). If multiple value bets tie, default to Match Winner.
+    6. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
+       - FIRST: If you have Google Search access, explicitly search for: "latest team news, recent player transfers, injuries, and starting lineups for {team_a} vs {team_b} today". 
+       - SECOND: Analyze the offensive stats vs defensive stats, xG, and Fatigue.
+
+    7. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:
+       - **Primary Pick**: Must be the absolute SAFEST mathematical bet. To ensure consistency across runs, if multiple markets are identically safe, default to the BASE MARKETS in this strict priority order: 1) Double Chance, 2) Over/Under 1.5 Goals, 3) Draw No Bet. Treat this as the banker.
+       - **Alternative Pick**: Must be a VALUE bet. Slightly riskier but offers significantly better odds. Default to Match Winner if tied.
+       - **ODDS EXTRACTION**: You MUST provide the realistic Decimal Odds for both picks. If you have the Odds API payload, use those exact numbers. If the payload is empty, use your Google Search to find the real market odds. If you cannot find them, estimate the exact decimal odds based on implied probability.
     
     ### Output Format
+    CRITICAL: Ensure your JSON structure is perfectly valid and contains ZERO trailing commas at the end of objects or lists.
     Return ONLY valid JSON with this exact structure:
     {{
         "step_by_step_reasoning": "Sentence 1 MUST state exactly who is injured/missing/transferred from the starting lineups based on your search. Sentence 2 MUST state how this changes your confidence. Then write your normal thought process.",
+        "scenario_analysis": {{
+            "scenario_a_expected_script": "Detailed projection of what happens if the favorite/home team scores first and controls possession.",
+            "scenario_b_underdog_disruption": "Detailed projection of what happens if the underdog/away team scores first and forces the favorite to chase the game."
+        }},
         "match": "{team_a} vs {team_b}",
         "full_analysis": {{
             "1X2": "Prediction: [Home/Draw/Away]. [Reasoning...]",
@@ -130,11 +144,13 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         }},
         "primary_pick": {{
             "tip": "The Safest Banker Prediction",
-            "confidence": 85
+            "confidence": 85,
+            "odds": 1.45
         }},
         "alternative_pick": {{
             "tip": "The Higher ROI Value Prediction",
-            "confidence": 65
+            "confidence": 65,
+            "odds": 2.10
         }},
         "reasoning": ["point 1", "point 2", "point 3"]
     }}
@@ -180,6 +196,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             if 'text' in part:
                 text_content += part['text']
                 
+        # Proactively clean trailing commas introduced by LLM hallucinations before parsing
+        text_content = re.sub(r',\s*}', '}', text_content)
+        text_content = re.sub(r',\s*\]', ']', text_content)
+                
         return json.loads(text_content)
     except Exception as e:
         print(f"Gemini API Error in predict_match: {e}")
@@ -207,35 +227,41 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
     {json.dumps(initial_prediction_json, indent=2)}
     
     ### RISK MANAGEMENT RULES
-    1. **Scrutinize the `primary_pick` (The Banker)**: Is it too aggressive? 
-       - **HONOR INJURY NEWS**: Read the `step_by_step_reasoning` above VERY carefully. If the primary agent discovered that a top striker or captain is injured/missing via Google Search, you MUST ruthlessly downgrade goal-dependent picks (like Over 1.5 Team Goals or Match Winner). Do not assume a team will easily score without their best players.
-       - If it predicts a pure Match Winner (e.g., "Home Win"), but the `step_by_step_reasoning` or `confidence` suggests it's a tight game, DOWNGRADE it.
-       - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records.
-       - If the tip is already very safe (e.g., "Over 1.5 Goals" or "Double Chance"), you may approve it.
-       - **CRITICAL**: If you downgrade the tip, you MUST choose the safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section.
-       
-    2. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
-       - A value bet can be risky, but it must be backed by the data. If it predicts an Away win for a heavily outmatched Away team playing on the road, downgrade it to something slightly safer but still valuable (like Asian Handicap).
+    1. **Catching the "Human Bias"**: Identify any widespread public narratives about this match (e.g., "The Home Team is unbeatable at home" or "They drew 0-0 last match so it will be low scoring again"). Cross-reference this bias with the underlying defensive/offensive data. If the public expectation contradicts the deep data, aggressive bet sizing against the public is warranted.
 
-    3. **Update the JSON**:
+    2. **Scrutinize the `primary_pick` (The Banker)**: Is it too aggressive? 
+       - **HONOR INJURY NEWS**: Read the `step_by_step_reasoning` above. If the primary agent discovered injuries to top strikers, you MUST ruthlessly downgrade goal-dependent picks.
+       - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. If the primary pick completely fails in "Scenario B (The Underdog Disruption)", it is NOT a safe banker. Downgrade it!
+       - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records without pure luck.
+       - **CRITICAL**: If you downgrade the tip, you MUST choose the safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section (like Double Chance or Draw No Bet).
+       
+    3. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
+       - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
+
+    4. **Update the JSON**:
        - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
-       - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips.
+       - Preserve the `scenario_analysis` object exactly as the primary agent wrote it, so the user can read those scenarios.
+       - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips based on the Bias Check and Scenarios.
        - Set `"is_downgraded": true` if you had to change the `primary_pick`, otherwise `false`.
        - Update the `reasoning` array to reflect your defensive mindset.
        
     ### Output Format
+    CRITICAL: Ensure your JSON structure is perfectly valid and contains ZERO trailing commas at the end of objects or lists.
     Return ONLY valid JSON. It MUST EXACTLY MATCH this schema:
     {{
         "step_by_step_reasoning": "Risk Manager's evaluation of the original tips...",
+        "scenario_analysis": {json.dumps(initial_prediction_json.get('scenario_analysis', {}))},
         "match": "{initial_prediction_json.get('match')}",
         "full_analysis": {json.dumps(initial_prediction_json.get('full_analysis', {}))},
         "primary_pick": {{
             "tip": "The Final, Approved Safe Bet",
-            "confidence": 90
+            "confidence": 90,
+            "odds": 1.45
         }},
         "alternative_pick": {{
             "tip": "The Final, Approved Value Bet",
-            "confidence": 65
+            "confidence": 65,
+            "odds": 2.10
         }},
         "is_downgraded": true,
         "reasoning": ["Risk Manager point 1", "Risk Manager point 2"]
@@ -269,23 +295,27 @@ def generate_best_picks(saved_predictions: list) -> dict:
     You are a Chief Risk Officer building the ultimate, safest sports accumulator.
     
     ### Task
-    Review the following JSON list of analyzed matches. Each match now contains a `primary_pick` (the safest bet) and an `alternative_pick` (the value bet).
+    Review the following JSON list of analyzed matches. Each match now contains a `primary_pick` (the safest bet), an `alternative_pick`, and a deep `scenario_analysis`.
     Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip (either the primary or alternative) that balances supreme safety with reasonable accumulator odds.
+    - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive BOTH Scenario A (Expected Script) AND Scenario B (Underdog Disruption), you must throw the match out.
     Return ONLY the absolute safest, highest-confidence matches for the master parlay.
     
     ### Matches to Analyze:
     {json.dumps(saved_predictions)}
     
     ### Output Format
+    CRITICAL: Ensure your JSON structure is perfectly valid and contains ZERO trailing commas at the end of objects or lists.
     Return ONLY valid JSON matching this exact structure:
     {{
         "master_reasoning": "Explain the overarching theme of why these specific matches and specific tips were chosen.",
+        "total_accumulator_odds": 5.45,
         "picks": [
             {{
                 "match_id": 12345,
                 "teams": "Home vs Away",
                 "match_date": "YYYY-MM-DDTHH:MM:SSZ",
                 "chosen_tip": "The singular tip you selected from either the primary or alternative options",
+                "odds": 1.45,
                 "confidence": 95,
                 "home_logo": "url_if_exists",
                 "away_logo": "url_if_exists",

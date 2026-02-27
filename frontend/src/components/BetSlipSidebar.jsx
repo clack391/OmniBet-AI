@@ -127,7 +127,12 @@ const BetSlipSidebar = () => {
                         >
                             <X className="w-4 h-4" />
                         </button>
-                        <div className="text-xs text-gray-400 mb-1">{bet.match}</div>
+                        <div className="text-xs text-gray-400 mb-1 font-semibold">{bet.match}</div>
+                        {bet.match_date && (
+                            <div className="text-[10px] text-gray-500 mb-2 font-mono">
+                                {new Date(bet.match_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                            </div>
+                        )}
                         <div className="text-blue-300 font-bold">{bet.selection}</div>
                         <div className="text-xs text-green-400 mt-1 flex justify-between">
                             <span>Safe Bet</span>

@@ -28,9 +28,15 @@ def init_db():
             confidence INTEGER,
             actual_result TEXT,
             is_correct BOOLEAN,
+            visible_in_history BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    try:
+        cursor.execute('ALTER TABLE predictions ADD COLUMN visible_in_history BOOLEAN DEFAULT 1')
+    except sqlite3.OperationalError:
+        pass # Column already exists
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS daily_fixtures (
@@ -45,6 +51,25 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             accumulator_json TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS prediction_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS group_matches (
+            group_id INTEGER,
+            match_id INTEGER,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (group_id, match_id),
+            FOREIGN KEY (group_id) REFERENCES prediction_groups (id) ON DELETE CASCADE,
+            FOREIGN KEY (match_id) REFERENCES predictions (match_id) ON DELETE CASCADE
         )
     ''')
     
@@ -124,7 +149,7 @@ def get_all_predictions():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT * FROM predictions ORDER BY match_date DESC')
+        cursor.execute('SELECT * FROM predictions WHERE visible_in_history = 1 ORDER BY match_date DESC')
         rows = cursor.fetchall()
         results = []
         for row in rows:
@@ -160,8 +185,17 @@ def clear_predictions():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        cursor.execute('DELETE FROM predictions')
-        cursor.execute("DELETE FROM sqlite_sequence WHERE name='predictions'")
+        # Hide predictions that belong to any group
+        cursor.execute('''
+            UPDATE predictions 
+            SET visible_in_history = 0 
+            WHERE match_id IN (SELECT match_id FROM group_matches)
+        ''')
+        # Delete predictions that don't belong to any group
+        cursor.execute('''
+            DELETE FROM predictions 
+            WHERE match_id NOT IN (SELECT match_id FROM group_matches)
+        ''')
         conn.commit()
     except Exception as e:
         print(f"Error clearing history: {e}")
@@ -176,6 +210,19 @@ def delete_prediction(match_id: int):
         conn.commit()
     except Exception as e:
         print(f"Error deleting prediction {match_id}: {e}")
+    finally:
+        conn.close()
+
+def restore_to_history(match_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('UPDATE predictions SET visible_in_history = 1 WHERE match_id = ?', (match_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error restoring prediction {match_id}: {e}")
+        return False
     finally:
         conn.close()
 
@@ -265,6 +312,119 @@ def clear_best_picks():
         conn.commit()
     except Exception as e:
         print(f"Error clearing accumulators: {e}")
+    finally:
+        conn.close()
+
+# --- Group / Folder Functions ---
+
+def create_group(name: str):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT INTO prediction_groups (name) VALUES (?)', (name,))
+        conn.commit()
+        return {"id": cursor.lastrowid, "name": name}
+    except sqlite3.IntegrityError:
+        return {"error": "Group already exists"}
+    except Exception as e:
+        print(f"Error creating group: {e}")
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+def get_groups():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            SELECT g.id, g.name, g.created_at, COUNT(gm.match_id) as match_count 
+            FROM prediction_groups g
+            LEFT JOIN group_matches gm ON g.id = gm.group_id
+            GROUP BY g.id
+            ORDER BY g.created_at DESC
+        ''')
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        print(f"Error fetching groups: {e}")
+        return []
+    finally:
+        conn.close()
+
+def delete_group(group_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM group_matches WHERE group_id = ?', (group_id,))
+        cursor.execute('DELETE FROM prediction_groups WHERE id = ?', (group_id,))
+        conn.commit()
+    except Exception as e:
+        print(f"Error deleting group {group_id}: {e}")
+    finally:
+        conn.close()
+
+def add_match_to_group(group_id: int, match_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('INSERT OR IGNORE INTO group_matches (group_id, match_id) VALUES (?, ?)', (group_id, match_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error adding match {match_id} to group {group_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def remove_match_from_group(group_id: int, match_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('DELETE FROM group_matches WHERE group_id = ? AND match_id = ?', (group_id, match_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error removing match {match_id} from group {group_id}: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_matches_by_group(group_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            SELECT p.* FROM predictions p
+            JOIN group_matches gm ON p.match_id = gm.match_id
+            WHERE gm.group_id = ?
+            ORDER BY gm.added_at DESC
+        ''', (group_id,))
+        rows = cursor.fetchall()
+        results = []
+        for row in rows:
+            db_data = dict(row)
+            full_pred = json.loads(db_data['full_analysis_json']) if db_data['full_analysis_json'] else {}
+            full_pred['id'] = db_data['id']
+            full_pred['match_date'] = db_data['match_date']
+            full_pred['teams'] = db_data['teams']
+            full_pred['actual_result'] = db_data['actual_result']
+            full_pred['is_correct'] = db_data['is_correct']
+            
+            if 'primary_pick' not in full_pred:
+                full_pred['primary_pick'] = {
+                    "tip": db_data['safe_bet_tip'],
+                    "confidence": db_data['confidence']
+                }
+            if 'alternative_pick' not in full_pred:
+                 full_pred['alternative_pick'] = None
+                 
+            results.append(full_pred)
+        return results
+    except Exception as e:
+        print(f"Error fetching matches for group {group_id}: {e}")
+        return []
     finally:
         conn.close()
 

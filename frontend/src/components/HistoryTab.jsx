@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap, FolderPlus } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
     baseURL: API_URL,
-    timeout: 600000 // 10 minutes
+    timeout: 1800000 // 30 minutes
 });
 
 // Axios Request Interceptor to inject JWT token
@@ -27,9 +27,17 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const [bestPicks, setBestPicks] = useState(null);
     const [generatingPicks, setGeneratingPicks] = useState(false);
 
+    // Groups State
+    const [groups, setGroups] = useState([]);
+    const [showGroupModal, setShowGroupModal] = useState(false);
+    const [selectedMatchForGroup, setSelectedMatchForGroup] = useState(null);
+    const [newGroupName, setNewGroupName] = useState('');
+    const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
+
     useEffect(() => {
         fetchHistory();
         fetchBestPicks();
+        fetchGroups();
     }, []);
 
     const fetchHistory = async () => {
@@ -78,6 +86,41 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
             alert("Failed to generate best picks. Make sure you have history saved!");
         } finally {
             setGeneratingPicks(false);
+        }
+    };
+
+    const fetchGroups = async () => {
+        try {
+            const response = await api.get('/groups');
+            setGroups(response.data);
+        } catch (err) {
+            console.error("Failed to fetch groups:", err);
+        }
+    };
+
+    const handleAddToExistingGroup = async (groupId) => {
+        try {
+            await api.post(`/groups/${groupId}/matches`, { match_id: selectedMatchForGroup.match_id });
+            alert("Match successfully added to group!");
+            setShowGroupModal(false);
+            fetchGroups(); // refresh counts
+        } catch (err) {
+            console.error(err);
+            alert("Failed to add match to group.");
+        }
+    };
+
+    const handleCreateGroupAndAdd = async () => {
+        try {
+            const res = await api.post('/groups', { name: newGroupName });
+            const newGroupId = res.data.id;
+            await api.post(`/groups/${newGroupId}/matches`, { match_id: selectedMatchForGroup.match_id });
+            alert("Group created and match added!");
+            setNewGroupName('');
+            setShowGroupModal(false);
+            fetchGroups();
+        } catch (err) {
+            alert(err.response?.data?.detail || "Failed to create group.");
         }
     };
 
@@ -185,6 +228,13 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                     AI Master Accumulator
                                 </h3>
                             </div>
+
+                            {bestPicks.total_accumulator_odds && (
+                                <div className="mb-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
+                                    <span className="text-sm font-bold text-emerald-400">Total Parlay Odds:</span>
+                                    <span className="text-lg font-black text-white">{bestPicks.total_accumulator_odds}x</span>
+                                </div>
+                            )}
                             <p className="text-amber-100/80 text-sm max-w-3xl leading-relaxed">
                                 {bestPicks.master_reasoning}
                             </p>
@@ -209,10 +259,17 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                     </div>
                                     <h4 className="font-bold text-white text-md mb-2">{pick.teams}</h4>
 
-                                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3">
-                                        <span className="text-xs text-amber-500 mr-2 font-bold">SAFEST TIP:</span>
-                                        <span className="text-sm font-black text-amber-400">{pick.chosen_tip || pick.safe_bet_tip}</span>
-                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-amber-300 font-mono">
+                                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3 flex-wrap gap-2">
+                                        <div className="flex items-center">
+                                            <span className="text-xs text-amber-500 mr-2 font-bold">SAFEST TIP:</span>
+                                            <span className="text-sm font-black text-amber-400">{pick.chosen_tip || pick.safe_bet_tip}</span>
+                                        </div>
+                                        {pick.odds && (
+                                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-[10px] text-emerald-300 font-mono font-bold border border-emerald-500/30">
+                                                {pick.odds}
+                                            </span>
+                                        )}
+                                        <span className="px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-amber-300 font-mono">
                                             {pick.confidence}%
                                         </span>
                                     </div>
@@ -254,13 +311,28 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                         <div className="text-xs text-gray-400 font-mono">
                                             {new Date(item.match_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                                         </div>
-                                        <button
-                                            onClick={(e) => handleDeletePrediction(e, item.match_id)}
-                                            className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                            title="Delete Prediction"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        <div className="flex gap-2">
+                                            {isLoggedIn && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedMatchForGroup(item);
+                                                        setShowGroupModal(true);
+                                                    }}
+                                                    className="p-1.5 text-gray-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                                                    title="Add to Group Folder"
+                                                >
+                                                    <FolderPlus className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={(e) => handleDeletePrediction(e, item.match_id)}
+                                                className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                title="Delete Prediction"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
                                     </div>
                                     <h3 className="text-lg font-bold text-white">{item.teams || "Unknown Match"}</h3>
                                     <div className="flex flex-col gap-2 mt-2">
@@ -322,6 +394,59 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* Group Assignment Modal */}
+            {showGroupModal && selectedMatchForGroup && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
+                        <button onClick={() => setShowGroupModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white">×</button>
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
+                            <FolderPlus className="text-blue-400" /> Add to Group
+                        </h3>
+
+                        <div className="mb-4 bg-gray-900/50 p-3 rounded border border-gray-700">
+                            <span className="text-xs text-gray-400 uppercase tracking-wider block mb-1">Target Match</span>
+                            <p className="font-semibold text-sm text-gray-200">{selectedMatchForGroup.teams}</p>
+                        </div>
+
+                        {groups.length > 0 && (
+                            <div className="mb-5 space-y-2 max-h-40 overflow-y-auto custom-scrollbar">
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Existing Folders</label>
+                                {groups.map(g => (
+                                    <button
+                                        key={g.id}
+                                        onClick={() => handleAddToExistingGroup(g.id)}
+                                        className="w-full text-left px-3 py-3 bg-gray-700 hover:bg-gray-600 rounded flex justify-between items-center transition-colors border border-gray-600 hover:border-blue-500/50"
+                                    >
+                                        <span className="font-medium">{g.name}</span>
+                                        <span className="text-xs text-gray-400 bg-gray-900/50 px-2 py-1 rounded">{g.match_count} matches</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-4 pt-5 border-t border-gray-700">
+                            <label className="block text-sm font-medium text-gray-400 mb-2">Create New Folder</label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newGroupName}
+                                    onChange={e => setNewGroupName(e.target.value)}
+                                    placeholder="e.g. Monday's Matches"
+                                    className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+                                />
+                                <button
+                                    onClick={handleCreateGroupAndAdd}
+                                    disabled={!newGroupName.trim()}
+                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded text-white font-semibold flex items-center gap-2 shadow-lg disabled:opacity-50 transition-colors text-sm"
+                                >
+                                    Create
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
