@@ -254,7 +254,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="text-xs text-amber-500/70 font-mono">
-                                            {new Date(pick.match_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                            {new Date(pick.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' })}
                                         </div>
                                     </div>
                                     <h4 className="font-bold text-white text-md mb-2">{pick.teams}</h4>
@@ -309,7 +309,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 <div className="flex-1">
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="text-xs text-gray-400 font-mono">
-                                            {new Date(item.match_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                            {new Date(item.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
                                         </div>
                                         <div className="flex gap-2">
                                             {isLoggedIn && (

@@ -203,7 +203,6 @@ def delete_prediction(match_id: int):
     try:
         # User requested a strict hard delete across all associations
         cursor.execute('DELETE FROM group_matches WHERE match_id = ?', (match_id,))
-        cursor.execute('DELETE FROM ai_best_picks WHERE match_id = ?', (match_id,))
         cursor.execute('DELETE FROM predictions WHERE match_id = ?', (match_id,))
         conn.commit()
     except Exception as e:
@@ -385,10 +384,9 @@ def remove_match_from_group(group_id: int, match_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        # Strict hard delete: wipe from the entire database, not just the group link
+        # Soft unarchive: remove from the specific folder but restore visibility in the main history feed
         cursor.execute('DELETE FROM group_matches WHERE group_id = ? AND match_id = ?', (group_id, match_id))
-        cursor.execute('DELETE FROM ai_best_picks WHERE match_id = ?', (match_id,))
-        cursor.execute('DELETE FROM predictions WHERE match_id = ?', (match_id,))
+        cursor.execute('UPDATE predictions SET visible_in_history = 1 WHERE match_id = ?', (match_id,))
         conn.commit()
         return True
     except Exception as e:

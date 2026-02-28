@@ -22,14 +22,17 @@ export const BetSlipProvider = ({ children }) => {
     }, [betSlip]);
 
     const addToSlip = (bet) => {
-        // Avoid duplicates
-        if (!betSlip.some(b => b.match_id === bet.match_id)) {
-            setBetSlip([...betSlip, bet]);
-        }
+        setBetSlip(prevSlip => {
+            // Avoid duplicates
+            if (prevSlip.some(b => b.match_id === bet.match_id)) {
+                return prevSlip;
+            }
+            return [...prevSlip, bet];
+        });
     };
 
     const removeFromSlip = (matchId) => {
-        setBetSlip(betSlip.filter(bet => bet.match_id !== matchId));
+        setBetSlip(prevSlip => prevSlip.filter(bet => bet.match_id !== matchId));
     };
 
     const clearSlip = () => {

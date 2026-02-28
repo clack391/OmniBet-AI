@@ -130,7 +130,7 @@ const BetSlipSidebar = () => {
                         <div className="text-xs text-gray-400 mb-1 font-semibold">{bet.match}</div>
                         {bet.match_date && (
                             <div className="text-[10px] text-gray-500 mb-2 font-mono">
-                                {new Date(bet.match_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                {new Date(bet.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
                             </div>
                         )}
                         <div className="text-blue-300 font-bold">{bet.selection}</div>

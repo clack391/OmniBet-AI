@@ -17,7 +17,7 @@ model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, match_date: str = None):
+def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, home_squad: dict = None, away_squad: dict = None, match_date: str = None):
 
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
@@ -69,6 +69,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     Home Team ({team_a}): {json.dumps(home_standings, indent=2) if home_standings else "N/A"}
     Away Team ({team_b}): {json.dumps(away_standings, indent=2) if away_standings else "N/A"}
     
+    ### Official Verified Rosters (ANTI-HALLUCINATION TRUTH)
+    Home Team ({team_a}) Coach & Squad: {json.dumps(home_squad, indent=2) if home_squad else "N/A"}
+    Away Team ({team_b}) Coach & Squad: {json.dumps(away_squad, indent=2) if away_squad else "N/A"}
+    
     ### Market Odds (Implied Probability Context)
     {json.dumps(odds_data, indent=2) if odds_data else "No live odds available."}
     
@@ -85,7 +89,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Rule 3 - Net Impact of Absences**: Cross-reference Team A's missing attackers against Team B's missing defenders using your Google Search. Explicitly name the available bench/impact players who will be relied upon to fill the gaps.
        - **Rule 4 - Edge Case Safeguard**: If specific bench personnel or interval data is unavailable after searching, acknowledge the missing data and weigh the primary prediction heavily toward recent form and overall head-to-head stats.
        - **Competition Isolation & The First Leg Anchor**: Explicitly separate domestic league form from cup/continental form. IF THIS IS A CUP OR CONTINENTAL MATCH, YOU MUST USE GOOGLE SEARCH TO FIND OUT IF THIS IS A 2ND-LEG TIE. If a team is leading on aggregate, they do not need to win; they will play highly conservative, suffocating football. Do not blindly predict the favorite to win if a draw advances them. 
-       - **ANTI-HALLUCINATION & ENTITY RESOLUTION**: When reading Google Search headlines, you MUST be hyper-vigilant about who a statistic belongs to. DO NOT accidentally map an individual opposing player's statistic (e.g., "Saka ends 15-match drought") to the entire team you are analyzing. Strictly verify matching nouns and adjectives.
+       - **ANTI-HALLUCINATION & ENTITY RESOLUTION**: When reading Google Search headlines, you MUST be hyper-vigilant about who a statistic belongs to. DO NOT accidentally map an individual opposing player's statistic to the entire team. 
+       - **STRICT ROSTER VERIFICATION**: You are STRICTLY FORBIDDEN from hallucinating players onto teams. You MUST ONLY use the exact players and coaches strictly defined in the `Official Verified Rosters` block above. If a player or manager is NOT in that array, THEY DO NOT EXIST for this team. Ignore any conflicting internet transfer rumors (e.g., "Liverpool linked with Wirtz"). If a player is missing from the search results but is in the roster, they are available. If a player is in the search results but NOT in the roster, they DO NOT PLAY FOR THIS TEAM.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -117,7 +122,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
          - *CRITICAL NEWS IMPACT*: If Google Search reveals a Top Goalscorer, Star Player, or Captain is missing/injured or recently left the club in a transfer, you MUST drastically reduce the confidence of goal-heavy markets.
     
     6. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
-       - FIRST: If you have Google Search access, explicitly search for: "latest team news, recent player transfers, injuries, and starting lineups for {team_a} vs {team_b} today". 
+       - FIRST: If you have Google Search access, explicitly search for: "confirmed injuries, suspended players, and official starting lineups for {team_a} vs {team_b} today". Do NOT search for transfer rumors.
        - SECOND: Analyze the offensive stats vs defensive stats, xG, and Fatigue.
 
     7. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:

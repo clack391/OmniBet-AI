@@ -16,7 +16,8 @@ from src.services.sports_api import (
     fetch_latest_odds,
     fetch_match_h2h,
     fetch_team_form,
-    get_team_standings
+    get_team_standings,
+    fetch_team_squad
 )
 from src.rag.pipeline import predict_match, risk_manager_review
 from src.database.db import get_cached_prediction, save_prediction
@@ -100,7 +101,11 @@ def run_daily_cron():
             home_standings = get_team_standings(home_id, competition_id) if home_id else {}
             away_standings = get_team_standings(away_id, competition_id) if away_id else {}
             
-            # 7. Scrubber
+            # 7. Get Official Squads
+            home_squad = fetch_team_squad(home_id) if home_id else None
+            away_squad = fetch_team_squad(away_id) if away_id else None
+
+            # 8. Scrubber
             if 'score' in stats:
                 del stats['score']
             if 'match' in stats and 'score' in stats['match']:
@@ -108,9 +113,9 @@ def run_daily_cron():
                 
             match_date = stats.get('match', {}).get('utcDate') or stats.get('utcDate')
             
-            # 8. Agent 1
+            # 9. Agent 1
             initial_prediction = predict_match(
-                home_team, away_team, stats, odds, h2h_data, home_form, away_form, home_standings, away_standings, match_date=match_date
+                home_team, away_team, stats, odds, h2h_data, home_form, away_form, home_standings, away_standings, home_squad=home_squad, away_squad=away_squad, match_date=match_date
             )
             
             # 9. Agent 2

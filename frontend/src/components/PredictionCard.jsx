@@ -304,7 +304,7 @@ const PredictionCard = ({ prediction }) => {
                             </button>
 
                             {/* Expandable Content */}
-                            <div className={`transition-all duration-300 ease-in-out ${showLogic ? 'max-h-[500px] opacity-100 p-5 pt-0' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                            <div className={`transition-all duration-300 ease-in-out ${showLogic ? 'max-h-[600px] overflow-y-auto opacity-100 p-5 pt-0' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                                 <div className="pt-4 border-t border-slate-700/50">
                                     <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-mono bg-black/20 p-4 rounded-lg">
                                         {prediction.step_by_step_reasoning}

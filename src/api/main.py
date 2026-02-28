@@ -13,7 +13,8 @@ from src.services.sports_api import (
     fetch_latest_odds,
     fetch_match_h2h,
     fetch_team_form,
-    get_team_standings
+    get_team_standings,
+    fetch_team_squad
 )
 from src.rag.pipeline import predict_match, risk_manager_review, generate_best_picks
 from src.database.db import (
@@ -244,7 +245,11 @@ def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(ge
                 # Try to parse the ISO format string 
                 # API usually gives something like '2024-03-22T20:00:00Z'
                 dt = datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
-                formatted_date = dt.strftime("%Y-%m-%d %H:%M UTC")
+                
+                from zoneinfo import ZoneInfo
+                dt_wat = dt.astimezone(ZoneInfo("Africa/Lagos"))
+                
+                formatted_date = dt_wat.strftime("%Y-%m-%d %H:%M WAT")
             except Exception:
                 formatted_date = str(match_date_str)
         
@@ -392,7 +397,11 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
         home_standings = get_team_standings(home_id, competition_id) if home_id else {}
         away_standings = get_team_standings(away_id, competition_id) if away_id else {}
 
-        # 8. ANTI-DATA LEAKAGE SCRUBBER
+        # 8. Get Official Squads
+        home_squad = fetch_team_squad(home_id) if home_id else None
+        away_squad = fetch_team_squad(away_id) if away_id else None
+
+        # 9. ANTI-DATA LEAKAGE SCRUBBER
         # Actively delete the 'score' objects from the current match stats
         # so the AI cannot "cheat" by looking at the live score of an IN_PLAY match.
         if 'score' in stats:
@@ -400,10 +409,10 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
         if 'match' in stats and 'score' in stats['match']:
             del stats['match']['score']
 
-        # 9. Extract Match Date for Anti-Cheating Backtest Mode
+        # 10. Extract Match Date for Anti-Cheating Backtest Mode
         match_date = stats.get('match', {}).get('utcDate') or stats.get('utcDate')
 
-        # 10. Predict (Agent 1)
+        # 11. Predict (Agent 1)
         initial_prediction = predict_match(
             home_team,
             away_team,
@@ -414,6 +423,8 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
             away_form,
             home_standings,
             away_standings,
+            home_squad=home_squad,
+            away_squad=away_squad,
             match_date=match_date
         )
 
