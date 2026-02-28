@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target } from 'lucide-react';
+import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target, Flag, AlertTriangle, User } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext';
 
 const PredictionCard = ({ prediction }) => {
@@ -43,6 +43,9 @@ const PredictionCard = ({ prediction }) => {
         if (market.includes('BTTS')) return <TrendingUp className="w-4 h-4 text-accent-green" />;
         if (market.includes('Half') || market.includes('HT')) return <Clock className="w-4 h-4 text-orange-400" />;
         if (market.includes('Score') || market.includes('Exact')) return <Target className="w-4 h-4 text-red-400" />;
+        if (market.includes('Corner')) return <Flag className="w-4 h-4 text-cyan-400" />;
+        if (market.includes('Card') || market.includes('Booking')) return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+        if (market.includes('Player') || market.includes('Prop')) return <User className="w-4 h-4 text-emerald-400" />;
         return <Bolt className="w-4 h-4 text-accent-purple" />;
     };
 

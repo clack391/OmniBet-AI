@@ -80,9 +80,11 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        
     2. **DYNAMIC WEIGHTING & DATA SEARCH FALLBACK**:
        - If any critical data block above says "No data available." or "N/A" (especially Odds or Standings), you MUST use Google Search to fetch recent team news, historical results, or odds.
+       - **Rule 1 - Contextualize Motivation**: You must explicitly state how each team's current league table position dictates their motivation and likely tactical setup (e.g., desperate for points near relegation vs. comfortable mid-table).
+       - **Rule 2 - Evaluate True Fatigue**: Do not just state a team is "fatigued." Analyze their `recent_scorelines` history. Describe if the fatigue is physical (heavy minutes/grueling match like a 2-2 draw) or mental (tough loss/draw).
+       - **Rule 3 - Net Impact of Absences**: Cross-reference Team A's missing attackers against Team B's missing defenders using your Google Search. Explicitly name the available bench/impact players who will be relied upon to fill the gaps.
+       - **Rule 4 - Edge Case Safeguard**: If specific bench personnel or interval data is unavailable after searching, acknowledge the missing data and weigh the primary prediction heavily toward recent form and overall head-to-head stats.
        - **Competition Isolation & The First Leg Anchor**: Explicitly separate domestic league form from cup/continental form. IF THIS IS A CUP OR CONTINENTAL MATCH, YOU MUST USE GOOGLE SEARCH TO FIND OUT IF THIS IS A 2ND-LEG TIE. If a team is leading on aggregate, they do not need to win; they will play highly conservative, suffocating football. Do not blindly predict the favorite to win if a draw advances them. 
-       - **Motivation & Fatigue**: Actively deduce or search for rest days, schedule congestion, or heavy travel distances.
-       - **Expected Goals (xG)**: Favor teams with high underlying xG creation over teams that are just getting lucky finishes. Flag dangerous underdogs.
        - **ANTI-HALLUCINATION & ENTITY RESOLUTION**: When reading Google Search headlines, you MUST be hyper-vigilant about who a statistic belongs to. DO NOT accidentally map an individual opposing player's statistic (e.g., "Saka ends 15-match drought") to the entire team you are analyzing. Strictly verify matching nouns and adjectives.
 
     3. **GAME STATE SIMULATION**:
@@ -90,7 +92,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Scenario A (The Expected Script)**: If the pre-match favorite (or Home team) scores first within 30 minutes, how does the opponent historically respond? Do they have the tactical discipline to avoid a blowout, or do they collapse?
        - **Scenario B (The Underdog Disruption)**: If the underdog (or Away team) scores first against the run of play, what happens? Does the favorite have the attacking metrics to break down a low block, or do they leave themselves vulnerable to devastating counter-attacks?
 
-    4. **Analyze the following 12 Core Betting Markets**:
+    4. **Analyze the following 16 Core Betting Markets**:
        - **Match Winner (1X2)**: Home, Draw, or Away?
        - **Match Total Goals**: Over/Under 2.5?
        - **BTTS**: Both Teams To Score (Yes/No)?
@@ -103,6 +105,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **HT/FT**: Half Time/Full Time result.
        - **Correct Score**: Exact final score prediction.
        - **Team Exact Goals**: Exact number of goals scored by Home or Away team.
+       - **Total Match Corners**: Over/Under based on tactical matchups & possession.
+       - **Total Match Cards**: Over/Under based on motivation, fouls, and derby intensity.
+       - **Highest Scoring Half**: 1st Half, 2nd Half, or Tie.
+       - **Player Props**: e.g. Anytime Goalscorer, Shots on Target for specific players.
 
     5. **Mathematical Synthesis**:
        - Weigh probabilities of ALL 12 markets against each other.
@@ -141,7 +147,11 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             "Second_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
             "HT_FT": "Prediction: [Pick]. [Reasoning...]",
             "Correct_Score": "Prediction: [Score]. [Reasoning...]",
-            "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]"
+            "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]",
+            "Total_Corners": "Prediction: [O/U]. [Reasoning...]",
+            "Total_Cards": "Prediction: [O/U Booking Points]. [Reasoning...]",
+            "Highest_Scoring_Half": "Prediction: [1st Half / 2nd Half / Tie]. [Reasoning...]",
+            "Player_Props": "Prediction: [Player Bet]. [Reasoning...]"
         }},
         "primary_pick": {{
             "tip": "The Safest Banker Prediction",
@@ -267,7 +277,11 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
             "Second_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
             "HT_FT": "Prediction: [Pick]. [Reasoning...]",
             "Correct_Score": "Prediction: [Score]. [Reasoning...]",
-            "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]"
+            "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]",
+            "Total_Corners": "Prediction: [O/U]. [Reasoning...]",
+            "Total_Cards": "Prediction: [O/U Booking Points]. [Reasoning...]",
+            "Highest_Scoring_Half": "Prediction: [1st Half / 2nd Half / Tie]. [Reasoning...]",
+            "Player_Props": "Prediction: [Player Bet]. [Reasoning...]"
         }},
         "primary_pick": {{
             "tip": "The Final, Approved Safe Bet",

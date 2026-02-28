@@ -6,10 +6,10 @@ from functools import wraps
 _last_called = 0.0
 _global_lock = threading.Lock()
 
-def rate_limit(calls_per_minute=10):
+def rate_limit(calls_per_minute=8):
     """
     Globally spaces out function executions so we don't exceed the API ratelimit.
-    10 calls per minute = 60.0 / 10 = 6.0 seconds per call.
+    8 calls per minute = 60.0 / 8 = 7.5 seconds per call to provide a safe buffer for the Free Tier.
     """
     min_interval = 60.0 / calls_per_minute
 

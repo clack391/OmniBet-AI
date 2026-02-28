@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen } from 'lucide-react';
+import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send } from 'lucide-react';
 import PredictionCard from './PredictionCard';
 import HistoryTab from './HistoryTab';
 import GroupsTab from './GroupsTab';
@@ -232,23 +232,34 @@ const Dashboard = () => {
                     <div className="text-sm text-gray-400 mt-1">JIT RAG Powered Engine</div>
                 </div>
 
-                {/* Admin Auth Controls */}
-                <div className="flex bg-gray-900 rounded-lg p-1">
-                    {isLoggedIn ? (
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors border border-gray-700 rounded-md"
-                        >
-                            <LogOut className="w-4 h-4" /> Admin Logout
-                        </button>
-                    ) : (
-                        <button
-                            onClick={() => setShowLoginModal(true)}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:text-white transition-colors bg-emerald-900/20 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-md"
-                        >
-                            <ShieldAlert className="w-4 h-4" /> Admin Access
-                        </button>
-                    )}
+                {/* Community and Admin Controls */}
+                <div className="flex items-center gap-3">
+                    <a
+                        href="https://t.me/+8omIp4SuGL84ZGU0"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-sky-400 hover:text-white transition-colors bg-sky-900/20 border border-sky-500/30 hover:bg-sky-500/20 rounded-md"
+                    >
+                        <Send className="w-4 h-4" /> Join Telegram
+                    </a>
+
+                    <div className="flex bg-gray-900 rounded-lg p-1">
+                        {isLoggedIn ? (
+                            <button
+                                onClick={handleLogout}
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors border border-gray-700 rounded-md"
+                            >
+                                <LogOut className="w-4 h-4" /> Admin Logout
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setShowLoginModal(true)}
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:text-white transition-colors bg-emerald-900/20 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-md"
+                            >
+                                <ShieldAlert className="w-4 h-4" /> Admin Access
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Tab Navigation */}

@@ -77,12 +77,10 @@ def run_daily_cron():
         print(f"⏳ No prediction found. Starting analysis...")
         
         try:
-            # 2. Get Stats 
-            stats = get_match_stats(match_id)
-            if "error" in stats:
-                print(f"⚠️ Stats error: {stats['error']}")
-                continue
-                
+            # 2. Get Stats from pre-fetched calendar payload string to save API quota
+            stats = match.copy()
+            
+
             # 3. Get H2H
             h2h_data = fetch_match_h2h(match_id)
             if h2h_data and 'matches' in h2h_data:
