@@ -17,7 +17,7 @@ model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, home_squad: dict = None, away_squad: dict = None, match_date: str = None):
+def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, match_date: str = None):
 
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
@@ -69,10 +69,6 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     Home Team ({team_a}): {json.dumps(home_standings, indent=2) if home_standings else "N/A"}
     Away Team ({team_b}): {json.dumps(away_standings, indent=2) if away_standings else "N/A"}
     
-    ### Official Verified Rosters (ANTI-HALLUCINATION TRUTH)
-    Home Team ({team_a}) Coach & Squad: {json.dumps(home_squad, indent=2) if home_squad else "N/A"}
-    Away Team ({team_b}) Coach & Squad: {json.dumps(away_squad, indent=2) if away_squad else "N/A"}
-    
     ### Market Odds (Implied Probability Context)
     {json.dumps(odds_data, indent=2) if odds_data else "No live odds available."}
     
@@ -90,7 +86,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Rule 4 - Edge Case Safeguard**: If specific bench personnel or interval data is unavailable after searching, acknowledge the missing data and weigh the primary prediction heavily toward recent form and overall head-to-head stats.
        - **Competition Isolation & The First Leg Anchor**: Explicitly separate domestic league form from cup/continental form. IF THIS IS A CUP OR CONTINENTAL MATCH, YOU MUST USE GOOGLE SEARCH TO FIND OUT IF THIS IS A 2ND-LEG TIE. If a team is leading on aggregate, they do not need to win; they will play highly conservative, suffocating football. Do not blindly predict the favorite to win if a draw advances them. 
        - **ANTI-HALLUCINATION & ENTITY RESOLUTION**: When reading Google Search headlines, you MUST be hyper-vigilant about who a statistic belongs to. DO NOT accidentally map an individual opposing player's statistic to the entire team. 
-       - **STRICT ROSTER VERIFICATION**: You are STRICTLY FORBIDDEN from hallucinating players onto teams. You MUST ONLY use the exact players and coaches strictly defined in the `Official Verified Rosters` block above. If a player or manager is NOT in that array, THEY DO NOT EXIST for this team. Ignore any conflicting internet transfer rumors (e.g., "Liverpool linked with Wirtz"). If a player is missing from the search results but is in the roster, they are available. If a player is in the search results but NOT in the roster, they DO NOT PLAY FOR THIS TEAM.
+       - **STRICT ROSTER VERIFICATION (GOOGLE ONLY)**: You are STRICTLY FORBIDDEN from hallucinating players onto teams. You MUST use your Google Search tool to search for "Confirmed active squad and injuries for {team_a} and {team_b}" to determine who actually plays for the team today. If a player does NOT come up in your search as an active squad member for that team, THEY DO NOT EXIST for this team. Ignore older transfer rumors.
+       - **Rule 5 - Regression to the Mean**: If a team is on an extreme streak (e.g., 5+ games without scoring, or a 10-match winless/winning streak), you MUST apply Regression to the Mean logic. The probability of a breakout or reversion increases with each game. Do NOT anchor your prediction to the assumption that an extreme streak will continue indefinitely into this specific match.
+       - **Rule 6 - High-Variance Desperation States**: If a team is facing relegation or knockout desperation, you MUST classify the match as a "High-Variance Game State". Desperate teams do not play conservative, low-scoring football; they abandon defensive structures to chase points, making games open, chaotic, and goal-heavy. Desperation = Goals, not defense.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -245,7 +243,9 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
     ### RISK MANAGEMENT RULES
     1. **Catching the "Human Bias"**: Identify any widespread public narratives about this match (e.g., "The Home Team is unbeatable at home" or "They drew 0-0 last match so it will be low scoring again"). Cross-reference this bias with the underlying defensive/offensive data. If the public expectation contradicts the deep data, aggressive bet sizing against the public is warranted.
 
-    2. **Scrutinize the `primary_pick` (The Banker)**: Is it too aggressive? 
+    2. **Catching the "Gambler's Fallacy" & "Desperation"**: Do not assume extreme streaks (e.g., 5 games without scoring) will continue indefinitely; enforce Regression to the Mean. Furthermore, if a team is facing relegation or knockout desperation, they will abandon defense to chase points. Relegate defensive (under 2.5) picks if one team is desperate.
+
+    3. **Scrutinize the `primary_pick` (The Banker)**: Is it too aggressive? 
        - **HONOR INJURY NEWS**: Read the `step_by_step_reasoning` above. If the primary agent discovered injuries to top strikers, you MUST ruthlessly downgrade goal-dependent picks.
        - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. If the primary pick completely fails in "Scenario B (The Underdog Disruption)", it is NOT a safe banker. Downgrade it!
        - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records without pure luck.
