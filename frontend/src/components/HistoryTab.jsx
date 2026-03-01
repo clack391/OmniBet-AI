@@ -26,6 +26,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     // AI Accumulator State
     const [bestPicks, setBestPicks] = useState(null);
     const [generatingPicks, setGeneratingPicks] = useState(false);
+    const [targetOdds, setTargetOdds] = useState('');
 
     // Groups State
     const [groups, setGroups] = useState([]);
@@ -79,8 +80,10 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
     const handleGenerateBestPicks = async () => {
         setGeneratingPicks(true);
         try {
-            const response = await api.post(`/generate-best-picks`);
+            const payload = targetOdds ? { target_odds: parseFloat(targetOdds) } : {};
+            const response = await api.post(`/generate-best-picks`, payload);
             setBestPicks(response.data);
+            setTargetOdds(''); // Reset after successful generation
         } catch (err) {
             console.error(err);
             alert("Failed to generate best picks. Make sure you have history saved!");
@@ -190,6 +193,18 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <div className="relative">
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="1.1"
+                            placeholder="Target Odds (e.g. 10.0)"
+                            value={targetOdds}
+                            onChange={(e) => setTargetOdds(e.target.value)}
+                            disabled={generatingPicks || history.length === 0}
+                            className="w-48 px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                        />
+                    </div>
                     <button
                         onClick={handleGenerateBestPicks}
                         disabled={generatingPicks || history.length === 0}
@@ -215,7 +230,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
             </div>
 
             {/* AI Accumulator Section */}
-            {bestPicks && bestPicks.picks && bestPicks.picks.length > 0 && (
+            {bestPicks && bestPicks.picks && (
                 <div className="mb-8 p-6 bg-gradient-to-br from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-2xl relative overflow-hidden">
                     {/* Decorative Background Icon */}
                     <Zap className="absolute -right-10 -bottom-10 w-64 h-64 text-amber-500/5 rotate-12 pointer-events-none" />

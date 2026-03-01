@@ -158,8 +158,11 @@ def restore_prediction_to_history(match_id: int, current_user: dict = Depends(ge
         raise HTTPException(status_code=400, detail="Failed to restore prediction to history.")
     return {"status": "restored", "match_id": match_id}
 
+class BestPicksRequest(BaseModel):
+    target_odds: float | None = None
+
 @app.post("/generate-best-picks")
-def create_best_picks(current_user: dict = Depends(get_admin_user)):
+def create_best_picks(req: BestPicksRequest = None, current_user: dict = Depends(get_admin_user)):
     # 1. Get all saved history
     saved_predictions = get_all_predictions()
 
@@ -167,10 +170,13 @@ def create_best_picks(current_user: dict = Depends(get_admin_user)):
     if not saved_predictions:
         raise HTTPException(status_code=400, detail="No predictions in history to analyze.")
 
-    # 3. Call the Gemini Chief Risk Officer Agent
-    best_picks_json = generate_best_picks(saved_predictions)
+    # 3. Get optional target odds
+    target_odds = req.target_odds if req else None
 
-    # 4. Save to DB
+    # 4. Call the Gemini Chief Risk Officer Agent
+    best_picks_json = generate_best_picks(saved_predictions, target_odds=target_odds)
+
+    # 5. Save to DB
     save_best_picks(best_picks_json)
 
     return best_picks_json

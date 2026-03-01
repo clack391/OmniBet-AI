@@ -41,7 +41,7 @@ const PredictionCard = ({ prediction }) => {
         if (market.includes('1X2') || market.includes('Winner')) return <Trophy className="w-4 h-4 text-yellow-400" />;
         if (market.includes('Goals') || market.includes('Over')) return <Activity className="w-4 h-4 text-blue-400" />;
         if (market.includes('BTTS')) return <TrendingUp className="w-4 h-4 text-accent-green" />;
-        if (market.includes('Half') || market.includes('HT')) return <Clock className="w-4 h-4 text-orange-400" />;
+        if (market.includes('Half') || market.includes('HT') || market.includes('Minute')) return <Clock className="w-4 h-4 text-orange-400" />;
         if (market.includes('Score') || market.includes('Exact')) return <Target className="w-4 h-4 text-red-400" />;
         if (market.includes('Corner')) return <Flag className="w-4 h-4 text-cyan-400" />;
         if (market.includes('Card') || market.includes('Booking')) return <AlertTriangle className="w-4 h-4 text-amber-500" />;
