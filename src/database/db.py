@@ -73,6 +73,13 @@ def init_db():
         )
     ''')
     
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -430,6 +437,121 @@ def get_matches_by_group(group_id: int):
     except Exception as e:
         print(f"Error fetching matches for group {group_id}: {e}")
         return []
+    finally:
+        conn.close()
+
+# --- Match Searching Cross Date ---
+import re
+
+def _clean_team_name(name: str) -> str:
+    if not name: return ""
+    name = name.lower()
+    name = re.sub(r'\bfc\b', '', name)
+    name = re.sub(r'\bca\b', '', name)
+    name = re.sub(r'\bunited\b', '', name)
+    name = re.sub(r'\bcity\b', '', name)
+    name = re.sub(r'\bde\b', '', name)
+    name = re.sub(r'\bsc\b', '', name)
+    name = re.sub(r'\bcf\b', '', name)
+    name = re.sub(r'[^a-z0-9]', '', name)
+    return name
+
+def find_fixtures_cross_date(parsed_matches: list):
+    """
+    Given a list of {"home_team": "Team A", "away_team": "Team B"}
+    Looks through ALL daily_fixtures JSON payloads in the database.
+    Returns the enriched matches with their actual `match_id` and `match_date`.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    hydrated_matches = []
+    unmatched_names = []
+    
+    try:
+        cursor.execute("SELECT date, fixtures_json FROM daily_fixtures")
+        rows = cursor.fetchall()
+        
+        # Load all cached fixtures into a single massive array for quick searching
+        all_cached_fixtures = []
+        for row in rows:
+            date_str = row[0]
+            if row[1]:
+                raw_json = json.loads(row[1])
+                
+                # Depending on the active Data Provider (SofaScore vs Football-Data),
+                # the root JSON might be a list, or it might be wrapped in a dict.
+                fixtures_list = []
+                if isinstance(raw_json, dict):
+                    fixtures_list = raw_json.get('matches', []) or raw_json.get('events', [])
+                elif isinstance(raw_json, list):
+                    fixtures_list = raw_json
+                    
+                for f in fixtures_list:
+                    if isinstance(f, dict):
+                        f['_omni_date'] = date_str # Tag the date onto the object
+                        
+                all_cached_fixtures.extend(fixtures_list)
+                
+        # Now fuzzy match each parsed match against this massive array
+        for pm in parsed_matches:
+            targetHome = _clean_team_name(pm.get('home_team', ''))
+            targetAway = _clean_team_name(pm.get('away_team', ''))
+            
+            found = False
+            for f in all_cached_fixtures:
+                fHome = _clean_team_name(f.get('homeTeam', {}).get('name', ''))
+                fAway = _clean_team_name(f.get('awayTeam', {}).get('name', ''))
+                
+                homeMatch = (len(targetHome) > 3 and targetHome in fHome) or (len(fHome) > 3 and fHome in targetHome)
+                awayMatch = (len(targetAway) > 3 and targetAway in fAway) or (len(fAway) > 3 and fAway in targetAway)
+                
+                if homeMatch or awayMatch:
+                    hydrated_matches.append(f)
+                    found = True
+                    break # Stop looking for this specific match once found
+            
+            if not found:
+                unmatched_names.append(f"{pm.get('home_team')} vs {pm.get('away_team')}")
+                
+        return {"matched": hydrated_matches, "unmatched": unmatched_names}
+        
+    except Exception as e:
+        print(f"Error cross-searching dates: {e}")
+        return {"matched": [], "unmatched": []}
+    finally:
+        conn.close()
+
+# --- App Settings Functions ---
+
+def get_app_setting(key: str, default_value: str = None):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT value FROM app_settings WHERE key = ?', (key,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        return default_value
+    except Exception as e:
+        print(f"Error fetching setting {key}: {e}")
+        return default_value
+    finally:
+        conn.close()
+
+def set_app_setting(key: str, value: str):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT OR REPLACE INTO app_settings (key, value)
+            VALUES (?, ?)
+        ''', (key, value))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error setting {key}: {e}")
+        return False
     finally:
         conn.close()
 

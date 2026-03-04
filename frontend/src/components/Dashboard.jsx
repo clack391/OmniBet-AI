@@ -4,6 +4,7 @@ import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn
 import PredictionCard from './PredictionCard';
 import HistoryTab from './HistoryTab';
 import GroupsTab from './GroupsTab';
+import SettingsTab from './SettingsTab';
 import { useBetSlip } from '../context/BetSlipContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -32,6 +33,8 @@ const Dashboard = () => {
     const [predictions, setPredictions] = useState([]);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
+    const [bookingCode, setBookingCode] = useState('');
+    const [isParsingCode, setIsParsingCode] = useState(false);
 
     // Admin Auth State
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -130,13 +133,19 @@ const Dashboard = () => {
                 }
             });
 
-            // Filter matches to only include those strictly on the selected 'date' (ignoring time)
-            // Note: date input is YYYY-MM-DD. match.utcDate is ISO string.
-            // We compare YYYY-MM-DD parts.
+            // Filter matches to only include those strictly on the selected 'date'
+            // We convert the UTC ISO string to the user's local browser timezone first!
             const allMatches = response.data.matches || [];
             const filteredMatches = allMatches.filter(match => {
-                const matchDate = match.utcDate.split('T')[0];
-                return matchDate === date;
+                const matchDate = new Date(match.utcDate);
+
+                // Construct YYYY-MM-DD in the user's local timezone (e.g. WAT)
+                const localYear = matchDate.getFullYear();
+                const localMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
+                const localDay = String(matchDate.getDate()).padStart(2, '0');
+                const localDateStr = `${localYear}-${localMonth}-${localDay}`;
+
+                return localDateStr === date;
             });
 
             setFixtures(filteredMatches);
@@ -222,6 +231,55 @@ const Dashboard = () => {
         }
     };
 
+    const handleParseBookingCode = async () => {
+        if (!bookingCode.trim()) return;
+        setIsParsingCode(true);
+        setError('');
+
+        try {
+            const response = await api.post('/api/sportybet/parse', {
+                booking_code: bookingCode.trim()
+            });
+
+            const rawMatches = response.data.matches;
+            if (!rawMatches || rawMatches.length === 0) {
+                setError("No valid matches could be found in that booking code.");
+                return;
+            }
+
+            const matchedFixtures = response.data.enriched_matches || [];
+            const unmatchedNames = response.data.unmatched_names || [];
+
+            // Automatically select the successfully matched fixtures cross-date
+            setSelectedMatches(prev => {
+                const newSelection = [...prev];
+                matchedFixtures.forEach(mf => {
+                    // Make sure we use the internal ID for deduplication
+                    if (!newSelection.some(selected => selected.id === mf.id)) {
+                        newSelection.push(mf);
+                    }
+                });
+                return newSelection;
+            });
+
+            if (unmatchedNames.length > 0) {
+                setError(`Successfully imported ${matchedFixtures.length} games. Could not locate: ${unmatchedNames.join(', ')} anywhere in the 7-day database.`);
+            } else {
+                setError(`Successfully imported all ${matchedFixtures.length} games to your slip!`);
+                // Auto clear on complete success
+                setTimeout(() => setError(''), 4000);
+            }
+
+            setBookingCode(''); // Clear input
+
+        } catch (err) {
+            console.error("Booking parse error:", err);
+            setError(err.response?.data?.detail || "Failed to parse booking code. Please try again.");
+        } finally {
+            setIsParsingCode(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-gray-900 text-white p-6 font-sans">
             <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between border-b border-gray-800 pb-4 gap-4">
@@ -291,11 +349,23 @@ const Dashboard = () => {
                     >
                         📜 History
                     </button>
+                    {isLoggedIn && (
+                        <button
+                            onClick={() => setActiveTab('settings')}
+                            className={`px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-1.5 ${activeTab === 'settings'
+                                ? 'bg-gray-800 text-teal-400 shadow-sm border border-gray-700'
+                                : 'text-gray-400 hover:text-white'
+                                }`}
+                        >
+                            ⚙️ Settings
+                        </button>
+                    )}
                 </div>
             </header>
 
             {activeTab === 'history' && <HistoryTab onSelectHistoryItem={handleSelectHistoryItem} />}
             {activeTab === 'groups' && <GroupsTab onSelectHistoryItem={handleSelectHistoryItem} />}
+            {activeTab === 'settings' && isLoggedIn && <SettingsTab />}
 
             {activeTab === 'calendar' && (
                 <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -311,6 +381,31 @@ const Dashboard = () => {
                                 onChange={(e) => setDate(e.target.value)}
                                 className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />
+                        </div>
+
+                        {/* Booking Code Importer */}
+                        <div className="mb-6 bg-gray-700/30 rounded-lg p-4 border border-gray-700 flex flex-col sm:flex-row gap-3 items-center">
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs text-gray-400 mb-1">SportyBet Booking Code</label>
+                                <input
+                                    type="text"
+                                    value={bookingCode}
+                                    onChange={(e) => setBookingCode(e.target.value)}
+                                    placeholder="e.g. BC4DF2A..."
+                                    className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500 text-purple-300"
+                                />
+                            </div>
+                            <button
+                                onClick={handleParseBookingCode}
+                                disabled={!bookingCode.trim() || isParsingCode}
+                                className={`mt-5 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 whitespace-nowrap transition-colors ${!bookingCode.trim() || isParsingCode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white'}`}
+                            >
+                                {isParsingCode ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin" /> Scraping...</>
+                                ) : (
+                                    <><Search className="w-4 h-4" /> Import Slip</>
+                                )}
+                            </button>
                         </div>
 
                         {loadingFixtures ? (

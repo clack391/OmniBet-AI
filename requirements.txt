@@ -114,3 +114,4 @@ yarl==1.22.0
 zipp==3.23.0
 pandas==2.2.1
 curl_cffi==0.14.0
+playwright

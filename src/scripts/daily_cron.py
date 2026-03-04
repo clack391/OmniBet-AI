@@ -21,7 +21,8 @@ from src.services.sports_api import (
     get_sofascore_match_stats
 )
 from src.rag.pipeline import predict_match, risk_manager_review
-from src.database.db import get_cached_prediction, save_prediction
+from src.database.db import get_cached_prediction, save_prediction, get_app_setting
+from src.services.sports_api import get_sofascore_fixtures
 
 def run_daily_cron():
     print("🚀 Starting OmniBet AI Daily Cron Job...")
@@ -39,8 +40,15 @@ def run_daily_cron():
     
     print(f"📅 Fetching fixtures between {start_time.strftime('%Y-%m-%d %H:%M')} and {end_time.strftime('%Y-%m-%d %H:%M')} UTC...")
     
+    provider = get_app_setting("primary_provider", "football-data")
+    print(f"⚙️ Active Data Provider: {provider}")
+    
     try:
-        fixtures_data = get_fixtures_by_date(start_date_str, end_date_str)
+        if provider == "sofascore":
+            fixtures_data = get_sofascore_fixtures(start_date_str, end_date_str)
+        else:
+            fixtures_data = get_fixtures_by_date(start_date_str, end_date_str)
+            
         all_matches = fixtures_data.get('matches', [])
     except Exception as e:
         print(f"❌ Failed to fetch fixtures: {e}")
@@ -79,6 +87,41 @@ def run_daily_cron():
         print(f"⏳ No prediction found. Starting analysis...")
         
         try:
+            if provider == "sofascore":
+                print(f"✅ Route: SofaScore AI Pipeline for Match {match_id}")
+                df, advanced_stats = get_sofascore_match_stats(match_id)
+                if not advanced_stats:
+                    print(f"⚠️ Failed to fetch SofaScore stats for match {match_id}")
+                    continue
+                    
+                home_team = advanced_stats.get('metadata', {}).get('home_team', 'Unknown')
+                away_team = advanced_stats.get('metadata', {}).get('away_team', 'Unknown')
+                match_date = match.get('utcDate') # Best practice: pull exact date from the schedule payload
+                
+                odds = fetch_latest_odds(home_team, away_team)
+                
+                initial_prediction = predict_match(
+                    home_team, away_team, 
+                    match_stats={}, odds_data=odds, h2h_data={}, home_form=None, away_form=None, 
+                    home_standings={}, away_standings={}, 
+                    advanced_stats=advanced_stats, match_date=match_date
+                )
+                
+                final_prediction = risk_manager_review(initial_prediction)
+                final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
+                final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
+                
+                final_prediction['match_id'] = match_id
+                final_prediction['match_date'] = match_date
+                save_prediction(final_prediction)
+                
+                print(f"🏆 Successfully saved prediction for {home_team} vs {away_team}")
+                
+                if i < len(today_matches) - 1:
+                    print(f"💤 Sleeping for 30 seconds to respect API rate limits...")
+                    time.sleep(30)
+                continue
+
             # 2. Get Stats from pre-fetched calendar payload string to save API quota
             stats = match.copy()
             

@@ -3,7 +3,7 @@ import time
 import os
 import json
 import google.generativeai as genai
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 import pandas as pd
 from src.utils.rate_limiter import rate_limit
@@ -19,7 +19,7 @@ BASE_URL = "https://api.football-data.org/v4"
 
 # Initialize Gemini for Fallbacks
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel("gemini-3.1-pro-preview")
+model = genai.GenerativeModel("gemini-3-pro-preview")
 
 # Cache for league standings with TTL 
 # Structure: { competition_id: {"data": [...], "fetched_at": datetime} }
@@ -60,6 +60,99 @@ def get_fixtures_by_date(start_date: str, end_date: str):
         return data
     except requests.exceptions.RequestException as e:
         return {"error": str(e)}
+
+def get_sofascore_fixtures(start_date: str, end_date: str):
+    """
+    Fetch fixtures from SofaScore directly instead of football-data.org.
+    Maps exactly to the football-data output schema for frontend compatibility.
+    """
+    try:
+        from curl_cffi import requests as cffi_requests
+    except ImportError:
+        print("Missing curl_cffi for SofaScore. Fast fallback to football-data.")
+        return get_fixtures_by_date(start_date, end_date)
+        
+    
+    # 1. Check DB Cache First
+    # We use a unique prefix for SofaScore cache keys so they don't collide with football-data
+    cache_key = f"sofascore_{start_date}_{end_date}"
+    cached_data = get_cached_fixtures(cache_key)
+    if cached_data:
+        print(f"✅ Loading SofaScore fixtures for {start_date} to {end_date} from Local Database Cache!")
+        return cached_data
+        
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    delta = end_dt - start_dt
+    
+    all_matches = []
+    
+    for i in range(delta.days + 1):
+        target_date = (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
+        url = f"https://api.sofascore.com/api/v1/sport/football/scheduled-events/{target_date}"
+        
+        try:
+            res = cffi_requests.get(url, impersonate="chrome120", timeout=15)
+            if res.status_code == 200:
+                data = res.json()
+                events = data.get("events", [])
+                
+                for event in events:
+                    # Filter for top level or specific tournaments if needed
+                    status_type = event.get("status", {}).get("type")
+                    status = "TIMED"
+                    if status_type == "finished":
+                        status = "FINISHED"
+                    elif status_type == "inprogress":
+                        status = "IN_PLAY"
+                        
+                    home_id = event.get("homeTeam", {}).get("id")
+                    away_id = event.get("awayTeam", {}).get("id")
+                    
+                    mapped_match = {
+                        "id": event.get("id"), # We pass the SofaScore event ID
+                        "utcDate": datetime.fromtimestamp(event.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        "status": status,
+                        "competition": {
+                            "id": event.get("tournament", {}).get("uniqueTournament", {}).get("id") or 2021,
+                            "name": event.get("tournament", {}).get("name", "Unknown")
+                        },
+                        "homeTeam": {
+                            "id": home_id,
+                            "name": event.get("homeTeam", {}).get("name")
+                        },
+                        "awayTeam": {
+                            "id": away_id,
+                            "name": event.get("awayTeam", {}).get("name")
+                        },
+                        "score": {
+                            "fullTime": {
+                                "home": event.get("homeScore", {}).get("current", None),
+                                "away": event.get("awayScore", {}).get("current", None)
+                            }
+                        },
+                        "home_logo": f"https://api.sofascore.app/api/v1/team/{home_id}/image" if home_id else None,
+                        "away_logo": f"https://api.sofascore.app/api/v1/team/{away_id}/image" if away_id else None,
+                        "_timestamp": event.get("startTimestamp", 0) # Temporary key for sorting
+                    }
+                    all_matches.append(mapped_match)
+        except Exception as e:
+            print(f"SofaScore Date Fetch Error for {target_date}: {e}")
+            
+    # Sort matches chronologically
+    all_matches.sort(key=lambda x: x.get("_timestamp", 0))
+    
+    # Remove the temporary timestamp key before returning
+    for match in all_matches:
+        if "_timestamp" in match:
+            del match["_timestamp"]
+
+    final_data = {"matches": all_matches}
+    
+    # 3. Save processed data to Cache
+    save_fixtures_cache(cache_key, final_data)
+    
+    return final_data
 
 @rate_limit(calls_per_minute=6)
 def get_match_stats(match_id: int):
@@ -515,7 +608,18 @@ def get_sofascore_match_stats(sofascore_match_id: int):
                 away_name: row[away_name]
             }
             
-        return df, flat_json
+        advanced_stats = {
+            "metadata": {
+                "home_team": home_name,
+                "away_team": away_name,
+                "home_logo": f"https://api.sofascore.app/api/v1/team/{home_id}/image" if home_id else None,
+                "away_logo": f"https://api.sofascore.app/api/v1/team/{away_id}/image" if away_id else None,
+                "match_date": datetime.fromtimestamp(event_data.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if event_data.get("startTimestamp") else None
+            },
+            "metrics": flat_json
+        }
+            
+        return df, advanced_stats
             
     else:
         print(f"Stats fetch failed. Home {home_stats_res.status_code}, Away {away_stats_res.status_code}")

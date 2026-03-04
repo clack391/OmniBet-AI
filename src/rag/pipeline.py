@@ -12,7 +12,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a standard stable model compatible with the free tier/broad availability
 # We use gemini-3.1-pro-preview for deeper analytical reasoning and Google Search Grounding support 
-MODEL_NAME = "gemini-3.1-pro-preview" 
+MODEL_NAME = "gemini-3-pro-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
@@ -136,8 +136,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - THIRD: Analyze the offensive stats vs defensive stats, xG, and Fatigue.
 
     7. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:
-       - **Primary Pick (The Banker)**: Must be the absolute SAFEST mathematical bet. You are no longer restricted to a specific priority list. You MUST evaluate all 17 markets and select the single market that has the highest mathematical probability of winning based on the data you collected. If the data screams 'Over 1.5 Goals' or 'BTTS: Yes' as the safest possible outcome over 'Double Chance', you must choose that. Act as a pure quantitative expert finding the most undeniable edge.
-       - **Alternative Pick**: Must be a VALUE bet. Find a market that offers a significantly higher ROI (higher odds) but is still heavily supported by the statistics and scenario analysis.
+       - **RESTRICTION**: You are STRICTLY FORBIDDEN from inventing or using outside betting markets (e.g., "Win to Nil", "Team to Score in Both Halves", "Player to Score 2+"). Both your Primary and Alternative picks MUST be selected directly from the 17 core markets you analyzed above.
+       - **Primary Pick (The Banker)**: Must be the absolute SAFEST mathematical bet from the 17 core markets. You MUST select the single market that has the highest mathematical probability of winning. If the data screams 'Over 1.5 Goals' or 'BTTS: Yes' as the safest possible outcome over 'Double Chance', you must choose that. Act as a pure quantitative expert finding the most undeniable edge.
+       - **Alternative Pick**: Must be a VALUE bet from the 17 core markets. Find a market that offers a significantly higher ROI (higher odds) but is still heavily supported by the statistics and scenario analysis. NO "Win to Nil".
        - **ODDS EXTRACTION**: You MUST provide the realistic Decimal Odds for both picks. If you have the Odds API payload, use those exact numbers. If the payload is empty, use your Google Search to find the real market odds. If you cannot find them, estimate the exact decimal odds based on implied probability.
     
     ### Output Format
@@ -292,7 +293,8 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
 
     6. **Update the JSON**:
        - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
-       - **STRICT HARMONIZATION**: The exact text inside `primary_pick["tip"]` and `alternative_pick["tip"]` MUST perfectly match one of the predictions inside your `full_analysis` grid. For example, you are FORBIDDEN from choosing 'Under 2.5' as your fallback value bet if your `Match_Goals` grid says 'Under 3.5'. They must be 100% identical.
+       - **STRICT HARMONIZATION**: The exact text inside `primary_pick["tip"]` and `alternative_pick["tip"]` MUST perfectly match the prediction part of one of the items inside your `full_analysis` grid.
+       - **NO BRACKETS IN TIP**: The `tip` string MUST be short and punchy (e.g., "Hamburger SV Over 0.5 Goals" or "Draw No Bet: Home"). You are STRICTLY FORBIDDEN from including `[Reasoning...]` text or brackets inside the `tip` string itself. Put all reasoning in the `reasoning` array or `step_by_step_reasoning`.
        - **GRID OVERWRITE**: If you downgraded a tip to be more defensive, you MUST completely overwrite the `full_analysis` grid to perfectly harmonize with your new defensive logic (e.g., updating Asian Handicap to tighter spreads, Correct Score to a low sum, BTTS to No). DO NOT leave contradictory high-scoring alternative markets if you predicted a defensive stalemate.
        - Preserve the `scenario_analysis` object exactly as the primary agent wrote it, so the user can read those scenarios.
        - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips based on the Ineptitude Floor and Scenarios.
@@ -326,12 +328,12 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
             "Player_Props": "Prediction: [Player Bet]. [Reasoning...]"
         }},
         "primary_pick": {{
-            "tip": "The Final, Approved Safe Bet",
+            "tip": "The Final Safe Bet (e.g., 'Home Win' - NO BRACKETS/REASONING)",
             "confidence": 90,
             "odds": 1.45
         }},
         "alternative_pick": {{
-            "tip": "The Final, Approved Value Bet",
+            "tip": "The Final Value Bet (e.g., 'Over 2.5' - NO BRACKETS/REASONING)",
             "confidence": 65,
             "odds": 2.10
         }},
@@ -414,7 +416,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {

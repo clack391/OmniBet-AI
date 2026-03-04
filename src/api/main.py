@@ -36,7 +36,9 @@ from src.database.db import (
     delete_group,
     add_match_to_group,
     remove_match_from_group,
-    get_matches_by_group
+    get_matches_by_group,
+    get_app_setting,
+    set_app_setting
 )
 from src.services.grader import fetch_result_with_ai
 from src.utils.auth import get_password_hash, verify_password, create_access_token, get_admin_user
@@ -68,6 +70,12 @@ class GroupCreateRequest(BaseModel):
 
 class GroupMatchRequest(BaseModel):
     match_id: int
+
+class ProviderSettingRequest(BaseModel):
+    provider: str
+
+class BookingCodeRequest(BaseModel):
+    booking_code: str
 
 origins = [
     "http://localhost:3000",
@@ -129,7 +137,37 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @app.get("/fixtures")
 def fixtures(start_date: str, end_date: str):
-    return get_fixtures_by_date(start_date, end_date)
+    # Determine the active provider
+    provider = get_app_setting("primary_provider", "football-data")
+    if provider == "sofascore":
+        # We will build this next in sports_api.py
+        from src.services.sports_api import get_sofascore_fixtures
+        return get_sofascore_fixtures(start_date, end_date)
+    else:
+        return get_fixtures_by_date(start_date, end_date)
+
+@app.post("/api/sportybet/parse")
+def parse_sportybet_code(request: BookingCodeRequest):
+    from src.services.sportybet_scraper import scrape_sportybet_code
+    from src.database.db import find_fixtures_cross_date
+    
+    # 1. Scrape and Parse via Playwright & Gemini
+    result = scrape_sportybet_code(request.booking_code)
+    
+    if result.get("booking_status") == "failed":
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to extract matches from booking code."))
+        
+    # 2. Enrich the parsed string names with actual our API match IDs and Dates
+    enriched_results = find_fixtures_cross_date(result.get("matches", []))
+    
+    # Maintain backwards compatibility with the raw output for the frontend
+    return {
+        "booking_status": "success",
+        "total_matches_found": result.get("total_matches_found", 0),
+        "matches": result.get("matches", []),         # The raw strings exactly as scraped
+        "enriched_matches": enriched_results.get("matched", []), # Fully hydrated Fixture objects
+        "unmatched_names": enriched_results.get("unmatched", []) # Strings that failed cross-date checks
+    }
 
 @app.get("/stats/{match_id}")
 def match_stats(match_id: int):
@@ -228,6 +266,24 @@ def api_remove_match_from_group(group_id: int, match_id: int, current_user: dict
 @app.get("/groups/{group_id}/matches")
 def api_get_group_matches(group_id: int):
     return get_matches_by_group(group_id)
+
+# --- Settings API ---
+
+@app.get("/settings/provider")
+def api_get_provider(current_user: dict = Depends(get_admin_user)):
+    provider = get_app_setting("primary_provider", "football-data")
+    return {"provider": provider}
+
+@app.put("/settings/provider")
+def api_set_provider(req: ProviderSettingRequest, current_user: dict = Depends(get_admin_user)):
+    if req.provider not in ["football-data", "sofascore"]:
+        raise HTTPException(status_code=400, detail="Invalid provider specified")
+    
+    success = set_app_setting("primary_provider", req.provider)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update provider setting")
+    
+    return {"status": "success", "provider": req.provider}
 
 @app.post("/share-betslip")
 def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(get_admin_user)):
@@ -351,7 +407,62 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
             results.append(cached_prediction)
             continue
 
-        # 1. Get Stats (Respects Rate Limit of 6s)
+        # 1. Check Global Provider
+        provider = get_app_setting("primary_provider", "football-data")
+        
+        if provider == "sofascore":
+            print(f"✅ Route: SofaScore AI Pipeline for Match {match_id}")
+            df, advanced_stats = get_sofascore_match_stats(match_id)
+            if not advanced_stats:
+                results.append({"match_id": match_id, "error": "Failed to fetch SofaScore stats. Check your RapidAPI configuration."})
+                continue
+                
+            home_team = advanced_stats.get('metadata', {}).get('home_team', 'Unknown')
+            away_team = advanced_stats.get('metadata', {}).get('away_team', 'Unknown')
+            match_date = advanced_stats.get('metadata', {}).get('match_date')
+            
+            if not match_date or "1970" in match_date:
+                # Fallback: Extract the exact match date from the existing calendar cache
+                import sqlite3, json
+                from src.database.db import DB_NAME
+                try:
+                    conn = sqlite3.connect(DB_NAME)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT matches FROM daily_fixtures WHERE date LIKE 'sofascore_%'")
+                    for row in cursor.fetchall():
+                        cached_matches = json.loads(row[0]).get('matches', [])
+                        for m in cached_matches:
+                            if str(m.get('id')) == str(match_id):
+                                match_date = m.get('utcDate')
+                                break
+                        if match_date and "1970" not in match_date:
+                            break
+                except Exception:
+                    pass
+                finally:
+                    conn.close()
+
+            
+            odds = fetch_latest_odds(home_team, away_team)
+            
+            initial_prediction = predict_match(
+                home_team, away_team, 
+                match_stats={}, odds_data=odds, h2h_data={}, home_form=None, away_form=None, 
+                home_standings={}, away_standings={}, 
+                advanced_stats=advanced_stats, match_date=match_date
+            )
+            
+            final_prediction = risk_manager_review(initial_prediction)
+            final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
+            final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
+            final_prediction['match_id'] = match_id
+            final_prediction['match_date'] = match_date
+            
+            save_prediction(final_prediction)
+            results.append(final_prediction)
+            continue
+
+        # 1. Get Stats (Respects Rate Limit of 6s) - Football Data Route
         stats = get_match_stats(match_id)
 
         if "error" in stats:
