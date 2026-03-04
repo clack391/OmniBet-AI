@@ -5,10 +5,14 @@ import json
 import google.generativeai as genai
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import pandas as pd
 from src.utils.rate_limiter import rate_limit
 from src.database.db import get_cached_fixtures, save_fixtures_cache
 
 load_dotenv()
+
+RAPID_API_KEY = os.getenv("RAPID_API_KEY")
+RAPID_API_HOST = os.getenv("RAPID_API_HOST", "sofascore6.p.rapidapi.com")
 
 API_KEY = os.getenv("FOOTBALL_DATA_API_KEY")
 BASE_URL = "https://api.football-data.org/v4"
@@ -21,7 +25,7 @@ model = genai.GenerativeModel("gemini-3.1-pro-preview")
 # Structure: { competition_id: {"data": [...], "fetched_at": datetime} }
 standings_cache = {}
 
-@rate_limit(calls_per_minute=10)
+@rate_limit(calls_per_minute=6)
 def get_fixtures_by_date(start_date: str, end_date: str):
     """
     Fetch fixtures between start_date and end_date.
@@ -40,7 +44,7 @@ def get_fixtures_by_date(start_date: str, end_date: str):
     
     try:
         print(f"🌐 Fetching fixtures for {start_date} from football-data.org...")
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=15)
         response.raise_for_status()
         data = response.json()
         
@@ -57,7 +61,7 @@ def get_fixtures_by_date(start_date: str, end_date: str):
     except requests.exceptions.RequestException as e:
         return {"error": str(e)}
 
-@rate_limit(calls_per_minute=10)
+@rate_limit(calls_per_minute=6)
 def get_match_stats(match_id: int):
     """
     Fetch match validation stats by match_id.
@@ -67,7 +71,7 @@ def get_match_stats(match_id: int):
     headers = {"X-Auth-Token": API_KEY}
     
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -128,7 +132,7 @@ def fetch_latest_odds(team_a: str, team_b: str):
         print(f"Error fetching odds: {e}")
         return None
 
-@rate_limit(calls_per_minute=10)
+@rate_limit(calls_per_minute=6)
 def fetch_match_h2h(match_id: int):
     """
     Fetch Head-to-Head statistics for a match.
@@ -140,7 +144,7 @@ def fetch_match_h2h(match_id: int):
     try:
         # Limit to last 5 matches
         params = {"limit": 5}
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=15)
         response.raise_for_status()
         data = response.json()
         return data
@@ -148,7 +152,7 @@ def fetch_match_h2h(match_id: int):
         print(f"Error fetching H2H: {e}")
         return None
 
-@rate_limit(calls_per_minute=10)
+@rate_limit(calls_per_minute=6)
 def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = None):
     """
     Fetch last 5 completed matches for a team to derive form.
@@ -166,7 +170,7 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = 
         params["venue"] = venue
     
     try:
-        response = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params, timeout=15)
         response.raise_for_status()
         data = response.json()
         
@@ -270,7 +274,7 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = 
         print(f"Error fetching team form for {team_name}: {e}")
         return None
 
-@rate_limit(calls_per_minute=10)
+@rate_limit(calls_per_minute=6)
 def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
     """
     Fetch league standings for a specific team.
@@ -300,7 +304,7 @@ def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
         
         try:
             print(f"🌐 Fetching fresh table for Comp {competition_id} from API...")
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=15)
             response.raise_for_status()
             data = response.json()
             
@@ -341,4 +345,180 @@ def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
             }
             
     return {} # Team not found in that competition
+
+def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None) -> int:
+    """
+    RapidAPI SofaScore6 does not have a reliable team name search endpoint.
+    To avoid using expensive Apify scraper credits for every lookup, we use
+    `curl_cffi` to perfectly impersonate a Chrome browser TLS signature, which
+    bypasses Cloudflare's 403 blocks against standard Python requests.
+    We hit the official SofaScore search API directly.
+    """
+    try:
+        from curl_cffi import requests as cffi_requests
+    except ImportError:
+        print("Missing curl_cffi for ID Resolution. Install via `pip install curl_cffi`")
+        return None
+        
+    try:
+        import urllib.parse
+        query = f"{team_a} {team_b}"
+        url = f"https://api.sofascore.com/api/v1/search/events?q={urllib.parse.quote(query)}"
+        
+        # We don't need heavy headers, just the TLS impersonation
+        try:
+            res = cffi_requests.get(url, impersonate="chrome120", timeout=10)
+        except Exception as req_e:
+            print(f"curl_cffi request failed: {req_e}")
+            return None
+            
+        if res.status_code == 200:
+            data = res.json()
+            if 'results' in data and len(data['results']) > 0:
+                # We optionally verify if the result name sort of matches our teams
+                # But typically the first search result is highly accurate.
+                return data['results'][0].get('entity', {}).get('id')
+                
+        return None
+    except Exception as e:
+        print(f"curl_cffi ID Resolution Error: {e}")
+        return None
+
+@rate_limit(calls_per_minute=20)
+def get_sofascore_match_stats(sofascore_match_id: int):
+    """
+    Fetches detailed match and team statistics using the RapidAPI SofaScore6 wrapper.
+    Returns a Pandas DataFrame and a flat JSON dictionary of advanced metrics.
+    """
+    if not RAPID_API_KEY:
+        print("Warning: RAPID_API_KEY not found in .env")
+        return None, None
+        
+    headers = {
+        "x-rapidapi-host": RAPID_API_HOST,
+        "x-rapidapi-key": RAPID_API_KEY
+    }
+    
+    # 1. Fetch Event Details to get IDs
+    event_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/details"
+    event_res = requests.get(event_url, headers=headers, params={"match_id": sofascore_match_id})
+    
+    if event_res.status_code != 200:
+        print(f"Could not fetch match {sofascore_match_id} data. Status: {event_res.status_code}")
+        return None, None
+
+    # The RapidAPI response doesn't wrap it in an 'event' object; the payload IS the event
+    event_data = event_res.json()
+    
+    home_id = event_data.get('homeTeam', {}).get('id')
+    home_name = event_data.get('homeTeam', {}).get('name')
+    away_id = event_data.get('awayTeam', {}).get('id')
+    away_name = event_data.get('awayTeam', {}).get('name')
+    
+    # Handle flat or nested tournament structure
+    tournament_id = event_data.get('uniqueTournament', {}).get('id')
+    if not tournament_id:
+         tournament_id = event_data.get('tournament', {}).get('uniqueTournament', {}).get('id')
+         
+    season_id = event_data.get('season', {}).get('id')
+    
+    if not tournament_id or not season_id or not home_id or not away_id:
+        print(f"Missing required IDs for Match {sofascore_match_id}.")
+        return None, None
+    
+    # 2. Fetch Team Overall Statistics
+    stats_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/team/statistics"
+    
+    home_params = {"team_id": home_id, "unique_tournament_id": tournament_id, "season_id": season_id}
+    away_params = {"team_id": away_id, "unique_tournament_id": tournament_id, "season_id": season_id}
+    
+    home_stats_res = requests.get(stats_url, headers=headers, params=home_params)
+    away_stats_res = requests.get(stats_url, headers=headers, params=away_params)
+    
+    if home_stats_res.status_code == 200 and away_stats_res.status_code == 200:
+        home_data = home_stats_res.json()
+        away_data = away_stats_res.json()
+        
+        # Sometimes RapidAPI returns a list of stat objects (e.g., if a tournament has multiple stages like Group & Knockout)
+        if isinstance(home_data, list) and len(home_data) > 0:
+            home_stats = home_data[0].get('statistics', {})
+        elif isinstance(home_data, dict):
+            home_stats = home_data.get('statistics', {})
+        else:
+            home_stats = {}
+            
+        if isinstance(away_data, list) and len(away_data) > 0:
+            away_stats = away_data[0].get('statistics', {})
+        elif isinstance(away_data, dict):
+            away_stats = away_data.get('statistics', {})
+        else:
+            away_stats = {}
+        
+        matches_home = home_stats.get('matches', 1) 
+        matches_away = away_stats.get('matches', 1)
+
+        metrics_to_compare = [
+            ("Matches", "matches", False),
+            ("Goals scored", "goalsScored", False),
+            ("Goals conceded", "goalsConceded", False),
+            ("Assists", "assists", False),
+            ("Goals per game", "goalsScored", True),
+            ("Shots on target per game", "shotsOnTarget", True),
+            ("Big chances created", "bigChancesCreated", False),
+            ("Big chances missed", "bigChancesMissed", False),
+            ("Ball possession (%)", "averageBallPossession", False),
+            ("Accurate passes per game", "accuratePasses", True),
+            ("Acc. long balls per game", "accurateLongBalls", True),
+            ("Clean sheets", "cleanSheets", False),
+            ("Goals conceded per game", "goalsConceded", True),
+            ("Interceptions per game", "interceptions", True),
+            ("Tackles per game", "tackles", True),
+            ("Clearances per game", "clearances", True),
+            ("Penalty goals conceded", "penaltyGoalsConceded", False),
+            ("Saves per game", "saves", True),
+            ("Duels won per game", "duelsWon", True),
+            ("Fouls per game", "fouls", True),
+            ("Offsides per game", "offsides", True),
+            ("Goal kicks per game", "goalKicks", True),
+            ("Throw-ins per game", "throwIns", True),
+            ("Yellow cards", "yellowCards", False),
+            ("Red cards", "redCards", False)
+        ]
+        
+        data_rows = []
+        
+        for display_name, json_key, needs_math in metrics_to_compare:
+            h_val = home_stats.get(json_key)
+            a_val = away_stats.get(json_key)
+            
+            if needs_math:
+                h_val = round(h_val / matches_home, 1) if h_val is not None else None
+                a_val = round(a_val / matches_away, 1) if a_val is not None else None
+            else:
+                if isinstance(h_val, float): h_val = round(h_val, 1)
+                if isinstance(a_val, float): a_val = round(a_val, 1)
+            
+            data_rows.append({
+                "Statistic": display_name,
+                home_name: h_val,
+                away_name: a_val
+            })
+            
+        df = pd.DataFrame(data_rows)
+        df.set_index("Statistic", inplace=True)
+        
+        flat_json = {}
+        for row in data_rows:
+            stat_name = row["Statistic"]
+            flat_json[stat_name] = {
+                home_name: row[home_name],
+                away_name: row[away_name]
+            }
+            
+        return df, flat_json
+            
+    else:
+        print(f"Stats fetch failed. Home {home_stats_res.status_code}, Away {away_stats_res.status_code}")
+        return None, None
+
 

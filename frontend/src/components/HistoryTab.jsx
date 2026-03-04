@@ -174,6 +174,22 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
         }
     };
 
+    const maxSafeStats = React.useMemo(() => {
+        if (!history || history.length === 0) return { odds: 0, count: 0 };
+        // We only want to multiply odds for matches that haven't explicitly lost
+        const eligible = history.filter(item => item.is_correct !== 0 && item.is_correct !== false);
+        let total = 1.0;
+        let count = 0;
+        eligible.forEach(item => {
+            const pickOdds = item.primary_pick?.odds;
+            if (pickOdds && !isNaN(parseFloat(pickOdds))) {
+                total *= parseFloat(pickOdds);
+                count++;
+            }
+        });
+        return { odds: count > 0 ? parseFloat(total.toFixed(2)) : 0, count };
+    }, [history]);
+
     if (loading) {
         return (
             <div className="flex justify-center items-center py-20">
@@ -192,39 +208,46 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                     <p className="text-sm text-gray-400 mt-1">Saved AI analyses from your database.</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <input
-                            type="number"
-                            step="0.1"
-                            min="1.1"
-                            placeholder="Target Odds (e.g. 10.0)"
-                            value={targetOdds}
-                            onChange={(e) => setTargetOdds(e.target.value)}
-                            disabled={generatingPicks || history.length === 0}
-                            className="w-48 px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                        />
-                    </div>
-                    <button
-                        onClick={handleGenerateBestPicks}
-                        disabled={generatingPicks || history.length === 0}
-                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-lg font-bold shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                        {generatingPicks ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Zap className="w-4 h-4 fill-current" />
-                        )}
-                        {generatingPicks ? 'Analyzing Picks...' : 'AI Accumulator Builder'}
-                    </button>
-
-                    {history.length > 0 && (
+                <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <input
+                                type="number"
+                                step="0.1"
+                                min="1.1"
+                                placeholder="Target Odds (e.g. 10.0)"
+                                value={targetOdds}
+                                onChange={(e) => setTargetOdds(e.target.value)}
+                                disabled={generatingPicks || history.length === 0}
+                                className="w-48 px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                        </div>
                         <button
-                            onClick={handleClearHistory}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+                            onClick={handleGenerateBestPicks}
+                            disabled={generatingPicks || history.length === 0}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-lg font-bold shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
-                            <Trash2 className="w-4 h-4" /> Clear
+                            {generatingPicks ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <Zap className="w-4 h-4 fill-current" />
+                            )}
+                            {generatingPicks ? 'Analyzing Picks...' : 'AI Accumulator Builder'}
                         </button>
+
+                        {history.length > 0 && (
+                            <button
+                                onClick={handleClearHistory}
+                                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+                            >
+                                <Trash2 className="w-4 h-4" /> Clear
+                            </button>
+                        )}
+                    </div>
+                    {maxSafeStats.count > 0 && (
+                        <div className="text-[11px] font-mono text-emerald-400/80 uppercase tracking-widest mr-[110px]">
+                            Odd Limit: <strong className="text-emerald-300">{maxSafeStats.odds}x</strong> from {maxSafeStats.count} safe games
+                        </div>
                     )}
                 </div>
             </div>

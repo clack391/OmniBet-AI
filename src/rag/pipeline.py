@@ -17,7 +17,7 @@ model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, match_date: str = None):
+def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, advanced_stats: dict = None, match_date: str = None):
 
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
@@ -75,6 +75,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     ### Market Odds (Implied Probability Context)
     {json.dumps(odds_data, indent=2) if odds_data else "No live odds available."}
     
+    ### Advanced Tactical Metrics (RapidAPI SofaScore)
+    {json.dumps(advanced_stats, indent=2) if advanced_stats else "No advanced tactical metrics available."}
+    
     ### CRITICAL INSTRUCTIONS
     1. **CHECK THE MATCH STATUS**:
        - 'TIMED'/'SCHEDULED'/'UPCOMING' -> Match NOT started.
@@ -82,17 +85,20 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Ignore 0-0 score** if Stale Data Warning is present.
        
     2. **DYNAMIC WEIGHTING & DATA SEARCH FALLBACK**:
+       - **Advanced Tactical Analysis**: Use the `Advanced Tactical Metrics` block to mathematically determine the match script. Do not just look at "Goals Scored." Compare "Shots on target", "Big chances missed", "Interceptions per game", and "Ball possession". For example, if a team has 65% possession but the opponent averages 18 interceptions and 20 tackles, expect a frustrating low-block scenario.
        - If any critical data block above says "No data available." or "N/A" (especially Odds or Standings), you MUST use Google Search to fetch recent team news, historical results, or odds.
        - **Rule 1 - Contextualize Motivation**: You must explicitly state how each team's current league table position dictates their motivation and likely tactical setup (e.g., desperate for points near relegation vs. comfortable mid-table).
-       - **Rule 2 - Evaluate True Fatigue**: Do not just state a team is "fatigued." Analyze their `recent_scorelines` history. Describe if the fatigue is physical (heavy minutes/grueling match like a 2-2 draw) or mental (tough loss/draw).
-       - **Rule 3 - Net Impact of Absences**: Cross-reference Team A's missing attackers against Team B's missing defenders using your Google Search. Explicitly name the available bench/impact players who will be relied upon to fill the gaps.
-       - **Rule 4 - Edge Case Safeguard**: If specific bench personnel or interval data is unavailable after searching, acknowledge the missing data and weigh the primary prediction heavily toward recent form and overall head-to-head stats.
+       - **Rule 2 - Evaluate True Fatigue**: Do not just state a team is "fatigued." Analyze their `recent_scorelines` history. Decide if the fatigue will lead to a collapse in defensive concentration, or a complete lack of offensive energy resulting in a low-scoring game.
+       - **Rule 3 - Net Impact of Absences**: Cross-reference Team A's missing attackers against Team B's missing defenders using your Google Search. Explicitly name the available bench/impact players who will be relied upon.
+       - **Rule 4 - The Ineptitude Floor**: If a team has a statistically abysmal scoring record (e.g., averaging < 0.8 goals per game or failing to score in multiple recent matches), you MUST NOT predict them to score purely based on narrative concepts like "desperation" or "derby rivalry." Data supersedes narrative. A team missing key attackers cannot magically produce goals.
        - **Competition Isolation & The First Leg Anchor**: Explicitly separate domestic league form from cup/continental form. IF THIS IS A CUP OR CONTINENTAL MATCH, YOU MUST USE GOOGLE SEARCH TO FIND OUT IF THIS IS A 2ND-LEG TIE. If a team is leading on aggregate, they do not need to win; they will play highly conservative, suffocating football. Do not blindly predict the favorite to win if a draw advances them. 
-       - **ANTI-HALLUCINATION & TEMPORAL INTEGRITY**: You are STRICTLY FORBIDDEN from inventing historical narratives. Google Search snippets often pull up old articles. If an article mentions a player injury or a match result from years ago (e.g., Sebastien Haller at Utrecht), you MUST ignore it. Do NOT claim a team like Nott Forest has a "European Hangover" unless you specifically verify they ACTUALLY played a match in Europe this week.
-       - **STRICT ROSTER VERIFICATION (GOOGLE ONLY)**: You are STRICTLY FORBIDDEN from hallucinating players onto teams. You MUST use your Google Search tool with the query "Confirmed lineups and injuries for {team_a} vs {team_b} recent {current_date_str[:4]}" to verify rosters. If a player does NOT come up in your search as an active current squad member, THEY DO NOT EXIST for this team. Ignore older transfer rumors.
+       - **ANTI-HALLUCINATION & TEMPORAL INTEGRITY**: You are STRICTLY FORBIDDEN from inventing historical narratives. Google Search snippets often pull up old articles. If an article mentions a player injury or a match result from years ago, you MUST ignore it.
+        - **STRICT ROSTER VERIFICATION (ZERO TOLERANCE)**: You are STRICTLY FORBIDDEN from mentioning players who are NOT in the `Team Squads` lists provided above. For example, if Man City is not playing, you MUST NOT mention Jack Grealish, Haaland, or Alcaraz. If you mention a player for a "Player Prop" or in your "Strategy," verify their name exists in the squad list for that specific team. If they aren't there, THEY ARE HALLUCINATIONS—DELETE THEM IMMEDIATELY.
+        - **Player Prop Validation**: In the `Player Props` section, IF YOU CANNOT FIND A RELIABLE ANYTIME GOALSCORER FOR THE TEAMS ON THE PITCH, you MUST default to "Market Suggestion" rather than inventing a name. Never suggest a player who plays for a team NOT involved in this match.
        - **Rule 5 - Regression to the Mean**: If a team is on an extreme streak (e.g., 5+ games without scoring, or a 10-match winless/winning streak), you MUST apply Regression to the Mean logic. The probability of a breakout or reversion increases with each game. Do NOT anchor your prediction to the assumption that an extreme streak will continue indefinitely into this specific match.
-       - **Rule 6 - High-Variance Desperation States (Desperation Supremacy)**: If a team is facing relegation or knockout desperation, you MUST classify the match as a "High-Variance Game State". Desperate teams do not play conservative, low-scoring football; they abandon defensive structures to chase points, making games open, chaotic, and goal-heavy. Desperation = Goals. **Do NOT downgrade the probability of a high-scoring shootout solely because of a key attacker's injury/absence.** Structural desperation heavily outweighs individual absences.
-       - **Rule 7 - The "Post-European Hangover"**: For top-tier teams coming off a massive midweek continental fixture (e.g., Champions League), you MUST drastically penalize their domestic away rating. Do NOT blindly trust their season-long defensive or offensive metrics (e.g., "0.85 GA/game"). Physical and emotional hangovers highly expose them to energetic underdog disruptions. If Scenario B maps out a frustrated favorite losing to lower-table counters, significantly boost the underdog's Double Chance (1X/X2) probability.
+       - **Rule 6 - High-Variance Desperation States**: If a team is facing relegation or knockout desperation, they may attempt to abandon defensive structures to chase points. HOWEVER, desperation often leads to frustration and forced errors, not high-quality goals. If they lack the offensive metrics to score, they will simply concede more goals without replying. Do NOT automatically predict BTTS or Over 2.5 just because a team is desperate.
+       - **Rule 7 - The "Post-European Hangover"**: For top-tier teams coming off a massive midweek continental fixture (e.g., Champions League), you MUST drastically penalize their domestic away rating. Physical and emotional hangovers highly expose them to energetic underdog disruptions. If Scenario B maps out a frustrated favorite losing to lower-table counters, prioritize low-scoring outcomes like Under 2.5 or Underdog Double Chance (1X/X2).
+       - **Rule 8 - The Derby Chaos Directive**: If your Google Search confirms this match is a historic or fierce local derby/rivalry, recognize that Derbies are emotionally charged. While this can sometimes mean goals, it very often means cagey, foul-heavy, and violently defensive 0-0 or 1-0 matches. You MUST analyze the underlying offensive stats: if both teams are missing playmakers, the derby will likely be a low-scoring battle of attrition. Do not force an Over 2.5 prediction purely because it is a derby.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -130,8 +136,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - THIRD: Analyze the offensive stats vs defensive stats, xG, and Fatigue.
 
     7. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:
-       - **Primary Pick**: Must be the absolute SAFEST mathematical bet. To ensure consistency across runs, if multiple markets are identically safe, default to the BASE MARKETS in this strict priority order: 1) Double Chance, 2) Over/Under 1.5 Goals, 3) Draw No Bet. Treat this as the banker.
-       - **Alternative Pick**: Must be a VALUE bet. Slightly riskier but offers significantly better odds. Default to Match Winner if tied.
+       - **Primary Pick (The Banker)**: Must be the absolute SAFEST mathematical bet. You are no longer restricted to a specific priority list. You MUST evaluate all 17 markets and select the single market that has the highest mathematical probability of winning based on the data you collected. If the data screams 'Over 1.5 Goals' or 'BTTS: Yes' as the safest possible outcome over 'Double Chance', you must choose that. Act as a pure quantitative expert finding the most undeniable edge.
+       - **Alternative Pick**: Must be a VALUE bet. Find a market that offers a significantly higher ROI (higher odds) but is still heavily supported by the statistics and scenario analysis.
        - **ODDS EXTRACTION**: You MUST provide the realistic Decimal Odds for both picks. If you have the Odds API payload, use those exact numbers. If the payload is empty, use your Google Search to find the real market odds. If you cannot find them, estimate the exact decimal odds based on implied probability.
     
     ### Output Format
@@ -199,8 +205,22 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         
         print(f"🧠 [Agent 1] Generating analysis for {team_a} vs {team_b} (Searching web if future match)...")
         request_start = datetime.now()
-        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
-        response.raise_for_status()
+        
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Add timeout and retry logic to gracefully handle RemoteDisconnected drops
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response.raise_for_status()
+                break
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    import time
+                    print(f"⚠️ Network Error during API call. Retrying {attempt + 1}/{max_retries} in 5 seconds ...")
+                    time.sleep(5)
+                else:
+                    raise
+                    
         request_end = datetime.now()
         print(f"✅ [Agent 1] Analysis finished in {(request_end - request_start).total_seconds():.2f}s")
         
@@ -223,13 +243,14 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
                 
         return json.loads(text_content)
     except Exception as e:
-        print(f"Gemini API Error in predict_match: {e}")
+        safe_error = re.sub(r'key=[^&\s]+', 'key=[REDACTED]', str(e))
+        print(f"Gemini API Error in predict_match: {safe_error}")
         try:
              print(f"Raw Response: {response.text}")
         except:
              pass
         return {
-            "error": str(e),
+            "error": safe_error,
             "match": f"{team_a} vs {team_b}",
             "primary_pick": {"tip": "Analysis Failed", "confidence": 0},
             "alternative_pick": {"tip": "Analysis Failed", "confidence": 0}
@@ -254,25 +275,26 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
     ### RISK MANAGEMENT RULES
     1. **Catching the "Human Bias"**: Identify any widespread public narratives about this match (e.g., "The Home Team is unbeatable at home" or "They drew 0-0 last match so it will be low scoring again"). Cross-reference this bias with the underlying defensive/offensive data. If the public expectation contradicts the deep data, aggressive bet sizing against the public is warranted.
 
-    2. **Catching the "Gambler's Fallacy" & "Desperation"**: Do not assume extreme streaks (e.g., 5 games without scoring) will continue indefinitely; enforce Regression to the Mean. Furthermore, if a team is facing relegation or knockout desperation, they will abandon defense to chase points. Overrule defensive (under 2.5) picks if one team is desperate.
+    2. **Catching the "Gambler's Fallacy"**: Do not assume extreme streaks (e.g., 5 games without scoring) will continue indefinitely; enforce Regression to the Mean when probabilistically appropriate.
 
-    3. **The "Post-European Hangover"**: If the primary agent identified that a massive favorite is returning from a grueling midweek Champions/Europa League match, you MUST respect "Scenario B (The Underdog Disruption)". Do not let the favorite's season-long defensive metrics override the immediate reality of heavy legs. A "Safe Bet" to win outright on a heavily fatigued favorite playing away is mathematically unsound.
+    3. **The "Ineptitude Floor" & Desperation check**: If the primary agent justified an aggressive 'Over 2.5' or 'BTTS: Yes' pick by claiming one team is "desperate" for points (e.g., relegation battle), you MUST verify their actual offensive output. Desperation does NOT equal goals if a team is statistically inept at scoring or missing key attackers. If a team averages < 0.8 goals a game or their top scorer is missing, Overrule BTTS/Over picks to safer Under markets (e.g., Under 3.5, Under 2.5, or Team Under).
 
-    4. **Scrutinize the `primary_pick` (The Banker)**: Is it too aggressive? 
-       - **HONOR INJURY NEWS vs DESPERATION**: If the primary agent discovered injuries to top strikers, you normally downgrade goal-dependent picks. **HOWEVER**, if the match is classified as a "High-Variance Desperation State", structural chaos overrides individual absences. Do NOT downgrade an Over 2.5 or BTTS pick simply because a striker is missing if the team is desperately chasing points.
-       - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. If the primary pick completely fails in "Scenario B (The Underdog Disruption)", it is NOT a safe banker. Downgrade it!
-       - If it predicts "BTTS - Yes", ensure both teams actually have strong scoring records without pure luck.
-       - **CRITICAL INSTRUCTION - CONFLICT RESOLUTION**: Before finalizing your analysis, cross-reference all statistics you are about to output. If any two data points contradict each other (e.g., claiming a team has not scored in 10 games, but also referencing a goal they scored last week), you must discard the older or more extreme statistic. Your final narrative must be 100% logically consistent.
-       - **CRITICAL**: If you downgrade the tip, you MUST choose the safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section (like Double Chance or Draw No Bet).
+    4. **The "Derby Caution Directive"**: If the primary agent upgraded a goal market purely because it is a "Derby", exercise extreme caution. Derbies are notoriously tight, card-heavy, defensive struggles. If the baseline data points to a low-scoring match, OVERRULE the agent's derby narrative and reinstate the mathematically sound Under/Conservative pick.
+
+    5. **Scrutinize the `primary_pick` (The Banker)**: Is it truly the safest mathematical edge among all 17 markets? 
+       - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. The primary pick might be 'Match Winner', 'Over 1.5', 'BTTS', etc. Whatever it is, if it completely fails in "Scenario B (The Underdog Disruption)", it is NOT a safe banker. Downgrade it to a safer, more resilient market.
+       - **HONOR INJURY NEWS**: If the primary agent chose a goal-dependent market (Over 2.5, BTTS) but discovered injuries to top strikers, you MUST downgrade the pick. Do not ignore structural problems just because of a narrative.
+       - **CRITICAL INSTRUCTION - CONFLICT RESOLUTION**: Before finalizing your analysis, cross-reference all statistics you are about to output. Your final narrative must be logically consistent. If you downgrade the tip to an "Under" market, ensure the text explicitly cites the data (e.g., missing players or low expected goals).
+       - **CRITICAL**: If you downgrade the tip, you MUST choose the absolute safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section that better survives both Scenarios.
        
     5. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
 
-    4. **Update the JSON**:
+    6. **Update the JSON**:
        - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
-       - **GRID HARMONIZATION**: You must rewrite the 17-market `full_analysis` block. If you kept the original tips, just copy the original `full_analysis`. IF YOU DOWNGRADED a tip (e.g., from 'Away Win' to 'Draw No Bet'), you MUST completely overwrite the `full_analysis` grid to perfectly harmonize with your new defensive logic (e.g., updating Asian Handicap to 0.0, Correct Score to a draw, BTTS to No). DO NOT leave contradictory aggressive markets if you predicted a defensive stalemate.
+       - **GRID HARMONIZATION**: You must rewrite the 17-market `full_analysis` block. If you kept the original tips, just copy the original `full_analysis`. IF YOU DOWNGRADED a tip (e.g., from 'Away Win' to 'Draw No Bet' or 'Over 2.5' to 'Under 2.5'), you MUST completely overwrite the `full_analysis` grid to perfectly harmonize with your new defensive logic (e.g., updating Asian Handicap to tighter spreads, Correct Score to a low sum, BTTS to No). DO NOT leave high-scoring alternative markets if you predicted a defensive stalemate.
        - Preserve the `scenario_analysis` object exactly as the primary agent wrote it, so the user can read those scenarios.
-       - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips based on the Bias Check and Scenarios.
+       - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips based on the Ineptitude Floor and Scenarios.
        - Set `"is_downgraded": true` if you had to change the `primary_pick`, otherwise `false`.
        - Update the `reasoning` array to reflect your defensive mindset.
        
@@ -400,8 +422,19 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
             }
         }
         
-        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
-        response.raise_for_status()
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response.raise_for_status()
+                break
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    import time
+                    print(f"⚠️ Network error (Risk Officer). Retrying {attempt + 1}/{max_retries} in 5s...")
+                    time.sleep(5)
+                else:
+                    raise
         master_end = datetime.now()
         print(f"✅ [Risk Officer] Master parlay crafted in {(master_end - master_start).total_seconds():.2f}s")
         

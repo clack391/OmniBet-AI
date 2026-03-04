@@ -16,7 +16,9 @@ from src.services.sports_api import (
     fetch_latest_odds,
     fetch_match_h2h,
     fetch_team_form,
-    get_team_standings
+    get_team_standings,
+    resolve_sofascore_match_id,
+    get_sofascore_match_stats
 )
 from src.rag.pipeline import predict_match, risk_manager_review
 from src.database.db import get_cached_prediction, save_prediction
@@ -108,9 +110,24 @@ def run_daily_cron():
                 
             match_date = stats.get('match', {}).get('utcDate') or stats.get('utcDate')
             
+            # 8.5 RapidAPI Integration
+            print(f"🔍 Resolving SofaScore Match ID for {home_team} vs {away_team}...")
+            advanced_stats = None
+            sofascore_id = resolve_sofascore_match_id(home_team, away_team, match_date)
+            
+            if sofascore_id:
+                print(f"✅ Found SofaScore ID: {sofascore_id}. Fetching deep stats from RapidAPI...")
+                df, advanced_stats = get_sofascore_match_stats(sofascore_id)
+                if advanced_stats:
+                    print(f"🔬 Successfully extracted deep tactical metrics for {home_team} vs {away_team}!")
+                else:
+                    print(f"⚠️ Could not build DataFrame for Match {sofascore_id}.")
+            else:
+                print(f"⚠️ Could not resolve SofaScore Match ID for {home_team} vs {away_team}.")
+            
             # 9. Agent 1
             initial_prediction = predict_match(
-                home_team, away_team, stats, odds, h2h_data, home_form, away_form, home_standings, away_standings, match_date=match_date
+                home_team, away_team, stats, odds, h2h_data, home_form, away_form, home_standings, away_standings, advanced_stats=advanced_stats, match_date=match_date
             )
             
             # 9. Agent 2
