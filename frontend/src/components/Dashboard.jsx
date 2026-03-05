@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send } from 'lucide-react';
+import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send, Plus, Check } from 'lucide-react';
 import PredictionCard from './PredictionCard';
 import HistoryTab from './HistoryTab';
 import GroupsTab from './GroupsTab';
@@ -24,7 +24,26 @@ api.interceptors.request.use((config) => {
 });
 
 const Dashboard = () => {
-    const { addToSlip } = useBetSlip();
+    const { betSlip, addToSlip } = useBetSlip();
+
+    const handleAddAudit = (pred) => {
+        if (!pred.audit_verdict || !pred.audit_verdict.ai_recommended_bet) return;
+        const bet = {
+            match_id: pred.match_id || Math.random(),
+            match: `${pred.home_team || 'Home'} vs ${pred.away_team || 'Away'}`,
+            match_date: pred.match_date,
+            selection: pred.audit_verdict.ai_recommended_bet,
+            type: 'Auditor Recommendation',
+            odds: 1.85
+        };
+        addToSlip(bet);
+    };
+
+    const isAuditAdded = (pred) => {
+        if (!pred.audit_verdict || !pred.audit_verdict.ai_recommended_bet) return false;
+        return betSlip.some(bet => bet.match_id === pred.match_id && bet.selection === pred.audit_verdict.ai_recommended_bet);
+    };
+
     const [date, setDate] = useState('');
     const [fixtures, setFixtures] = useState([]);
     const [selectedMatches, setSelectedMatches] = useState([]); // Now stores full match objects: { id, homeTeam, awayTeam }
@@ -226,6 +245,28 @@ const Dashboard = () => {
         } catch (err) {
             console.error(err);
             setError("Auto-Generate failed. Please try again.");
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
+    const handleAudit = async () => {
+        if (selectedMatches.length === 0) return;
+
+        setAnalyzing(true);
+        setPredictions([]); // We reuse the predictions state to hold the audit array
+
+        try {
+            const response = await api.post(`/predict-audit`, {
+                items: selectedMatches.map(m => ({
+                    match_id: m.id,
+                    user_selected_bet: m._user_selected_bet || "Unknown Bet"
+                }))
+            });
+            setPredictions(response.data);
+        } catch (err) {
+            console.error(err);
+            setError("Betslip Auditor failed. Please try again.");
         } finally {
             setAnalyzing(false);
         }
@@ -491,6 +532,27 @@ const Dashboard = () => {
                                 )}
                             </button>
 
+                            <button
+                                onClick={handleAudit}
+                                disabled={selectedMatches.length === 0 || analyzing}
+                                className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedMatches.length === 0 || analyzing
+                                    ? 'bg-gray-600/50 text-gray-500 cursor-not-allowed hidden'
+                                    : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white shadow-lg shadow-red-900/20'
+                                    }`}
+                            >
+                                {analyzing ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        Auditing Slip...
+                                    </>
+                                ) : (
+                                    <>
+                                        <ShieldAlert className="w-5 h-5 text-white" />
+                                        Audit Slip (AI Judge)
+                                    </>
+                                )}
+                            </button>
+
                             {selectedMatches.length > 0 && (
                                 <div className="mt-4 bg-gray-700/30 rounded-lg p-4 border border-gray-700">
                                     <div className="flex justify-between items-center mb-2">
@@ -542,7 +604,87 @@ const Dashboard = () => {
                         )}
 
                         {predictions.map((pred, i) => (
-                            <PredictionCard key={i} prediction={pred} />
+                            pred.audit_verdict ? (
+                                <div key={i} className="mb-10 space-y-4 border border-blue-900/50 rounded-2xl p-4 bg-blue-900/10">
+                                    <div className="flex items-center gap-2 mb-2 text-blue-400 px-2">
+                                        <ShieldAlert className="w-5 h-5" />
+                                        <span className="font-bold tracking-widest uppercase text-sm">Dual-Agent Auditor Report</span>
+                                    </div>
+                                    <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-xl mb-4">
+                                        <div className={`p-4 border-b ${pred.audit_verdict.status === 'APPROVED' ? 'bg-green-900/30 border-green-800' :
+                                            pred.audit_verdict.status === 'DOWNGRADED' ? 'bg-yellow-900/30 border-yellow-800' :
+                                                'bg-red-900/30 border-red-800'
+                                            }`}>
+                                            <div className="flex justify-between items-center bg-gray-900/50 px-3 py-2 rounded-lg mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    {pred.home_logo && <img src={pred.home_logo} alt="Home" className="w-5 h-5 object-contain" />}
+                                                    <span className="font-bold text-gray-200">{pred.home_team || "Home"}</span>
+                                                </div>
+                                                <span className="text-gray-500 text-sm font-bold">VS</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-gray-200">{pred.away_team || "Away"}</span>
+                                                    {pred.away_logo && <img src={pred.away_logo} alt="Away" className="w-5 h-5 object-contain" />}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-between items-center mb-2">
+                                                <div className="text-sm text-gray-400">Your Bet: <span className="text-white font-mono bg-gray-900 px-2 py-1 rounded ml-1">{pred.audit_verdict.original_bet}</span></div>
+                                                <div className={`text-sm font-black px-3 py-1 rounded-full ${pred.audit_verdict.status === 'APPROVED' ? 'bg-green-500/20 text-green-400 border border-green-500/50' :
+                                                    pred.audit_verdict.status === 'DOWNGRADED' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/50' :
+                                                        'bg-red-500/20 text-red-400 border border-red-500/50'
+                                                    }`}>
+                                                    {pred.audit_verdict.status}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="px-4 pt-4 pb-2 bg-gray-900/50">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Search className="w-4 h-4 text-gray-400" />
+                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Auditor's Internal Debate</span>
+                                            </div>
+                                            <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                                {pred.internal_debate}
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 bg-gray-900/50 border-t border-gray-700">
+                                            <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
+                                                <div className="text-xs text-blue-400 font-bold mb-1 uppercase tracking-wider">Auditor Recommendation</div>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="text-lg font-medium text-white">{pred.audit_verdict.ai_recommended_bet}</div>
+
+                                                    {pred.audit_verdict.status !== 'REJECTED' && (
+                                                        <button
+                                                            onClick={() => handleAddAudit(pred)}
+                                                            disabled={isAuditAdded(pred)}
+                                                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${isAuditAdded(pred)
+                                                                ? 'bg-blue-500/10 text-blue-400 cursor-default border border-blue-500/20'
+                                                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
+                                                                }`}
+                                                        >
+                                                            {isAuditAdded(pred) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                                            <span>{isAuditAdded(pred) ? 'Added to Slip' : 'Add to Slip'}</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="text-sm mt-2 text-gray-300 italic border-l-2 border-blue-500 pl-3">
+                                                    "{pred.verdict_reasoning}"
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 border-t border-blue-900/30 pt-4">
+                                        <div className="flex items-center gap-2 mb-4 text-gray-400 px-2">
+                                            <Search className="w-4 h-4" />
+                                            <span className="font-bold tracking-widest uppercase text-xs">Agent 1: Deep Tactical Prediction Generated Pre-Audit</span>
+                                        </div>
+                                        <PredictionCard prediction={pred} />
+                                    </div>
+                                </div>
+                            ) : (
+                                <PredictionCard key={i} prediction={pred} />
+                            )
                         ))}
                     </div>
                 </main>

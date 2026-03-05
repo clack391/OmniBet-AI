@@ -107,7 +107,7 @@ def run_daily_cron():
                     advanced_stats=advanced_stats, match_date=match_date
                 )
                 
-                final_prediction = risk_manager_review(initial_prediction)
+                final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
                 final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
                 final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
                 
@@ -174,7 +174,7 @@ def run_daily_cron():
             )
             
             # 9. Agent 2
-            final_prediction = risk_manager_review(initial_prediction)
+            final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
             
             # 10. Prepare and Save
             final_prediction['home_logo'] = match.get('homeTeam', {}).get('crest', '').replace("http://", "https://") if match.get('homeTeam', {}).get('crest') else None

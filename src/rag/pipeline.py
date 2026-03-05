@@ -99,6 +99,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Rule 6 - High-Variance Desperation States**: If a team is facing relegation or knockout desperation, they may attempt to abandon defensive structures to chase points. HOWEVER, desperation often leads to frustration and forced errors, not high-quality goals. If they lack the offensive metrics to score, they will simply concede more goals without replying. Do NOT automatically predict BTTS or Over 2.5 just because a team is desperate.
        - **Rule 7 - The "Post-European Hangover"**: For top-tier teams coming off a massive midweek continental fixture (e.g., Champions League), you MUST drastically penalize their domestic away rating. Physical and emotional hangovers highly expose them to energetic underdog disruptions. If Scenario B maps out a frustrated favorite losing to lower-table counters, prioritize low-scoring outcomes like Under 2.5 or Underdog Double Chance (1X/X2).
        - **Rule 8 - The Derby Chaos Directive**: If your Google Search confirms this match is a historic or fierce local derby/rivalry, recognize that Derbies are emotionally charged. While this can sometimes mean goals, it very often means cagey, foul-heavy, and violently defensive 0-0 or 1-0 matches. You MUST analyze the underlying offensive stats: if both teams are missing playmakers, the derby will likely be a low-scoring battle of attrition. Do not force an Over 2.5 prediction purely because it is a derby.
+       - **Rule 9 - The Star Player Trap**: Do not overreact to the absence of a famous, aging "star" player (e.g., Radamel Falcao, Lionel Messi). While a big name missing generates news, professional teams often adapt by playing a tighter, more cohesive, and devastating tactical counter-attack system without them. A historic club missing a star striker is NEVER guaranteed to lose. Do NOT automatically downgrade a team just because a famous name is injured.
+       - **Rule 10 - The Derby Form Toss (Superclásico Rule)**: If this is a massive historic rivalry, "Superclásico", or a high-stakes Cup Qualifier between two giant clubs in the same country, you MUST heavily discount recent domestic league form (like a 4-0-0 home streak). In one-off emotional bloodbaths, sheer tactical spite and underdog motivation routinely violently override sterile statistical home streaks. Underdogs in these situations are extremely dangerous and often win outright.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -257,7 +259,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             "alternative_pick": {"tip": "Analysis Failed", "confidence": 0}
         }
 
-def risk_manager_review(initial_prediction_json: dict) -> dict:
+def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -> dict:
     """
     Second agent in the Multi-Agent Loop. Acts as a strict Risk Manager to verify 
     the safety of the initial prediction.
@@ -296,6 +298,7 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
        - **STRICT HARMONIZATION**: The exact text inside `primary_pick["tip"]` and `alternative_pick["tip"]` MUST perfectly match the prediction part of one of the items inside your `full_analysis` grid.
        - **NO BRACKETS IN TIP**: The `tip` string MUST be short and punchy (e.g., "Hamburger SV Over 0.5 Goals" or "Draw No Bet: Home"). You are STRICTLY FORBIDDEN from including `[Reasoning...]` text or brackets inside the `tip` string itself. Put all reasoning in the `reasoning` array or `step_by_step_reasoning`.
        - **GRID OVERWRITE**: If you downgraded a tip to be more defensive, you MUST completely overwrite the `full_analysis` grid to perfectly harmonize with your new defensive logic (e.g., updating Asian Handicap to tighter spreads, Correct Score to a low sum, BTTS to No). DO NOT leave contradictory high-scoring alternative markets if you predicted a defensive stalemate.
+       - **FACT-CHECKING DIRECTIVE**: Your colleague is not infallible. You have Live Google Search access! Whenever you review a major claim (such as a key player injury, a massive historical win streak, or team lineups), actively use your Search Tool to fact-check your colleague's data before downgrading or approving the bet. If your search proves your colleague lied, explicitly call them out in your step_by_step_reasoning.
        - Preserve the `scenario_analysis` object exactly as the primary agent wrote it, so the user can read those scenarios.
        - Add a completely new thought process to `step_by_step_reasoning` explaining *why* you approved or downgraded the original tips based on the Ineptitude Floor and Scenarios.
        - Set `"is_downgraded": true` if you had to change the `primary_pick`, otherwise `false`.
@@ -349,16 +352,56 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
         time.sleep(5)
         print(f"🔎 [Agent 2] Risk Manager is now reviewing {initial_prediction_json.get('match')}...")
         rm_start = datetime.now()
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.0,
-                response_mime_type="application/json"
-            )
-        )
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("API Key is missing")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.0, 
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        is_historical = False
+        if match_date:
+            try:
+                match_dt = datetime.fromisoformat(match_date.replace("Z", "+00:00"))
+                now_dt = datetime.now(timezone.utc)
+                duration = (now_dt - match_dt).total_seconds() / 3600
+                if duration > 0:
+                    is_historical = True
+            except Exception:
+                pass
+                
+        if is_historical:
+            print(f"🛡️ Risk Manager Backtesting Mode: Disabling Search for past match")
+        else:
+            payload["tools"] = [{"google_search": {}}]
+        
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response.raise_for_status()
+                break
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    import time
+                    print(f"⚠️ Network error (Risk Manager). Retrying {attempt + 1}/{max_retries} in 5s...")
+                    time.sleep(5)
+                else:
+                    raise
+        
         rm_end = datetime.now()
         print(f"✅ [Agent 2] Risk review completed in {(rm_end - rm_start).total_seconds():.2f}s")
-        return json.loads(response.text)
+        
+        response_json = response.json()
+        raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
+        
+        return json.loads(raw_text)
     except Exception as e:
         print(f"Risk Manager Error: {e}")
         # Fallback to the initial prediction if the second agent fails
@@ -451,4 +494,109 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         return {
             "master_reasoning": "Failed to generate AI accumulator due to an error.",
             "picks": []
+        }
+
+def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: str = None):
+    """
+    The Betslip Auditor Mode (Pipeline B - Dual Agent Phase 2)
+    Evaluates the 'user_selected_bet' against Agent 1's full tactical breakdown.
+    """
+    prompt = f"""
+    You are the Lead Risk Manager and Betslip Auditor for OmniBet AI.
+    Your colleague (The Master Tactical Analyzer) has just produced a rigorous, deeply researched 17-market statistical breakdown of an upcoming football match.
+    
+    ### Colleague's Master Breakdown
+    {json.dumps(initial_prediction, indent=2)}
+    
+    ============
+    USER'S SELECTED BET: "{user_selected_bet}"
+    ============
+    
+    Your job is to act as the "Judge." You must evaluate the User's Bet against your colleague's hard data and scenario analysis. Decide if the user's bet is safe, if it needs to be downgraded for safety, or if it is a complete trap.
+    
+    *** CRITICAL: FACT-CHECKING DIRECTIVE ***
+    Your colleague is not infallible and may hallucinate. You have Live Google Search access! 
+    Whenever you review a major claim (such as a key player injury, a massive historical win streak, or team lineups), actively use your Search Tool to fact-check your colleague's data before passing your verdict. If your search proves your colleague lied or used outdated data, explicitly call them out in your internal_debate and reject/downgrade the bet accordingly.
+
+    You MUST return your analysis strictly in JSON format. Do not use markdown wrappers around the JSON.
+    {{
+      "internal_debate": "string (Critique the user's bet against Agent 1's Scenario Analysis BEFORE making your verdict)",
+      "audit_verdict": {{
+        "status": "APPROVED | DOWNGRADED | REJECTED",
+        "original_bet": "{user_selected_bet}",
+        "ai_recommended_bet": "string (CRITICAL: EXACTLY ONE standard betting market. NEVER use the word 'or'. Example: 'Over 1.5 Goals' or 'Home Draw No Bet')",
+        "risk_level": "Low | Medium | Extreme"
+      }},
+      "verdict_reasoning": "string (A 2-sentence explanation of why you approved or changed their bet citing the advanced stats)"
+    }}
+
+    *** AUDIT RULES ***
+    - APPROVED: If the user's bet is mathematically sound and matches the likely Game Script.
+    - DOWNGRADED: If the user has the right idea but is being too greedy. (e.g., User picks 'Over 2.5', but stats show a tight game -> Downgrade to 'Over 1.5').
+    - REJECTED: If the user is walking into a statistical trap.
+    - STRICT OUTPUT: The 'ai_recommended_bet' MUST be exactly ONE actionable bet. NEVER offer multiple choices or conversational text in this field.
+    """
+    
+    try:
+        team_a_name = initial_prediction.get('home_team') or "the Match"
+        print(f"⚖️ [Auditor] Evaluating {user_selected_bet} against Agent 1 report for {team_a_name}...")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("API Key is missing")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "temperature": 0.2, 
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        is_historical = False
+        if match_date:
+            try:
+                match_dt = datetime.fromisoformat(match_date.replace("Z", "+00:00"))
+                now_dt = datetime.now(timezone.utc)
+                duration = (now_dt - match_dt).total_seconds() / 3600
+                if duration > 0:
+                    is_historical = True
+            except Exception:
+                pass
+                
+        if is_historical:
+            print(f"🛡️ Auditor Backtesting Mode: Disabling Search for past match")
+        else:
+            payload["tools"] = [{"google_search": {}}]
+        
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response.raise_for_status()
+                break
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    import time
+                    print(f"⚠️ Network error (Auditor). Retrying {attempt + 1}/{max_retries} in 5s...")
+                    time.sleep(5)
+                else:
+                    raise
+        
+        response_json = response.json()
+        raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
+        
+        return json.loads(raw_text)
+        
+    except Exception as e:
+        print(f"Error executing Auditor: {e}")
+        return {
+            "internal_debate": f"Failed to audit bet due to API Error: {str(e)}",
+            "audit_verdict": {
+                "status": "REJECTED",
+                "original_bet": user_selected_bet,
+                "ai_recommended_bet": "API Error",
+                "risk_level": "Extreme"
+            },
+            "verdict_reasoning": "Could not extract statistical data to verify bet safety."
         }

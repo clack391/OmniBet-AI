@@ -477,7 +477,7 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
         print(f"curl_cffi ID Resolution Error: {e}")
         return None
 
-@rate_limit(calls_per_minute=20)
+@rate_limit(calls_per_minute=16)
 def get_sofascore_match_stats(sofascore_match_id: int):
     """
     Fetches detailed match and team statistics using the RapidAPI SofaScore6 wrapper.

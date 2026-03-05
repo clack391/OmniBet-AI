@@ -68,7 +68,7 @@ def parse_betslip_with_ai(raw_text: str):
     You are a precision data extraction tool for OmniBet AI. 
     I will provide you with raw, messy scraped text from a sports betting betslip. 
 
-    Your ONLY job is to identify the football matches within this text and return them in a clean, structured format. Ignore all betting odds, stake amounts, dates, and random UI text.
+    Your ONLY job is to identify the football matches AND the specific bet the user placed on that match.
 
     You MUST return your extraction strictly in JSON format with the following exact structure:
     {
@@ -77,15 +77,17 @@ def parse_betslip_with_ai(raw_text: str):
       "matches": [
         {
           "home_team": "string",
-          "away_team": "string"
+          "away_team": "string",
+          "user_selected_bet": "string (e.g., 'Over 2.5 Goals', 'Home Win', 'GG/BTTS')"
         }
       ]
     }
 
     *** EXTRACTION RULES ***
     1. Clean the team names. If the raw text says "Man Utd (Reserves)", simplify it to "Manchester United". 
-    2. If the text does not contain any recognizable football matches, set "booking_status" to "failed".
-    3. Do not include any conversational text. Output only the requested JSON.
+    2. Try your best to extract the exact betting market the user chose from the messy text. Ensure it is readable and standard (e.g., "1X2: X" -> "Draw").
+    3. If the text does not contain any recognizable football matches, set "booking_status" to "failed".
+    4. Do not include any conversational text. Output only the requested JSON.
     """
     
     try:

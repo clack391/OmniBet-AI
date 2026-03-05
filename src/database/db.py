@@ -507,6 +507,10 @@ def find_fixtures_cross_date(parsed_matches: list):
                 awayMatch = (len(targetAway) > 3 and targetAway in fAway) or (len(fAway) > 3 and fAway in targetAway)
                 
                 if homeMatch or awayMatch:
+                    # Pass the user's original bet to the frontend for the Auditor feature
+                    if 'user_selected_bet' in pm:
+                        f['_user_selected_bet'] = pm['user_selected_bet']
+                        
                     hydrated_matches.append(f)
                     found = True
                     break # Stop looking for this specific match once found
