@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send, Plus, Check } from 'lucide-react';
+import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send, Plus, Check, X } from 'lucide-react';
 import PredictionCard from './PredictionCard';
 import HistoryTab from './HistoryTab';
 import GroupsTab from './GroupsTab';
@@ -567,13 +567,18 @@ const Dashboard = () => {
                                     <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
                                         {selectedMatches
                                             .map(m => (
-                                                <div key={m.id} className="flex justify-between items-center text-xs bg-gray-800 p-2 rounded">
-                                                    <span className="truncate max-w-[200px]">{m.homeTeam?.name} vs {m.awayTeam?.name}</span>
+                                                <div key={m.id} className="flex justify-between items-center text-xs bg-gray-800 p-2 rounded border border-gray-700/50">
+                                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                                        <span className="truncate font-medium text-gray-200">{m.homeTeam?.name} vs {m.awayTeam?.name}</span>
+                                                        {m._user_selected_bet && (
+                                                            <span className="text-[10px] text-purple-400 font-bold truncate">Pick: {m._user_selected_bet}</span>
+                                                        )}
+                                                    </div>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); toggleMatchSelection(m); }}
-                                                        className="text-gray-500 hover:text-white"
+                                                        className="text-gray-500 hover:text-red-400 p-1 transition-colors"
                                                     >
-                                                        ×
+                                                        <X className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             ))

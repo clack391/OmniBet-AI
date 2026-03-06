@@ -1,6 +1,8 @@
 import sqlite3
 import json
 from datetime import datetime
+import unicodedata
+import re
 
 DB_NAME = "omnibet.db"
 
@@ -443,18 +445,48 @@ def get_matches_by_group(group_id: int):
 # --- Match Searching Cross Date ---
 import re
 
-def _clean_team_name(name: str) -> str:
-    if not name: return ""
+def _clean_team_name(name: str) -> set:
+    if not name: return set()
     name = name.lower()
-    name = re.sub(r'\bfc\b', '', name)
-    name = re.sub(r'\bca\b', '', name)
-    name = re.sub(r'\bunited\b', '', name)
-    name = re.sub(r'\bcity\b', '', name)
-    name = re.sub(r'\bde\b', '', name)
-    name = re.sub(r'\bsc\b', '', name)
-    name = re.sub(r'\bcf\b', '', name)
-    name = re.sub(r'[^a-z0-9]', '', name)
-    return name
+    
+    # Universal Normalization: Removes ALL accents/diacritics (e.g., á -> a, ñ -> n, ç -> c)
+    # This works for every language on Earth.
+    name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('utf-8')
+    
+    # Strip everything except lowercase and spaces before replacements
+    name = re.sub(r'[^a-z0-9\s]', ' ', name)
+    
+    # Handle common translations/abbreviations
+    replacements = {
+        "munchen": "munich",
+        "mgladbach": "monchengladbach",
+        "gladb": "monchengladbach",
+        "utd": "united",
+        "psg": "paris saint germain",
+        "wolves": "wolverhampton",
+        "spurs": "tottenham",
+        "atl": "atletico",
+        "intl": "internacional",
+        "ahli": "al ahli",
+        "ittihad": "al ittihad",
+        "sparkasse": "",
+        "amateur": "",
+        "u19": "",
+        "u21": "",
+        "u23": "",
+        "reserves": ""
+    }
+    for old, new in replacements.items():
+        name = re.sub(rf'\b{old}\b', new, name)
+
+    # Remove standard noise words
+    noise = ['fc', 'ca', 'united', 'city', 'sc', 'cf', 'de', 'afc', 'as', 'fk', 'rio', 'v', 'vs']
+    for word in noise:
+        name = re.sub(rf'\b{word}\b', '', name)
+        
+    # Extract only alphanumeric words with length >= 2
+    words = set(re.findall(r'[a-z0-9]{2,}', name))
+    return words
 
 def find_fixtures_cross_date(parsed_matches: list):
     """
@@ -469,6 +501,8 @@ def find_fixtures_cross_date(parsed_matches: list):
     unmatched_names = []
     
     try:
+        provider = get_app_setting("primary_provider", "football-data")
+        
         cursor.execute("SELECT date, fixtures_json FROM daily_fixtures")
         rows = cursor.fetchall()
         
@@ -476,6 +510,14 @@ def find_fixtures_cross_date(parsed_matches: list):
         all_cached_fixtures = []
         for row in rows:
             date_str = row[0]
+            
+            # STRICTURE: If we are in SofaScore mode, only look at SofaScore-prefixed keys
+            # and vice versa. This prevents ID collisions between providers.
+            if provider == "sofascore" and not date_str.startswith("sofascore_"):
+                continue
+            if provider == "football-data" and date_str.startswith("sofascore_"):
+                continue
+
             if row[1]:
                 raw_json = json.loads(row[1])
                 
@@ -495,30 +537,62 @@ def find_fixtures_cross_date(parsed_matches: list):
                 
         # Now fuzzy match each parsed match against this massive array
         for pm in parsed_matches:
-            targetHome = _clean_team_name(pm.get('home_team', ''))
-            targetAway = _clean_team_name(pm.get('away_team', ''))
+            targetHomeWords = _clean_team_name(pm.get('home_team', ''))
+            targetAwayWords = _clean_team_name(pm.get('away_team', ''))
             
+            if not targetHomeWords or not targetAwayWords:
+                unmatched_names.append(f"{pm.get('home_team')} vs {pm.get('away_team')} (Incomplete Names)")
+                continue
+
             found = False
+            best_match = None
+            max_score = 0
+            
             for f in all_cached_fixtures:
-                fHome = _clean_team_name(f.get('homeTeam', {}).get('name', ''))
-                fAway = _clean_team_name(f.get('awayTeam', {}).get('name', ''))
+                fHomeWords = _clean_team_name(f.get('homeTeam', {}).get('name', ''))
+                fAwayWords = _clean_team_name(f.get('awayTeam', {}).get('name', ''))
                 
-                homeMatch = (len(targetHome) > 3 and targetHome in fHome) or (len(fHome) > 3 and fHome in targetHome)
-                awayMatch = (len(targetAway) > 3 and targetAway in fAway) or (len(fAway) > 3 and fAway in targetAway)
+                # Scoring Match:
+                # 1. Home word in Home fixture? (Direct)
+                # 2. Away word in Away fixture? (Direct)
+                # 3. Home word in Away fixture? (Inverse/Swap detection)
+                # 4. Away word in Home fixture? (Inverse/Swap detection)
                 
-                if homeMatch or awayMatch:
-                    # Pass the user's original bet to the frontend for the Auditor feature
-                    if 'user_selected_bet' in pm:
-                        f['_user_selected_bet'] = pm['user_selected_bet']
-                        
-                    hydrated_matches.append(f)
-                    found = True
-                    break # Stop looking for this specific match once found
+                home_direct = len(targetHomeWords & fHomeWords)
+                away_direct = len(targetAwayWords & fAwayWords)
+                home_swap = len(targetHomeWords & fAwayWords)
+                away_swap = len(targetAwayWords & fHomeWords)
+                
+                is_direct = home_direct > 0 and away_direct > 0
+                is_swapped = home_swap > 0 and away_swap > 0
+                
+                # Calculate a total confidence score
+                score = (home_direct + away_direct) if is_direct else (home_swap + away_swap) if is_swapped else 0
+                
+                # STRICTURE: We require at least ONE word from BOTH teams to match
+                # This prevents 'Heracles vs Utrecht' matching 'Heracles vs PSV'
+                if score > max_score:
+                    max_score = score
+                    best_match = f
+            
+            # We need a minimum threshold of score to be confident
+            # Usually 1 word from each team = 2
+            if best_match and max_score >= 1:
+                print(f"✅ Match Found: '{pm.get('home_team')} vs {pm.get('away_team')}' -> '{best_match.get('homeTeam',{}).get('name')} vs {best_match.get('awayTeam',{}).get('name')}' (Score: {max_score})")
+                # Pass the user's original bet to the frontend
+                if 'user_selected_bet' in pm:
+                    best_match['_user_selected_bet'] = pm['user_selected_bet']
+                    
+                hydrated_matches.append(best_match)
+                found = True
             
             if not found:
+                print(f"❌ Match Failed: '{pm.get('home_team')} vs {pm.get('away_team')}'")
                 unmatched_names.append(f"{pm.get('home_team')} vs {pm.get('away_team')}")
                 
-        return {"matched": hydrated_matches, "unmatched": unmatched_names}
+        # Deduplicate unmatched names while preserving order
+        unique_unmatched = list(dict.fromkeys(unmatched_names))
+        return {"matched": hydrated_matches, "unmatched": unique_unmatched}
         
     except Exception as e:
         print(f"Error cross-searching dates: {e}")

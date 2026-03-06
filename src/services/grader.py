@@ -3,83 +3,19 @@ import os
 import requests
 from dotenv import load_dotenv
 
+# Import our project helpers
+from src.services.sports_api import resolve_sofascore_match_id, get_sofascore_match_grade_data
+
 env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
 load_dotenv(dotenv_path=env_path)
 
+# Use the same model as the main pipeline
 MODEL_NAME = "gemini-3-pro-preview"
-
-def resolve_sofascore_url(team_a: str, team_b: str, match_date: str) -> str:
-    """
-    Uses Apify's official Google Search scraper to find the exact SofaScore URL.
-    This safely bypasses Cloudflare and Google IP blocks while preventing LLM hallucination of URL hashes.
-    """
-    try:
-        from apify_client import ApifyClient
-    except ImportError:
-        print("apify-client not installed.")
-        return "NOT_FOUND"
-        
-    apify_token = os.getenv("APIFY_API_TOKEN")
-    if not apify_token:
-        print("Missing APIFY_API_TOKEN in .env for URL Resolution.")
-        return "NOT_FOUND"
-        
-    try:
-        client = ApifyClient(apify_token)
-        query = f"site:sofascore.com/football/match {team_a} {team_b}"
-        
-        run_input = {
-            "queries": query,
-            "resultsPerPage": 3,
-            "maxPagesPerQuery": 1,
-            "languageCode": "en"
-        }
-        
-        # Apify's lightweight Google Search Actor
-        run = client.actor("apify/google-search-scraper").call(run_input=run_input)
-        
-        for item in client.dataset(run["defaultDatasetId"]).iterate_items():
-            organic = item.get("organicResults", [])
-            for res in organic:
-                url = res.get("url", "")
-                if "sofascore.com/football/match" in url:
-                    return url
-                    
-        return "NOT_FOUND"
-    except Exception as e:
-        print(f"Apify URL Resolution Error: {e}")
-        return "NOT_FOUND"
-
-def scrape_sofascore_data(url: str) -> dict:
-    """
-    Uses the Apify client to scrape raw match data from the provided SofaScore URL.
-    """
-    try:
-        from apify_client import ApifyClient
-    except ImportError:
-        return None
-        
-    apify_token = os.getenv("APIFY_API_TOKEN")
-    if not apify_token:
-        return None
-        
-    try:
-        client = ApifyClient(apify_token)
-        run_input = {"startUrls": [url]}
-        
-        run = client.actor("azzouzana/sofascore-scraper-pro").call(run_input=run_input)
-        
-        for item in client.dataset(run["defaultDatasetId"]).iterate_items():
-            return item.get("data", {})
-            
-        return None
-    except Exception as e:
-        print(f"Apify Scraper Error: {e}")
-        return None
 
 def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, safe_bet_tip: str) -> dict:
     """
-    The original Google Search-based grader used as a fallback if Apify completely fails.
+    The original Google Search-based grader used as a fallback if RapidAPI completely fails
+    or if the match ID cannot be resolved.
     """
     prompt = f"""
     Act as a strict sports betting adjudicator.
@@ -130,44 +66,31 @@ def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, saf
 
 def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip: str) -> dict:
     """
-    Uses Apify SofaScore scraping combined with Gemini evaluating the payload.
-    Gracefully falls back to pure Google Search if Apify fails or lacks a token.
+    Uses RapidAPI SofaScore direct retrieval combined with Gemini evaluating the payload.
+    Gracefully falls back to pure Google Search if RapidAPI fails.
     """
-    apify_token = os.getenv("APIFY_API_TOKEN")
     
-    if not apify_token:
-        print("No Apify token found. Using Pure Google Search Fallback Grader.")
+    # 1. Resolve Match ID (using existing project helper)
+    print(f"🔍 [Grader] Resolving SofaScore Match ID for {team_a} vs {team_b}...")
+    match_id = resolve_sofascore_match_id(team_a, team_b, match_date)
+    
+    if not match_id:
+        print(f"⚠️ Could not resolve Match ID for {team_a} vs {team_b}. Falling back to Search.")
         return fetch_result_with_ai_fallback(team_a, team_b, match_date, safe_bet_tip)
         
-    print(f"Resolving SofaScore URL for {team_a} vs {team_b} via Apify...")
-    url = resolve_sofascore_url(team_a, team_b, match_date)
+    # 2. Fetch Grade Data (Consolidated RapidAPI calls)
+    print(f"📡 [Grader] Fetching RapidAPI data for match_id: {match_id}")
+    grade_data = get_sofascore_match_grade_data(match_id)
     
-    if url == "NOT_FOUND":
-        print("Could not resolve SofaScore URL. Using Pure Google Search Fallback Grader.")
+    if not grade_data or grade_data.get("score_summary") == "Unknown":
+        print(f"⚠️ Failed to fetch RapidAPI grade data for {match_id}. Falling back to Search.")
         return fetch_result_with_ai_fallback(team_a, team_b, match_date, safe_bet_tip)
         
-    print(f"Scraping SofaScore using Apify at URL: {url}")
-    sofa_data = scrape_sofascore_data(url)
+    actual_score_str = grade_data["score_summary"]
+    status_desc = grade_data["match_status"]
     
-    if not sofa_data:
-        print("Failed to scrape SofaScore data. Using Pure Google Search Fallback Grader.")
-        return fetch_result_with_ai_fallback(team_a, team_b, match_date, safe_bet_tip)
-        
-    event_data = sofa_data.get("event", {})
-    home_score = event_data.get("homeScore", {}).get("current", 0)
-    away_score = event_data.get("awayScore", {}).get("current", 0)
-    status_desc = event_data.get("status", {}).get("description", "Unknown")
-    
-    actual_score_str = f"{team_a} {home_score} - {away_score} {team_b}"
-    
-    trimmed_data = {
-        "score_summary": actual_score_str,
-        "match_status": status_desc,
-        "statistics": sofa_data.get("statistics", []),
-        "incidents": sofa_data.get("incidents", []) 
-    }
-    
-    print("Grading match against parsed SofaScore payload using Gemini SDK...")
+    # 3. AI Adjudication
+    print(f"⚖️ [Grader] Evaluating {safe_bet_tip} against RapidAPI payload...")
     prompt = f"""
     Act as a strict sports betting adjudicator.
     
@@ -176,7 +99,7 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
     Based heavily on the 'score_summary', 'statistics', and 'incidents' lists provided below, evaluate if the predicted betting tip `{safe_bet_tip}` won or lost.
 
     SofaScore Payload Dump:
-    {json.dumps(trimmed_data)[:25000]} 
+    {json.dumps(grade_data)[:25000]} 
 
     ### Rules
     1. If the match status is not finished, set `status` to "Live" or "Scheduled" and evaluate `is_correct` only if mathematically determined (e.g. Over 2.5 hits when score is 2-1).
@@ -205,7 +128,7 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
         return json.loads(raw_text)
         
     except Exception as e:
-        print(f"Error in Hybrid Apify-Gemini Grader: {e}")
+        print(f"Error in RapidAPI Grader: {e}")
         return {
             "actual_score": actual_score_str,
             "status": status_desc,

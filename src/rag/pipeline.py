@@ -78,6 +78,12 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     ### Advanced Tactical Metrics (RapidAPI SofaScore)
     {json.dumps(advanced_stats, indent=2) if advanced_stats else "No advanced tactical metrics available."}
     
+    ### CRITICAL: HOME/AWAY VENUE SPLITS
+    If the data above contains a "home_away_split" key, it holds venue-filtered stats:
+    - The Home team's stats are from HOME matches ONLY.
+    - The Away team's stats are from AWAY matches ONLY.
+    YOU MUST PRIORITIZE these venue-specific splits over the overall "metrics" for predictions involving possession, goals per game, clean sheets, and defensive stats. Teams behave fundamentally differently at home vs away.
+    
     ### CRITICAL INSTRUCTIONS
     1. **CHECK THE MATCH STATUS**:
        - 'TIMED'/'SCHEDULED'/'UPCOMING' -> Match NOT started.
@@ -88,7 +94,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Advanced Tactical Analysis**: Use the `Advanced Tactical Metrics` block to mathematically determine the match script. Do not just look at "Goals Scored." Compare "Shots on target", "Big chances missed", "Interceptions per game", and "Ball possession". For example, if a team has 65% possession but the opponent averages 18 interceptions and 20 tackles, expect a frustrating low-block scenario.
        - If any critical data block above says "No data available." or "N/A" (especially Odds or Standings), you MUST use Google Search to fetch recent team news, historical results, or odds.
        - **Rule 1 - Contextualize Motivation**: You must explicitly state how each team's current league table position dictates their motivation and likely tactical setup (e.g., desperate for points near relegation vs. comfortable mid-table).
-       - **Rule 2 - Evaluate True Fatigue**: Do not just state a team is "fatigued." Analyze their `recent_scorelines` history. Decide if the fatigue will lead to a collapse in defensive concentration, or a complete lack of offensive energy resulting in a low-scoring game.
+        - **Rule 2 - Evaluate True Fatigue**: Do not just state a team is "fatigued." Analyze their `recent_scorelines` history. While fatigue often slows down an elite offense, it **catastrophically destroys** a poor defense's concentration and reaction speed. If an inferior team is fatigued, expect them to concede significantly more goals than their season average.
        - **Rule 3 - Net Impact of Absences**: Cross-reference Team A's missing attackers against Team B's missing defenders using your Google Search. Explicitly name the available bench/impact players who will be relied upon.
        - **Rule 4 - The Ineptitude Floor**: If a team has a statistically abysmal scoring record (e.g., averaging < 0.8 goals per game or failing to score in multiple recent matches), you MUST NOT predict them to score purely based on narrative concepts like "desperation" or "derby rivalry." Data supersedes narrative. A team missing key attackers cannot magically produce goals.
        - **Competition Isolation & The First Leg Anchor**: Explicitly separate domestic league form from cup/continental form. IF THIS IS A CUP OR CONTINENTAL MATCH, YOU MUST USE GOOGLE SEARCH TO FIND OUT IF THIS IS A 2ND-LEG TIE. If a team is leading on aggregate, they do not need to win; they will play highly conservative, suffocating football. Do not blindly predict the favorite to win if a draw advances them. 
@@ -100,7 +106,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Rule 7 - The "Post-European Hangover"**: For top-tier teams coming off a massive midweek continental fixture (e.g., Champions League), you MUST drastically penalize their domestic away rating. Physical and emotional hangovers highly expose them to energetic underdog disruptions. If Scenario B maps out a frustrated favorite losing to lower-table counters, prioritize low-scoring outcomes like Under 2.5 or Underdog Double Chance (1X/X2).
        - **Rule 8 - The Derby Chaos Directive**: If your Google Search confirms this match is a historic or fierce local derby/rivalry, recognize that Derbies are emotionally charged. While this can sometimes mean goals, it very often means cagey, foul-heavy, and violently defensive 0-0 or 1-0 matches. You MUST analyze the underlying offensive stats: if both teams are missing playmakers, the derby will likely be a low-scoring battle of attrition. Do not force an Over 2.5 prediction purely because it is a derby.
        - **Rule 9 - The Star Player Trap**: Do not overreact to the absence of a famous, aging "star" player (e.g., Radamel Falcao, Lionel Messi). While a big name missing generates news, professional teams often adapt by playing a tighter, more cohesive, and devastating tactical counter-attack system without them. A historic club missing a star striker is NEVER guaranteed to lose. Do NOT automatically downgrade a team just because a famous name is injured.
-       - **Rule 10 - The Derby Form Toss (Superclásico Rule)**: If this is a massive historic rivalry, "Superclásico", or a high-stakes Cup Qualifier between two giant clubs in the same country, you MUST heavily discount recent domestic league form (like a 4-0-0 home streak). In one-off emotional bloodbaths, sheer tactical spite and underdog motivation routinely violently override sterile statistical home streaks. Underdogs in these situations are extremely dangerous and often win outright.
+        - **Rule 10 - The Derby Form Toss (Superclásico Rule)**: If this is a massive historic rivalry, "Superclásico", or a high-stakes Cup Qualifier between two giant clubs in the same country, you MUST heavily discount recent domestic league form (like a 4-0-0 home streak). In one-off emotional bloodbaths, sheer tactical spite and underdog motivation routinely violently override sterile statistical home streaks. Underdogs in these situations are extremely dangerous and often win outright.
+        - **Rule 11 - The Demoralization Catalyst (Blowout Detection)**: If a top-tier Home team (high xG, high possession) faces a bottom-tier opponent with abysmal defensive metrics and high goals-conceded averages, do NOT automatically predict "Under 2.5" just because the Home team is tired or missing a striker. Demoralized underdogs often stop defending entirely after conceding the second goal. In these "Mismatch" scenarios, fatigue is a catalyst for a 4-0 or 5-0 blowout, not a reason for a 1-0 snoozer.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -134,8 +141,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     
     6. **Chain-of-Thought Process**: Before declaring any predictions, you MUST think step-by-step. 
        - FIRST: If you have Google Search access, explicitly search for: "confirmed injuries, suspended players, and official starting lineups for {team_a} vs {team_b} today". Do NOT search for transfer rumors.
-       - SECOND: If estimating the 'Total Match Cards' market, explicitly use your Google Search tool to find the assigned referee for this match and their historical average cards per game to calibrate your prediction.
-       - THIRD: Analyze the offensive stats vs defensive stats, xG, and Fatigue.
+       - SECOND: For the 'Total Match Cards' market, check the "referee" field in the metadata. If a referee name is provided, use your Google Search tool to find that specific referee's historical average cards per game. If no referee is in the metadata, search for who is assigned. This is MANDATORY for accurate card predictions.
+       - THIRD: Check the "tournament" and "round" fields in the metadata. Use this to assess match importance (e.g., Cup Final vs. early round, relegation battle vs. mid-table). Factor motivation into all markets.
+       - FOURTH: Analyze the offensive stats vs defensive stats, xG, and Fatigue.
 
     7. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:
        - **RESTRICTION**: You are STRICTLY FORBIDDEN from inventing or using outside betting markets (e.g., "Win to Nil", "Team to Score in Both Halves", "Player to Score 2+"). Both your Primary and Alternative picks MUST be selected directly from the 17 core markets you analyzed above.
@@ -531,6 +539,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     }}
 
     *** AUDIT RULES ***
+    - MARKET INTERPRETABILITY: You are an expert in ALL global football betting markets (Asian Handicaps, Multi-goals, Combos, etc.). Even if the user's bet is NOT one of the 17 markets predicted by your colleague, you MUST use your own reasoning to interpret the market and validate it against the provided statistics (xG, team form, defensive frailty).
     - APPROVED: If the user's bet is mathematically sound and matches the likely Game Script.
     - DOWNGRADED: If the user has the right idea but is being too greedy. (e.g., User picks 'Over 2.5', but stats show a tight game -> Downgrade to 'Over 1.5').
     - REJECTED: If the user is walking into a statistical trap.

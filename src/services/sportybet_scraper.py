@@ -36,28 +36,46 @@ def scrape_sportybet_code(booking_code: str):
             # Wait for the betslip matches to render on the screen
             print("Waiting for network...")
             try:
-                page.wait_for_selector('.m-bet-wrapper', timeout=15000)
+                # Target the actual betslip content area
+                page.wait_for_selector('.m-betslip-content, .m-bet-wrapper', timeout=15000)
             except Exception:
-                print("Could not find .m-bet-wrapper, slip might be empty or invalid.")
+                print("Could not find betslip content, slip might be empty or invalid.")
             
-            # Scrape ALL the raw text from the betslip container
-            print("Extracting betslip text...")
+            # Extract specific betslip items
+            print("Extracting betslip items...")
+            betslip_raw_text = ""
             try:
-                betslip_raw_text = page.locator('.m-betslip-wrapper').inner_text(timeout=5000)
-            except Exception:
-                print("Could not find .m-betslip-wrapper. Grabbing right sidebar as fallback...")
-                betslip_raw_text = page.locator('.s-right').inner_text(timeout=5000)
+                # Target the individual match cards in the betslip
+                items = page.locator('.m-betslip-item').all_inner_texts()
+                if items:
+                    betslip_raw_text = "\n---\n".join(items)
+                    print(f"✅ Found {len(items)} items in the actual betslip.")
+            except Exception as e:
+                print(f"⚠️ Failed to find .m-betslip-item: {e}")
+
+            if not betslip_raw_text:
+                try:
+                    # Fallback to the specific content container
+                    betslip_raw_text = page.locator('.m-betslip-content').inner_text(timeout=5000)
+                except Exception:
+                    try:
+                        # Fallback to the wrapper
+                        betslip_raw_text = page.locator('.m-betslip-wrapper').inner_text(timeout=5000)
+                    except Exception:
+                        print("Could not find betslip containers. Grabbing right sidebar as fallback...")
+                        betslip_raw_text = page.locator('.s-right').inner_text(timeout=5000)
             
             browser.close()
             
-            if not betslip_raw_text:
-                return {"booking_status": "failed", "error": "No text found on betslip."}
+            if not betslip_raw_text or len(betslip_raw_text.strip()) < 10:
+                return {"booking_status": "failed", "error": "No valid betslip content found."}
                 
             return parse_betslip_with_ai(betslip_raw_text)
             
         except Exception as e:
             print(f"❌ Scraper failed: {e}")
-            browser.close()
+            if 'browser' in locals():
+                browser.close()
             return {"booking_status": "failed", "error": str(e)}
 
 def parse_betslip_with_ai(raw_text: str):
@@ -84,10 +102,13 @@ def parse_betslip_with_ai(raw_text: str):
     }
 
     *** EXTRACTION RULES ***
-    1. Clean the team names. If the raw text says "Man Utd (Reserves)", simplify it to "Manchester United". 
-    2. Try your best to extract the exact betting market the user chose from the messy text. Ensure it is readable and standard (e.g., "1X2: X" -> "Draw").
-    3. If the text does not contain any recognizable football matches, set "booking_status" to "failed".
-    4. Do not include any conversational text. Output only the requested JSON.
+    1. Look specifically for the list of matches that have a market/selection attached.
+    2. Items in a betslip usually have a team pair (e.g., 'Wolves v Liverpool'), a market (e.g., 'Over 2'), and odds (e.g., '1.32').
+    3. IGNORE everything under 'Popular Matches', 'Highlights', or 'Live Now'.
+    4. Clean the team names (e.g., 'Wolves v Liverpool' -> home: 'Wolves', away: 'Liverpool').
+    5. Ensure you extract the market correctly. If it says 'Over 2' for 'Over/Under', the selection is 'Over 2'.
+    6. If the text is empty or clearly doesn't contain a betslip, set 'booking_status' to 'failed'.
+    7. No conversational text. Output JSON only.
     """
     
     try:

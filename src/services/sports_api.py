@@ -467,10 +467,31 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
             
         if res.status_code == 200:
             data = res.json()
-            if 'results' in data and len(data['results']) > 0:
-                # We optionally verify if the result name sort of matches our teams
-                # But typically the first search result is highly accurate.
-                return data['results'][0].get('entity', {}).get('id')
+            results = data.get('results', [])
+            if not results:
+                return None
+
+            # Filter by date if provided
+            if match_date:
+                # Expected match_date format: 'YYYY-MM-DD'
+                for r in results:
+                    if r.get('type') != 'event': continue
+                    entity = r.get('entity', {})
+                    ts = entity.get('startTimestamp')
+                    if ts:
+                        res_date = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+                        if res_date == match_date:
+                            print(f"✅ Found matching SofaScore ID {entity.get('id')} for date {match_date}")
+                            return entity.get('id')
+                
+                # Loose fallback: Check if anything matches the year/month at least? 
+                # Or just pick the first one if it's "recent" (last 10 years).
+                # But for now, strict date match is safest for Grader.
+
+            # Final fallback: return the first event found
+            for r in results:
+                if r.get('type') == 'event':
+                    return r.get('entity', {}).get('id')
                 
         return None
     except Exception as e:
@@ -503,10 +524,25 @@ def get_sofascore_match_stats(sofascore_match_id: int):
     # The RapidAPI response doesn't wrap it in an 'event' object; the payload IS the event
     event_data = event_res.json()
     
+    # SAFETY: Sometimes the API returns a list (search results) if the ID is wrong or ambiguous
+    if isinstance(event_data, list):
+        if len(event_data) > 0:
+            event_data = event_data[0]
+        else:
+            print(f"Match {sofascore_match_id} details came back as an empty list.")
+            return None, None
+    
     home_id = event_data.get('homeTeam', {}).get('id')
     home_name = event_data.get('homeTeam', {}).get('name')
     away_id = event_data.get('awayTeam', {}).get('id')
     away_name = event_data.get('awayTeam', {}).get('name')
+    
+    # Extract Referee & Match Context (zero extra API calls)
+    referee_name = event_data.get('referee', {}).get('name') if event_data.get('referee') else None
+    tournament_name = event_data.get('tournament', {}).get('name') or event_data.get('uniqueTournament', {}).get('name')
+    round_info = event_data.get('roundInfo', {}).get('name') or event_data.get('roundInfo', {}).get('round')
+    if referee_name:
+        print(f"🟨 Referee Detected: {referee_name}")
     
     # Handle flat or nested tournament structure
     tournament_id = event_data.get('uniqueTournament', {}).get('id')
@@ -519,7 +555,60 @@ def get_sofascore_match_stats(sofascore_match_id: int):
         print(f"Missing required IDs for Match {sofascore_match_id}.")
         return None, None
     
-    # 2. Fetch Team Overall Statistics
+    # --- Helper: extract stats dict from raw API response ---
+    def _extract_stats(raw_data):
+        if isinstance(raw_data, list) and len(raw_data) > 0:
+            return raw_data[0].get('statistics', {})
+        elif isinstance(raw_data, dict):
+            return raw_data.get('statistics', {})
+        return {}
+
+    # --- Helper: build flat comparison JSON from two stat dicts ---
+    METRICS_TO_COMPARE = [
+        ("Matches", "matches", False),
+        ("Goals scored", "goalsScored", False),
+        ("Goals conceded", "goalsConceded", False),
+        ("Assists", "assists", False),
+        ("Goals per game", "goalsScored", True),
+        ("Shots on target per game", "shotsOnTarget", True),
+        ("Big chances created", "bigChancesCreated", False),
+        ("Big chances missed", "bigChancesMissed", False),
+        ("Ball possession (%)", "averageBallPossession", False),
+        ("Accurate passes per game", "accuratePasses", True),
+        ("Acc. long balls per game", "accurateLongBalls", True),
+        ("Clean sheets", "cleanSheets", False),
+        ("Goals conceded per game", "goalsConceded", True),
+        ("Interceptions per game", "interceptions", True),
+        ("Tackles per game", "tackles", True),
+        ("Clearances per game", "clearances", True),
+        ("Penalty goals conceded", "penaltyGoalsConceded", False),
+        ("Saves per game", "saves", True),
+        ("Duels won per game", "duelsWon", True),
+        ("Fouls per game", "fouls", True),
+        ("Offsides per game", "offsides", True),
+        ("Goal kicks per game", "goalKicks", True),
+        ("Throw-ins per game", "throwIns", True),
+        ("Yellow cards", "yellowCards", False),
+        ("Red cards", "redCards", False)
+    ]
+
+    def _build_comparison(h_stats, a_stats, h_label, a_label):
+        m_h = h_stats.get('matches', 1) or 1
+        m_a = a_stats.get('matches', 1) or 1
+        flat = {}
+        for display_name, json_key, needs_math in METRICS_TO_COMPARE:
+            h_val = h_stats.get(json_key)
+            a_val = a_stats.get(json_key)
+            if needs_math:
+                h_val = round(h_val / m_h, 1) if h_val is not None else None
+                a_val = round(a_val / m_a, 1) if a_val is not None else None
+            else:
+                if isinstance(h_val, float): h_val = round(h_val, 1)
+                if isinstance(a_val, float): a_val = round(a_val, 1)
+            flat[display_name] = {h_label: h_val, a_label: a_val}
+        return flat
+
+    # 2. Fetch Team OVERALL Statistics
     stats_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/team/statistics"
     
     home_params = {"team_id": home_id, "unique_tournament_id": tournament_id, "season_id": season_id}
@@ -528,101 +617,141 @@ def get_sofascore_match_stats(sofascore_match_id: int):
     home_stats_res = requests.get(stats_url, headers=headers, params=home_params)
     away_stats_res = requests.get(stats_url, headers=headers, params=away_params)
     
-    if home_stats_res.status_code == 200 and away_stats_res.status_code == 200:
-        home_data = home_stats_res.json()
-        away_data = away_stats_res.json()
-        
-        # Sometimes RapidAPI returns a list of stat objects (e.g., if a tournament has multiple stages like Group & Knockout)
-        if isinstance(home_data, list) and len(home_data) > 0:
-            home_stats = home_data[0].get('statistics', {})
-        elif isinstance(home_data, dict):
-            home_stats = home_data.get('statistics', {})
-        else:
-            home_stats = {}
-            
-        if isinstance(away_data, list) and len(away_data) > 0:
-            away_stats = away_data[0].get('statistics', {})
-        elif isinstance(away_data, dict):
-            away_stats = away_data.get('statistics', {})
-        else:
-            away_stats = {}
-        
-        matches_home = home_stats.get('matches', 1) 
-        matches_away = away_stats.get('matches', 1)
-
-        metrics_to_compare = [
-            ("Matches", "matches", False),
-            ("Goals scored", "goalsScored", False),
-            ("Goals conceded", "goalsConceded", False),
-            ("Assists", "assists", False),
-            ("Goals per game", "goalsScored", True),
-            ("Shots on target per game", "shotsOnTarget", True),
-            ("Big chances created", "bigChancesCreated", False),
-            ("Big chances missed", "bigChancesMissed", False),
-            ("Ball possession (%)", "averageBallPossession", False),
-            ("Accurate passes per game", "accuratePasses", True),
-            ("Acc. long balls per game", "accurateLongBalls", True),
-            ("Clean sheets", "cleanSheets", False),
-            ("Goals conceded per game", "goalsConceded", True),
-            ("Interceptions per game", "interceptions", True),
-            ("Tackles per game", "tackles", True),
-            ("Clearances per game", "clearances", True),
-            ("Penalty goals conceded", "penaltyGoalsConceded", False),
-            ("Saves per game", "saves", True),
-            ("Duels won per game", "duelsWon", True),
-            ("Fouls per game", "fouls", True),
-            ("Offsides per game", "offsides", True),
-            ("Goal kicks per game", "goalKicks", True),
-            ("Throw-ins per game", "throwIns", True),
-            ("Yellow cards", "yellowCards", False),
-            ("Red cards", "redCards", False)
-        ]
-        
-        data_rows = []
-        
-        for display_name, json_key, needs_math in metrics_to_compare:
-            h_val = home_stats.get(json_key)
-            a_val = away_stats.get(json_key)
-            
-            if needs_math:
-                h_val = round(h_val / matches_home, 1) if h_val is not None else None
-                a_val = round(a_val / matches_away, 1) if a_val is not None else None
-            else:
-                if isinstance(h_val, float): h_val = round(h_val, 1)
-                if isinstance(a_val, float): a_val = round(a_val, 1)
-            
-            data_rows.append({
-                "Statistic": display_name,
-                home_name: h_val,
-                away_name: a_val
-            })
-            
-        df = pd.DataFrame(data_rows)
-        df.set_index("Statistic", inplace=True)
-        
-        flat_json = {}
-        for row in data_rows:
-            stat_name = row["Statistic"]
-            flat_json[stat_name] = {
-                home_name: row[home_name],
-                away_name: row[away_name]
-            }
-            
-        advanced_stats = {
-            "metadata": {
-                "home_team": home_name,
-                "away_team": away_name,
-                "home_logo": f"https://api.sofascore.app/api/v1/team/{home_id}/image" if home_id else None,
-                "away_logo": f"https://api.sofascore.app/api/v1/team/{away_id}/image" if away_id else None,
-                "match_date": datetime.fromtimestamp(event_data.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if event_data.get("startTimestamp") else None
-            },
-            "metrics": flat_json
-        }
-            
-        return df, advanced_stats
-            
-    else:
+    if home_stats_res.status_code != 200 or away_stats_res.status_code != 200:
         print(f"Stats fetch failed. Home {home_stats_res.status_code}, Away {away_stats_res.status_code}")
         return None, None
 
+    home_stats = _extract_stats(home_stats_res.json())
+    away_stats = _extract_stats(away_stats_res.json())
 
+    # Build the overall comparison (existing behavior)
+    overall_json = _build_comparison(home_stats, away_stats, home_name, away_name)
+    
+    # Build DataFrame for legacy compatibility
+    data_rows = [{"Statistic": k, home_name: v[home_name], away_name: v[away_name]} for k, v in overall_json.items()]
+    df = pd.DataFrame(data_rows)
+    df.set_index("Statistic", inplace=True)
+    
+    # 3. Fetch VENUE-SPECIFIC Statistics (Home team's HOME-ONLY stats, Away team's AWAY-ONLY stats)
+    home_venue_json = None
+    away_venue_json = None
+    
+    try:
+        home_venue_params = {**home_params, "group": "home"}
+        away_venue_params = {**away_params, "group": "away"}
+        
+        hv_res = requests.get(stats_url, headers=headers, params=home_venue_params)
+        av_res = requests.get(stats_url, headers=headers, params=away_venue_params)
+        
+        if hv_res.status_code == 200 and av_res.status_code == 200:
+            hv_stats = _extract_stats(hv_res.json())
+            av_stats = _extract_stats(av_res.json())
+            
+            # Only use venue stats if they actually contain data (i.e., the API supports the group param)
+            if hv_stats.get('matches') and av_stats.get('matches'):
+                home_venue_json = _build_comparison(hv_stats, av_stats, f"{home_name} (HOME ONLY)", f"{away_name} (AWAY ONLY)")
+                print(f"📊 Venue Split: {home_name} HOME={hv_stats.get('matches')} matches | {away_name} AWAY={av_stats.get('matches')} matches")
+            else:
+                print("⚠️ Venue-filtered stats returned empty. Using Overall stats only.")
+        else:
+            print(f"⚠️ Venue stats fetch returned {hv_res.status_code}/{av_res.status_code}. Using Overall stats only.")
+    except Exception as venue_err:
+        print(f"⚠️ Venue stats fetch failed ({venue_err}). Using Overall stats only.")
+        
+    advanced_stats = {
+        "metadata": {
+            "home_team": home_name,
+            "away_team": away_name,
+            "home_logo": f"https://api.sofascore.app/api/v1/team/{home_id}/image" if home_id else None,
+            "away_logo": f"https://api.sofascore.app/api/v1/team/{away_id}/image" if away_id else None,
+            "match_date": datetime.fromtimestamp(event_data.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if event_data.get("startTimestamp") else None,
+            "referee": referee_name,
+            "tournament": tournament_name,
+            "round": str(round_info) if round_info else None
+        },
+        "metrics": overall_json
+    }
+    
+    # Attach venue-specific stats if available
+    if home_venue_json:
+        advanced_stats["home_away_split"] = home_venue_json
+        
+    return df, advanced_stats
+
+
+
+@rate_limit(calls_per_minute=16)
+def get_sofascore_match_grade_data(sofascore_match_id: int):
+    """
+    Consolidated fetch for the Grader service.
+    Returns Score, Status, Statistics, and Incidents (Goals/Cards).
+    """
+    if not RAPID_API_KEY:
+        return None
+
+    headers = {
+        "x-rapidapi-host": RAPID_API_HOST,
+        "x-rapidapi-key": RAPID_API_KEY
+    }
+
+    results = {
+        "score_summary": "Unknown",
+        "match_status": "Unknown",
+        "statistics": [],
+        "incidents": []
+    }
+
+    def _safe_get(obj, key, default={}):
+        if not isinstance(obj, dict): return default
+        val = obj.get(key, default)
+        if isinstance(val, list) and len(val) > 0: return val[0]
+        return val if isinstance(val, dict) else default
+
+    try:
+        # 1. Fetch Details (Score & Status)
+        detail_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/details"
+        res = requests.get(detail_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        if res.status_code == 200:
+            data = res.json()
+            if isinstance(data, list) and len(data) > 0: data = data[0]
+            
+            if isinstance(data, dict):
+                hT = _safe_get(data, 'homeTeam')
+                aT = _safe_get(data, 'awayTeam')
+                hS = _safe_get(data, 'homeScore')
+                aS = _safe_get(data, 'awayScore')
+                st = _safe_get(data, 'status')
+
+                home_name = hT.get('name', 'Home')
+                away_name = aT.get('name', 'Away')
+                home_score = hS.get('current', 0)
+                away_score = aS.get('current', 0)
+                status = st.get('description', 'Unknown')
+                
+                results["score_summary"] = f"{home_name} {home_score} - {away_score} {away_name}"
+                results["match_status"] = status
+
+        # 2. Fetch Statistics (Corners, Cards, etc.)
+        stats_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/statistics"
+        res = requests.get(stats_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        if res.status_code == 200:
+            data = res.json()
+            if isinstance(data, list) and len(data) > 0:
+                results["statistics"] = data[0].get('statistics', [])
+            elif isinstance(data, dict):
+                results["statistics"] = data.get('statistics', [])
+
+        # 3. Fetch Incidents (Goals, Red Cards)
+        inc_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/incidents"
+        res = requests.get(inc_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        if res.status_code == 200:
+            data = res.json()
+            if isinstance(data, list) and len(data) > 0:
+                results["incidents"] = data[0].get('incidents', [])
+            elif isinstance(data, dict):
+                results["incidents"] = data.get('incidents', [])
+
+        return results
+    except Exception as e:
+        print(f"Error fetching grade data for {sofascore_match_id}: {e}")
+        return None
