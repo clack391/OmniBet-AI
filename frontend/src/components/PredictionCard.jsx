@@ -17,7 +17,9 @@ const PredictionCard = ({ prediction }) => {
     const getLogoUrl = (logoPath) => {
         if (!logoPath) return null;
         if (logoPath.startsWith('http') || logoPath.startsWith(API_URL)) return logoPath;
-        return `${API_URL}${logoPath}`;
+        // Strip leading slash if API_URL ends with one (unlikely but safe)
+        const path = logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
+        return `${API_URL}${path}`;
     };
 
     const handleAdd = (pickObj, type) => {

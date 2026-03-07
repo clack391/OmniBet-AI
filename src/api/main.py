@@ -65,17 +65,25 @@ async def team_logo_proxy(team_id: int):
     try:
         from curl_cffi import requests as cffi_requests
         url = f"https://api.sofascore.com/api/v1/team/{team_id}/image"
-        res = cffi_requests.get(url, impersonate="chrome120", timeout=10)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Referer": "https://www.sofascore.com/",
+            "Origin": "https://www.sofascore.com"
+        }
+        res = cffi_requests.get(url, impersonate="chrome120", headers=headers, timeout=12)
         
         if res.status_code == 200:
             # Save to Cache for next time
             os.makedirs("data/logos", exist_ok=True)
             with open(cache_path, "wb") as f:
                 f.write(res.content)
+            print(f"✅ Logo cached and served for team {team_id}")
             return Response(content=res.content, media_type="image/png")
+        else:
+            print(f"⚠️ Logo fetch failed (Status {res.status_code}) for team {team_id} at {url}")
             
     except Exception as e:
-        print(f"Logo proxy error for team {team_id}: {e}")
+        print(f"❌ Logo proxy error for team {team_id}: {str(e)}")
         
     # Fallback: return a 1x1 transparent PNG
     return Response(content=b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n\xb4\x00\x00\x00\x00IEND\xaeB`\x82', media_type="image/png")

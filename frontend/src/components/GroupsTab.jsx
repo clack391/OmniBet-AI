@@ -21,7 +21,8 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
     const getLogoUrl = (logoPath) => {
         if (!logoPath) return null;
         if (logoPath.startsWith('http') || logoPath.startsWith(API_URL)) return logoPath;
-        return `${API_URL}${logoPath}`;
+        const path = logoPath.startsWith('/') ? logoPath : `/${logoPath}`;
+        return `${API_URL}${path}`;
     };
 
     const [groups, setGroups] = useState([]);
