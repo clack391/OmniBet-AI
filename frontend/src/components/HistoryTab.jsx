@@ -19,6 +19,12 @@ api.interceptors.request.use((config) => {
 });
 
 const HistoryTab = ({ onSelectHistoryItem }) => {
+    const getLogoUrl = (logoPath) => {
+        if (!logoPath) return null;
+        if (logoPath.startsWith('http')) return logoPath;
+        return `${API_URL}${logoPath}`;
+    };
+
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [gradingIds, setGradingIds] = useState([]);
@@ -295,7 +301,17 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                             {new Date(pick.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' })}
                                         </div>
                                     </div>
-                                    <h4 className="font-bold text-white text-md mb-2">{pick.teams}</h4>
+                                    <div className="flex justify-between items-center mb-3 bg-gray-950/50 p-2 rounded-lg border border-gray-800/50">
+                                        <div className="flex items-center gap-2">
+                                            {pick.home_logo && <img src={getLogoUrl(pick.home_logo)} alt="Home" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                            <span className="font-bold text-gray-200 text-sm">{pick.teams.split(' vs ')[0]}</span>
+                                        </div>
+                                        <span className="text-gray-600 text-[10px] font-bold">VS</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-gray-200 text-sm">{pick.teams.split(' vs ')[1]}</span>
+                                            {pick.away_logo && <img src={getLogoUrl(pick.away_logo)} alt="Away" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                        </div>
+                                    </div>
 
                                     <div className="inline-flex items-center px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3 flex-wrap gap-2">
                                         <div className="flex items-center">
@@ -372,7 +388,15 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                             </button>
                                         </div>
                                     </div>
-                                    <h3 className="text-lg font-bold text-white">{item.teams || "Unknown Match"}</h3>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="flex items-center gap-2 bg-gray-950/30 px-3 py-1.5 rounded-lg border border-gray-800/50">
+                                            {item.home_logo && <img src={getLogoUrl(item.home_logo)} alt="H" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                            <span className="text-base font-bold text-white">{item.teams ? item.teams.split(' vs ')[0] : "Home"}</span>
+                                            <span className="text-gray-500 text-xs font-black px-1">VS</span>
+                                            <span className="text-base font-bold text-white">{item.teams ? item.teams.split(' vs ')[1] : "Away"}</span>
+                                            {item.away_logo && <img src={getLogoUrl(item.away_logo)} alt="A" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                        </div>
+                                    </div>
                                     <div className="flex flex-col gap-2 mt-2">
                                         <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-emerald-500/20 w-fit">
                                             <span className="text-xs text-emerald-400 mr-2 font-bold">SAFEST TIP:</span>

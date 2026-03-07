@@ -18,6 +18,12 @@ api.interceptors.request.use((config) => {
 });
 
 const GroupsTab = ({ onSelectHistoryItem }) => {
+    const getLogoUrl = (logoPath) => {
+        if (!logoPath) return null;
+        if (logoPath.startsWith('http')) return logoPath;
+        return `${API_URL}${logoPath}`;
+    };
+
     const [groups, setGroups] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedGroup, setSelectedGroup] = useState(null);
@@ -165,7 +171,15 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                             )}
                                         </div>
                                     </div>
-                                    <h3 className="text-base md:text-lg font-bold text-white mb-2">{item.teams || "Unknown Match"}</h3>
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="flex items-center gap-2 bg-gray-950/30 px-3 py-1.5 rounded-lg border border-gray-800/50">
+                                            {item.home_logo && <img src={getLogoUrl(item.home_logo)} alt="H" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                            <span className="text-base font-bold text-white">{item.teams ? item.teams.split(' vs ')[0] : "Home"}</span>
+                                            <span className="text-gray-500 text-xs font-black px-1">VS</span>
+                                            <span className="text-base font-bold text-white">{item.teams ? item.teams.split(' vs ')[1] : "Away"}</span>
+                                            {item.away_logo && <img src={getLogoUrl(item.away_logo)} alt="A" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                        </div>
+                                    </div>
                                     <div className="flex flex-col gap-2">
                                         <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-emerald-500/20 w-fit">
                                             <span className="text-[10px] md:text-xs text-emerald-400 mr-2 font-bold">SAFEST:</span>

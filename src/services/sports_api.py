@@ -720,10 +720,11 @@ def get_sofascore_match_stats(sofascore_match_id: int):
 
 
 @rate_limit(calls_per_minute=16)
+@rate_limit(calls_per_minute=16)
 def get_sofascore_match_grade_data(sofascore_match_id: int):
     """
     Consolidated fetch for the Grader service.
-    Returns Score, Status, Statistics, and Incidents (Goals/Cards).
+    Returns Score, Status, Statistics, Incidents (Goals/Cards), and Player Performance.
     """
     if not RAPID_API_KEY:
         return None
@@ -736,8 +737,10 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
     results = {
         "score_summary": "Unknown",
         "match_status": "Unknown",
+        "period_scores": {},
         "statistics": [],
-        "incidents": []
+        "incidents": [],
+        "player_statistics": []
     }
 
     def _safe_get(obj, key, default={}):
@@ -747,7 +750,7 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
         return val if isinstance(val, dict) else default
 
     try:
-        # 1. Fetch Details (Score & Status)
+        # 1. Fetch Details (Score, Status, Period Scores)
         detail_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/details"
         res = requests.get(detail_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
         if res.status_code == 200:
@@ -769,6 +772,13 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
                 
                 results["score_summary"] = f"{home_name} {home_score} - {away_score} {away_name}"
                 results["match_status"] = status
+                
+                # Period Scores (1st Half, 2nd Half, ET, etc.)
+                results["period_scores"] = {
+                    "period1": {"home": hS.get("period1"), "away": aS.get("period1")},
+                    "period2": {"home": hS.get("period2"), "away": aS.get("period2")},
+                    "extraTime": {"home": hS.get("extra1"), "away": aS.get("extra1")} # simplified
+                }
 
         # 2. Fetch Statistics (Corners, Cards, etc.)
         stats_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/statistics"
@@ -780,7 +790,7 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
             elif isinstance(data, dict):
                 results["statistics"] = data.get('statistics', [])
 
-        # 3. Fetch Incidents (Goals, Red Cards)
+        # 3. Fetch Incidents (Goals, Red Cards, Penalty minute markers)
         inc_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/incidents"
         res = requests.get(inc_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
         if res.status_code == 200:
@@ -789,6 +799,15 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
                 results["incidents"] = data[0].get('incidents', [])
             elif isinstance(data, dict):
                 results["incidents"] = data.get('incidents', [])
+
+        # 4. Fetch Player Statistics (For Player Props)
+        player_stats_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/player-statistics"
+        res = requests.get(player_stats_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        if res.status_code == 200:
+            data = res.json()
+            # This usually returns arrays for both teams
+            if isinstance(data, dict):
+                results["player_statistics"] = data.get('players', [])
 
         return results
     except Exception as e:

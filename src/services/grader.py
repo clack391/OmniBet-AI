@@ -92,33 +92,36 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
     # 3. AI Adjudication
     print(f"⚖️ [Grader] Evaluating {safe_bet_tip} against RapidAPI payload...")
     prompt = f"""
-    Act as a strict, impartial sports betting adjudicator.
+    Act as a strict, expert sports betting adjudicator. 
     
     ### Match Context
     Target Match: {team_a} vs {team_b} on {match_date}
     Predicted Tip: `{safe_bet_tip}`
     
-    ### Data Source
-    I am providing you with raw SofaScore JSON data. Your first priority is to VERIFY this data belongs to the target match.
-    
-    SofaScore Payload Dump:
+    ### Data Source: SofaScore Forensic Payload
     {json.dumps(grade_data)[:25000]} 
 
-    ### Mandatory Evaluation Steps
-    1. **Identity Check**: Ensure the teams in the payload match "{team_a}" and "{team_b}". If they are completely different teams, set `is_correct` to null.
-    2. **Temporal Check**: Ensure the match date in the payload is within 24 hours of {match_date}.
-    3. **Market Grading**: 
-       - If status is NOT finished, set `status` to "Live" or "Scheduled".
-       - Only set `is_correct` to true/false if the result is already mathematically certain (e.g. "Over 2.5" score is 3-0).
-       - For micro-markets (corners, cards), parse the 'statistics' or 'incidents' array with extreme precision.
+    ### Your Adjudication Task
+    Evaluate if `{safe_bet_tip}` won, lost, or is still pending. You have access to the full match statistics, period scores, incident timeline, and player-level data.
+
+    #### Market Grading Guide:
+    1. **1X2 / Double Chance / DNB**: Use `score_summary`.
+    2. **Over/Under Goals / BTTS**: Use `score_summary`.
+    3. **HT/FT & Highest Scoring Half**: Compare `period_scores['period1']` vs `score_summary`.
+    4. **Player Props (e.g. Shots/Goals/Cards)**: Locate the player in `player_statistics`. Look for fields like 'shotsOnTarget', 'goals', 'yellowCards'.
+    5. **10/15/30 Minute Markets**: Inspect `incidents`. If a goal occurs at minute X, and the market is "No goal before X", it is a LOSS. 
+    6. **Corners/Cards**: Verify exact counts in the `statistics` array.
+
+    ### Mandatory Identity Check
+    Ensure the teams in the payload match "{team_a}" & "{team_b}". If they are different, set `is_correct` to null.
 
     ### Output Format
-    Return ONLY valid JSON matching this structure:
+    Return ONLY valid JSON:
     {{
         "actual_score": "{actual_score_str}",
         "status": "Finished, Live, or Scheduled",
         "is_correct": true, false, or null,
-        "reasoning": "Brief explanation of the grade"
+        "reasoning": "Forensic breakdown: e.g., 'Player X had 2 shots on target', 'Goal at 7 min broke 10 min draw'"
     }}
     """
     

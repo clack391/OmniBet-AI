@@ -24,6 +24,12 @@ api.interceptors.request.use((config) => {
 });
 
 const Dashboard = () => {
+    const getLogoUrl = (logoPath) => {
+        if (!logoPath) return null;
+        if (logoPath.startsWith('http')) return logoPath;
+        return `${API_URL}${logoPath}`;
+    };
+
     const { betSlip, addToSlip } = useBetSlip();
 
     const handleAddAudit = (pred) => {
@@ -628,15 +634,31 @@ const Dashboard = () => {
                                             pred.audit_verdict.status === 'DOWNGRADED' ? 'bg-yellow-900/30 border-yellow-800' :
                                                 'bg-red-900/30 border-red-800'
                                             }`}>
-                                            <div className="flex justify-between items-center bg-gray-900/50 px-3 py-2 rounded-lg mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    {pred.home_logo && <img src={pred.home_logo} alt="Home" className="w-5 h-5 object-contain" />}
-                                                    <span className="font-bold text-gray-200">{pred.home_team || "Home"}</span>
+                                            <div className="flex justify-between items-center bg-gray-900/80 px-4 py-3 rounded-xl mb-4 border border-gray-700/50 shadow-inner">
+                                                <div className="flex flex-col items-center gap-2 flex-1">
+                                                    <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-700 shadow-lg flex items-center justify-center overflow-hidden p-1.5">
+                                                        {pred.home_logo ? (
+                                                            <img src={getLogoUrl(pred.home_logo)} alt="H" className="w-full h-full object-contain" />
+                                                        ) : (
+                                                            <span className="text-gray-400 font-bold text-xs">{pred.home_team?.substring(0, 2).toUpperCase()}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="font-bold text-gray-200 text-xs text-center leading-tight">{pred.home_team || "Home"}</span>
                                                 </div>
-                                                <span className="text-gray-500 text-sm font-bold">VS</span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-200">{pred.away_team || "Away"}</span>
-                                                    {pred.away_logo && <img src={pred.away_logo} alt="Away" className="w-5 h-5 object-contain" />}
+
+                                                <div className="px-4">
+                                                    <span className="text-gray-600 text-sm font-black italic">VS</span>
+                                                </div>
+
+                                                <div className="flex flex-col items-center gap-2 flex-1">
+                                                    <div className="w-12 h-12 rounded-full bg-white border-2 border-slate-700 shadow-lg flex items-center justify-center overflow-hidden p-1.5">
+                                                        {pred.away_logo ? (
+                                                            <img src={getLogoUrl(pred.away_logo)} alt="A" className="w-full h-full object-contain" />
+                                                        ) : (
+                                                            <span className="text-gray-400 font-bold text-xs">{pred.away_team?.substring(0, 2).toUpperCase()}</span>
+                                                        )}
+                                                    </div>
+                                                    <span className="font-bold text-gray-200 text-xs text-center leading-tight">{pred.away_team || "Away"}</span>
                                                 </div>
                                             </div>
 
@@ -665,7 +687,13 @@ const Dashboard = () => {
                                             <div className="bg-gray-900 rounded-lg p-3 border border-gray-700">
                                                 <div className="text-xs text-blue-400 font-bold mb-1 uppercase tracking-wider">Auditor Recommendation</div>
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <div className="text-lg font-medium text-white">{pred.audit_verdict.ai_recommended_bet}</div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex -space-x-2">
+                                                            {pred.home_logo && <img src={getLogoUrl(pred.home_logo)} className="w-6 h-6 rounded-full border border-gray-700 bg-white p-0.5 object-contain" alt="H" />}
+                                                            {pred.away_logo && <img src={getLogoUrl(pred.away_logo)} className="w-6 h-6 rounded-full border border-gray-700 bg-white p-0.5 object-contain" alt="A" />}
+                                                        </div>
+                                                        <div className="text-lg font-black text-white">{pred.audit_verdict.ai_recommended_bet}</div>
+                                                    </div>
 
                                                     {pred.audit_verdict.status !== 'REJECTED' && (
                                                         <button
