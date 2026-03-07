@@ -16,7 +16,7 @@ const PredictionCard = ({ prediction }) => {
 
     const getLogoUrl = (logoPath) => {
         if (!logoPath) return null;
-        if (logoPath.startsWith('http')) return logoPath;
+        if (logoPath.startsWith('http') || logoPath.startsWith(API_URL)) return logoPath;
         return `${API_URL}${logoPath}`;
     };
 

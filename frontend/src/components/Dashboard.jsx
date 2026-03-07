@@ -26,7 +26,7 @@ api.interceptors.request.use((config) => {
 const Dashboard = () => {
     const getLogoUrl = (logoPath) => {
         if (!logoPath) return null;
-        if (logoPath.startsWith('http')) return logoPath;
+        if (logoPath.startsWith('http') || logoPath.startsWith(API_URL)) return logoPath;
         return `${API_URL}${logoPath}`;
     };
 
@@ -162,15 +162,10 @@ const Dashboard = () => {
             // We convert the UTC ISO string to the user's local browser timezone first!
             const allMatches = response.data.matches || [];
             const filteredMatches = allMatches.filter(match => {
-                const matchDate = new Date(match.utcDate);
-
-                // Construct YYYY-MM-DD in the user's local timezone (e.g. WAT)
-                const localYear = matchDate.getFullYear();
-                const localMonth = String(matchDate.getMonth() + 1).padStart(2, '0');
-                const localDay = String(matchDate.getDate()).padStart(2, '0');
-                const localDateStr = `${localYear}-${localMonth}-${localDay}`;
-
-                return localDateStr === date;
+                // Ensure we compare UTC date strings to the calendar's YYYY-MM-DD input
+                // match.utcDate is something like "2024-03-07T12:00:00Z"
+                const utcDateStr = match.utcDate.split('T')[0];
+                return utcDateStr === date;
             });
 
             setFixtures(filteredMatches);

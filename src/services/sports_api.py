@@ -131,8 +131,8 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
                                 "away": event.get("awayScore", {}).get("current", None)
                             }
                         },
-                        "home_logo": f"/api/team-logo/{home_id}" if home_id else None,
-                        "away_logo": f"/api/team-logo/{away_id}" if away_id else None,
+                        "home_logo": f"/team-logo/{home_id}" if home_id else None,
+                        "away_logo": f"/team-logo/{away_id}" if away_id else None,
                         "_timestamp": event.get("startTimestamp", 0) # Temporary key for sorting
                     }
                     all_matches.append(mapped_match)

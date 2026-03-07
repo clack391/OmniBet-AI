@@ -297,7 +297,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
 
     2. **Catching the "Gambler's Fallacy"**: Do not assume extreme streaks (e.g., 5 games without scoring) will continue indefinitely; enforce Regression to the Mean when probabilistically appropriate.
 
-    3. **The "Ineptitude Floor" & Desperation check**: If the primary agent justified an aggressive 'Over 2.5' or 'BTTS: Yes' pick by claiming one team is "desperate" for points (e.g., relegation battle), you MUST verify their actual offensive output. Desperation does NOT equal goals if a team is statistically inept at scoring or missing key attackers. If a team averages < 0.8 goals a game or their top scorer is missing, Overrule BTTS/Over picks to safer Under markets (e.g., Under 3.5, Under 2.5, or Team Under).
+    3. **The "Squad Depth" & Ineptitude Audit**: If the primary agent justified an aggressive 'Over 2.5' or 'BTTS: Yes' pick but a top scorer is missing, perform a **Squad Depth Check**. Search for the backup striker's current form or the team's goals-per-game without that star player. If depth is confirmed, you may approve the pick with a minor confidence penalty. If no depth exists and the team averages < 0.8 goals/game, you MUST downgrade to a safer Under/Conservative market.
 
     4. **The "Derby Caution Directive"**: If the primary agent upgraded a goal market purely because it is a "Derby", exercise extreme caution. Derbies are notoriously tight, card-heavy, defensive struggles. If the baseline data points to a low-scoring match, OVERRULE the agent's derby narrative and reinstate the mathematically sound Under/Conservative pick.
 
@@ -310,10 +310,21 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
         
     6. **Early Season Sample Size Audit**: You MUST identify if the primary agent is over-correcting based on Matchday 1 or 2 results. If the agent justifies an 'Under 2.5' or 'No BTTS' pick solely because "Team X failed to score in their opener", you MUST challenge this as **Sample Size Bias**. If Team X had high possession/xG in that opener, they are likely to regress (breakout) in this match. Downgrade any Under 2.5 pick to Under 3.5 or Double Chance if the reasoning relies on a single-game "sterile" performance during the first 4 rounds of the season.
        
-    5. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
+    7. **THE HALLUCINATION PENALTY (CRITICAL)**: If your Google Search reveals that your colleague (Agent 1) has hallucinated a player who is NOT in the squad or mentioned a stat that is provably false, you MUST automatically:
+       - Reduce the `confidence` of the primary pick by at least **20%**.
+       - If the hallucinated player was used to justify a goal-scoring market (e.g., "Gu00fcndogan/Osimhen will score"), you MUST DOWNGRADE that market (e.g., BTTS -> Team Over 0.5 or No Bet).
+       - A hallucination is a sign of a flawed tactical model; do not ignore it just because the "firepower" is still high.
+
+    8. **THE DERBY LOCKDOWN**: If the match is a high-intensity derby (e.g., Istanbul Derby, North London Derby, El Clasico):
+       - Goal-scoring markets (BTTS: Yes, Over 2.5) should be judged with **Extreme Skepticism**.
+       - Search for the last 3 H2H results. If at least TWO were low-scoring (Under 2.5), you MUST overrule any 'Over 2.5' or 'BTTS: Yes' recommendation to a more conservative market (Under 3.5, Over 1.5, or Team Under).
+       - Derbies are about tactical shutdowns and cards, not always goals.
+
+       
+    9. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
 
-    6. **Update the JSON**:
+    10. **Update the JSON**:
        - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
        - **STRICT HARMONIZATION**: The exact text inside `primary_pick["tip"]` and `alternative_pick["tip"]` MUST perfectly match the prediction part of one of the items inside your `full_analysis` grid.
        - **NO BRACKETS IN TIP**: The `tip` string MUST be short and punchy (e.g., "Hamburger SV Over 0.5 Goals" or "Draw No Bet: Home"). You are STRICTLY FORBIDDEN from including `[Reasoning...]` text or brackets inside the `tip` string itself. Put all reasoning in the `reasoning` array or `step_by_step_reasoning`.
@@ -551,7 +562,10 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     }}
 
     *** AUDIT RULES ***
-    - **RULE 1: EARLY SEASON SAMPLE SIZE ALERT**: If this is Matchday 1-4 of the new season, you MUST NOT reject a user's 'Over 2.5' or 'Win' bet purely because the team failed to score in their opener. This is **Sample Size Bias**. One sterile game is not a trend. If the team had high possession/xG but finished poorly, they are likely to breakout. Downgrade their bet if necessary, but do NOT reject it based on Matchday 1 "ineptitude". 
+    - **RULE 1: THE HALLUCINATION PENALTY (CRITICAL)**: If your Search Tool reveals that your colleague (Agent 1) has hallucinated a player (e.g., Gündogan in a team he doesn't play for) or cited a false historical streak, you MUST DOWNGRADE the user's bet if it relies on that "firepower" or "resilience" narrative. A single hallucination discredits the entire tactical weight of that agent's reasoning.
+    - **RULE 2: DERBY LOCKDOWN**: In high-stakes derbies, if the user picks 'Both Teams To Score' or 'Over 2.5', look for tactical reasons to DOWNGRADE. If the H2H history shows cagey 1-0 or 1-1 results, do not approve a high-scoring bet.
+    - **RULE 3: SQUAD DEPTH VERIFICATION (INJURIES)**: If a team's top goalscorer is OUT, do NOT automatically forbid goal markets. Instead, perform a **Squad Depth Check** via search. Look for the backup striker's recent form or the team's goals-per-game in matches where that star player was absent. If depth is confirmed, you may APPROVE the bet with a minor confidence reduction. Only downgrade if proof of replacement quality is missing.
+    - **RULE 4: EARLY SEASON SAMPLE SIZE ALERT**: If this is Matchday 1-4 of the new season, you MUST NOT reject a user's 'Over 2.5' or 'Win' bet purely because the team failed to score in their opener. This is **Sample Size Bias**. One sterile game is not a trend. If the team had high possession/xG but finished poorly, they are likely to breakout. Downgrade their bet if necessary, but do NOT reject it based on Matchday 1 "ineptitude". 
     - MARKET INTERPRETABILITY: You are an expert in ALL global football betting markets...
     - APPROVED: If the user's bet is mathematically sound and matches the likely Game Script.
     - DOWNGRADED: If the user has the right idea but is being too greedy. (e.g., User picks 'Over 2.5', but stats show a tight game -> Downgrade to 'Over 1.5').
