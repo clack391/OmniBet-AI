@@ -110,18 +110,18 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
     if (selectedGroup) {
         return (
             <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 w-full mt-6">
-                <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-700">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-700">
                     <button
                         onClick={handleBackToGroups}
-                        className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 hover:text-white transition-colors flex items-center gap-2"
+                        className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-gray-300 hover:text-white transition-colors flex items-center gap-2 text-sm"
                     >
                         <ArrowLeft className="w-4 h-4" /> Back
                     </button>
                     <div>
-                        <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                        <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
                             <FolderOpen className="text-blue-400" /> {selectedGroup.name}
                         </h2>
-                        <p className="text-sm text-gray-400 mt-1">Viewing organized matches.</p>
+                        <p className="text-xs md:text-sm text-gray-400 mt-1">Viewing organized matches.</p>
                     </div>
                 </div>
 
@@ -141,18 +141,18 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                 onClick={() => onSelectHistoryItem && onSelectHistoryItem(item)}
                                 className="bg-gray-900 border border-gray-700 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-blue-500/50 hover:bg-gray-800/80 cursor-pointer transition-all shadow-sm"
                             >
-                                <div className="flex-1">
+                                <div className="flex-1 w-full">
                                     <div className="flex justify-between items-start mb-1">
-                                        <div className="text-xs text-gray-400 font-mono">
+                                        <div className="text-[10px] md:text-xs text-gray-400 font-mono">
                                             {new Date(item.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
                                         </div>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={(e) => handleCopyToHistory(e, item.match_id)}
-                                                className="flex items-center gap-1.5 px-2 py-1 text-xs text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
+                                                className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
                                                 title="Copy to Prediction History"
                                             >
-                                                <Copy className="w-3.5 h-3.5" /> Copy to History
+                                                <Copy className="w-3 h-3" /> <span className="hidden xs:inline">Restore</span>
                                             </button>
                                             {isLoggedIn && (
                                                 <button
@@ -165,19 +165,19 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                             )}
                                         </div>
                                     </div>
-                                    <h3 className="text-lg font-bold text-white mb-2">{item.teams || "Unknown Match"}</h3>
+                                    <h3 className="text-base md:text-lg font-bold text-white mb-2">{item.teams || "Unknown Match"}</h3>
                                     <div className="flex flex-col gap-2">
                                         <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-emerald-500/20 w-fit">
-                                            <span className="text-xs text-emerald-400 mr-2 font-bold">SAFEST TIP:</span>
-                                            <span className="text-sm font-semibold text-emerald-300">{item.primary_pick?.tip || item.safe_bet_tip}</span>
+                                            <span className="text-[10px] md:text-xs text-emerald-400 mr-2 font-bold">SAFEST:</span>
+                                            <span className="text-xs md:text-sm font-semibold text-emerald-300">{item.primary_pick?.tip || item.safe_bet_tip}</span>
                                             <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-emerald-200 font-mono">
                                                 {item.primary_pick?.confidence || item.confidence}%
                                             </span>
                                         </div>
                                         {item.alternative_pick && (
                                             <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-amber-500/20 w-fit">
-                                                <span className="text-xs text-amber-500 mr-2 font-bold">VALUE BET:</span>
-                                                <span className="text-sm font-semibold text-amber-400">{item.alternative_pick.tip}</span>
+                                                <span className="text-[10px] md:text-xs text-amber-500 mr-2 font-bold">VALUE:</span>
+                                                <span className="text-xs md:text-sm font-semibold text-amber-400">{item.alternative_pick.tip}</span>
                                                 <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-amber-200 font-mono">
                                                     {item.alternative_pick.confidence}%
                                                 </span>
@@ -185,7 +185,7 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                         )}
                                     </div>
                                     {item.actual_result && (
-                                        <div className="mt-3 text-xs text-gray-300">
+                                        <div className="mt-2 text-[10px] md:text-xs text-gray-300">
                                             Result: <span className="font-mono bg-black/30 px-2 py-0.5 rounded text-white">{item.actual_result}</span>
                                         </div>
                                     )}
@@ -214,7 +214,7 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                     <p className="text-sm mt-1">Admins can click the Folder icon on any match in the History Tab to create a new group.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {groups.map(g => (
                         <div
                             key={g.id}

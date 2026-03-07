@@ -12,6 +12,14 @@ const PredictionCard = ({ prediction }) => {
     // Parse teams safely
     const [homeTeam, awayTeam] = prediction.match.split(' vs ');
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+    const getLogoUrl = (logoPath) => {
+        if (!logoPath) return null;
+        if (logoPath.startsWith('http')) return logoPath;
+        return `${API_URL}${logoPath}`;
+    };
+
     const handleAdd = (pickObj, type) => {
         // Fallback for legacy predictions still using safe_bet_tip string
         const tipStr = typeof pickObj === 'string' ? pickObj : pickObj?.tip;
@@ -72,7 +80,7 @@ const PredictionCard = ({ prediction }) => {
                 <div className="absolute top-40 -left-20 w-48 h-48 bg-accent-green/10 rounded-full blur-[60px] pointer-events-none"></div>
 
                 {/* Card Header: Teams & Logo */}
-                <div className="relative z-10 p-6 pb-4">
+                <div className="relative z-10 p-4 md:p-6 pb-4">
                     <div className="flex justify-between items-center mb-6">
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 bg-slate-800/50 px-3 py-1 rounded-full">
                             Match • Prediction
@@ -92,242 +100,242 @@ const PredictionCard = ({ prediction }) => {
                     </div>
 
                     {/* Teams Display */}
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center justify-between gap-2 md:gap-4">
                         {/* Home Team */}
-                        <div className="flex flex-col items-center gap-3 flex-1">
+                        <div className="flex flex-col items-center gap-2 md:gap-3 flex-1">
                             <div className="relative">
-                                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 shadow-lg overflow-hidden group p-2 bg-white">
+                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 shadow-lg overflow-hidden group p-1.5 md:p-2 bg-white">
                                     {prediction.home_logo ? (
-                                        <img src={prediction.home_logo} alt={homeTeam} className="w-full h-full object-contain drop-shadow-sm" />
+                                        <img src={getLogoUrl(prediction.home_logo)} alt={homeTeam} className="w-full h-full object-contain drop-shadow-sm" />
                                     ) : (
-                                        <span className="text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors">{homeTeam?.substring(0, 2).toUpperCase()}</span>
+                                        <span className="text-base md:text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors">{homeTeam?.substring(0, 2).toUpperCase()}</span>
                                     )}
                                 </div>
                             </div>
                             <div className="text-center">
-                                <h3 className="text-lg font-extrabold text-white leading-tight break-words max-w-[120px]">{homeTeam}</h3>
-                                <p className="text-sm text-slate-400 font-medium">Home</p>
+                                <h3 className="text-base md:text-lg font-extrabold text-white leading-tight break-words max-w-[100px] md:max-w-[120px]">{homeTeam}</h3>
+                                <p className="text-[10px] md:text-sm text-slate-400 font-medium whitespace-nowrap">Home</p>
                             </div>
                         </div>
 
                         {/* VS Divider */}
                         <div className="flex flex-col items-center justify-center pt-2">
-                            <span className="text-2xl font-black text-slate-600 italic">VS</span>
+                            <span className="text-lg md:text-2xl font-black text-slate-600 italic">VS</span>
                         </div>
 
                         {/* Away Team */}
-                        <div className="flex flex-col items-center gap-3 flex-1">
+                        <div className="flex flex-col items-center gap-2 md:gap-3 flex-1">
                             <div className="relative">
-                                <div className="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 shadow-lg overflow-hidden group p-2 bg-white">
+                                <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 shadow-lg overflow-hidden group p-1.5 md:p-2 bg-white">
                                     {prediction.away_logo ? (
-                                        <img src={prediction.away_logo} alt={awayTeam} className="w-full h-full object-contain drop-shadow-sm" />
+                                        <img src={getLogoUrl(prediction.away_logo)} alt={awayTeam} className="w-full h-full object-contain drop-shadow-sm" />
                                     ) : (
-                                        <span className="text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors">{awayTeam?.substring(0, 2).toUpperCase()}</span>
+                                        <span className="text-base md:text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors">{awayTeam?.substring(0, 2).toUpperCase()}</span>
                                     )}
                                 </div>
                             </div>
                             <div className="text-center">
-                                <h3 className="text-lg font-extrabold text-white leading-tight break-words max-w-[120px]">{awayTeam}</h3>
-                                <p className="text-sm text-slate-400 font-medium">Away</p>
+                                <h3 className="text-base md:text-lg font-extrabold text-white leading-tight break-words max-w-[100px] md:max-w-[120px]">{awayTeam}</h3>
+                                <p className="text-[10px] md:text-sm text-slate-400 font-medium whitespace-nowrap">Away</p>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Dual Expert Picks Section */}
-                <div className="relative z-10 px-6 py-2">
-                    <div className="bg-slate-800/40 border border-white/5 rounded-xl p-5 glass-panel">
-                        <div className="flex justify-between items-start mb-4">
-                            <span className="text-primary text-xs font-bold uppercase tracking-wider">AI Expert Picks</span>
-                            <div className="flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                                <span className="text-[10px] text-red-400 font-bold uppercase">Live Analysis</span>
+            {/* Dual Expert Picks Section */}
+            <div className="relative z-10 px-6 py-2">
+                <div className="bg-slate-800/40 border border-white/5 rounded-xl p-5 glass-panel">
+                    <div className="flex justify-between items-start mb-4">
+                        <span className="text-primary text-xs font-bold uppercase tracking-wider">AI Expert Picks</span>
+                        <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                            <span className="text-[10px] text-red-400 font-bold uppercase">Live Analysis</span>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Primary Safe Pick */}
+                        <div className="bg-slate-900/60 border border-emerald-500/20 rounded-lg p-4 flex flex-col justify-between">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                                    <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Primary Safe Bet</span>
+                                </div>
+                                <h2 className="text-lg font-black text-white leading-tight mb-2">
+                                    {prediction.primary_pick?.tip || prediction.safe_bet_tip}
+                                </h2>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-emerald-500 rounded-full"
+                                            style={{ width: `${prediction.primary_pick?.confidence || prediction.confidence || 0}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="text-xs font-bold text-emerald-400">{prediction.primary_pick?.confidence || prediction.confidence}%</span>
+                                    {prediction.primary_pick?.odds && (
+                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">
+                                            @{prediction.primary_pick.odds}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
+
+                            <button
+                                onClick={() => handleAdd(prediction.primary_pick || prediction.safe_bet_tip, 'Primary')}
+                                disabled={isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)}
+                                className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)
+                                    ? 'bg-emerald-500/10 text-emerald-500 cursor-default border border-emerald-500/20'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+                                    }`}
+                            >
+                                {isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                <span>{isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip) ? 'Added' : 'Add Banker'}</span>
+                            </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Primary Safe Pick */}
-                            <div className="bg-slate-900/60 border border-emerald-500/20 rounded-lg p-4 flex flex-col justify-between">
+                        {/* Alternative Value Pick */}
+                        {prediction.alternative_pick && (
+                            <div className="bg-slate-900/60 border border-amber-500/20 rounded-lg p-4 flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                                        <span className="text-emerald-400 text-[10px] font-bold uppercase tracking-wider">Primary Safe Bet</span>
+                                        <Target className="w-4 h-4 text-amber-400" />
+                                        <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">Value Alternative</span>
                                     </div>
                                     <h2 className="text-lg font-black text-white leading-tight mb-2">
-                                        {prediction.primary_pick?.tip || prediction.safe_bet_tip}
+                                        {prediction.alternative_pick.tip}
                                     </h2>
                                     <div className="flex items-center gap-2 mb-4">
                                         <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
                                             <div
-                                                className="h-full bg-emerald-500 rounded-full"
-                                                style={{ width: `${prediction.primary_pick?.confidence || prediction.confidence || 0}%` }}
+                                                className="h-full bg-amber-500 rounded-full"
+                                                style={{ width: `${prediction.alternative_pick.confidence}%` }}
                                             ></div>
                                         </div>
-                                        <span className="text-xs font-bold text-emerald-400">{prediction.primary_pick?.confidence || prediction.confidence}%</span>
-                                        {prediction.primary_pick?.odds && (
-                                            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-500/30">
-                                                @{prediction.primary_pick.odds}
+                                        <span className="text-xs font-bold text-amber-400">{prediction.alternative_pick.confidence}%</span>
+                                        {prediction.alternative_pick?.odds && (
+                                            <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
+                                                @{prediction.alternative_pick.odds}
                                             </span>
                                         )}
                                     </div>
                                 </div>
 
                                 <button
-                                    onClick={() => handleAdd(prediction.primary_pick || prediction.safe_bet_tip, 'Primary')}
-                                    disabled={isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)}
-                                    className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)
-                                        ? 'bg-emerald-500/10 text-emerald-500 cursor-default border border-emerald-500/20'
-                                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
+                                    onClick={() => handleAdd(prediction.alternative_pick, 'Value')}
+                                    disabled={isPickAdded(prediction.alternative_pick.tip)}
+                                    className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.alternative_pick.tip)
+                                        ? 'bg-amber-500/10 text-amber-500 cursor-default border border-amber-500/20'
+                                        : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20'
                                         }`}
                                 >
-                                    {isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                    <span>{isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip) ? 'Added' : 'Add Banker'}</span>
+                                    {isPickAdded(prediction.alternative_pick.tip) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                                    <span>{isPickAdded(prediction.alternative_pick.tip) ? 'Added' : 'Add Value Bet'}</span>
                                 </button>
                             </div>
-
-                            {/* Alternative Value Pick */}
-                            {prediction.alternative_pick && (
-                                <div className="bg-slate-900/60 border border-amber-500/20 rounded-lg p-4 flex flex-col justify-between">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <Target className="w-4 h-4 text-amber-400" />
-                                            <span className="text-amber-400 text-[10px] font-bold uppercase tracking-wider">Value Alternative</span>
-                                        </div>
-                                        <h2 className="text-lg font-black text-white leading-tight mb-2">
-                                            {prediction.alternative_pick.tip}
-                                        </h2>
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-amber-500 rounded-full"
-                                                    style={{ width: `${prediction.alternative_pick.confidence}%` }}
-                                                ></div>
-                                            </div>
-                                            <span className="text-xs font-bold text-amber-400">{prediction.alternative_pick.confidence}%</span>
-                                            {prediction.alternative_pick?.odds && (
-                                                <span className="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">
-                                                    @{prediction.alternative_pick.odds}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        onClick={() => handleAdd(prediction.alternative_pick, 'Value')}
-                                        disabled={isPickAdded(prediction.alternative_pick.tip)}
-                                        className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.alternative_pick.tip)
-                                            ? 'bg-amber-500/10 text-amber-500 cursor-default border border-amber-500/20'
-                                            : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20'
-                                            }`}
-                                    >
-                                        {isPickAdded(prediction.alternative_pick.tip) ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                        <span>{isPickAdded(prediction.alternative_pick.tip) ? 'Added' : 'Add Value Bet'}</span>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
                 </div>
+            </div>
 
-                {/* Market Insights Grid (Using full_analysis) */}
-                <div className="relative z-10 p-6 pt-4">
-                    <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-accent-purple" />
-                        Market Insights (Click to Expand)
+            {/* Market Insights Grid (Using full_analysis) */}
+            <div className="relative z-10 p-6 pt-4">
+                <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-accent-purple" />
+                    Market Insights (Click to Expand)
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                    {/* Render all 8 items as Insight Cards */}
+                    {Object.entries(prediction.full_analysis || {}).map(([market, analysis], i) => (
+                        <InsightCard
+                            key={market}
+                            market={market}
+                            analysis={analysis}
+                            index={i}
+                            getIcon={getMarketIcon}
+                            onClick={() => setActiveInsight({ market, analysis })}
+                        />
+                    ))}
+                </div>
+
+                {/* Reasoning Section - Adjusted title since cards also have reasoning */}
+                <div className="bg-slate-900/50 rounded-xl p-5 border-t border-slate-800">
+                    <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-primary" />
+                        Overall Strategy
                     </h4>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                        {/* Render all 8 items as Insight Cards */}
-                        {Object.entries(prediction.full_analysis || {}).map(([market, analysis], i) => (
-                            <InsightCard
-                                key={market}
-                                market={market}
-                                analysis={analysis}
-                                index={i}
-                                getIcon={getMarketIcon}
-                                onClick={() => setActiveInsight({ market, analysis })}
-                            />
+                    <ul className="space-y-3">
+                        {(Array.isArray(prediction.reasoning) ? prediction.reasoning : [prediction.reasoning]).map((r, idx) => (
+                            <li key={idx} className="flex gap-3 text-sm text-slate-300 leading-relaxed">
+                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+                                <span>{r}</span>
+                            </li>
                         ))}
-                    </div>
-
-                    {/* Reasoning Section - Adjusted title since cards also have reasoning */}
-                    <div className="bg-slate-900/50 rounded-xl p-5 border-t border-slate-800">
-                        <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                            <Brain className="w-4 h-4 text-primary" />
-                            Overall Strategy
-                        </h4>
-                        <ul className="space-y-3">
-                            {(Array.isArray(prediction.reasoning) ? prediction.reasoning : [prediction.reasoning]).map((r, idx) => (
-                                <li key={idx} className="flex gap-3 text-sm text-slate-300 leading-relaxed">
-                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
-                                    <span>{r}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Game State Simulation (New Phase 9) */}
-                    {prediction.scenario_analysis && (
-                        <div className="bg-slate-900/50 rounded-xl p-5 border-t border-slate-800 mt-4">
-                            <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                                <Target className="w-4 h-4 text-orange-400" />
-                                Game State Simulation
-                            </h4>
-                            <div className="space-y-4">
-                                <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
-                                    <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario A: The Expected Script</h5>
-                                    <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_a_expected_script}</p>
-                                </div>
-                                <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
-                                    <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario B: The Underdog Disruption</h5>
-                                    <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_b_underdog_disruption}</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* AI Logic Dropdown (CoT) */}
-                    {prediction.step_by_step_reasoning && (
-                        <div className="mt-4 bg-slate-800/20 rounded-xl border border-slate-700/50 overflow-hidden transition-all duration-300">
-                            <button
-                                onClick={() => setShowLogic(!showLogic)}
-                                className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-800/40 transition-colors"
-                            >
-                                <div className="flex items-center gap-2">
-                                    <Bolt className="w-4 h-4 text-slate-400" />
-                                    <span className="text-sm font-semibold text-slate-300">View AI Internal Logic</span>
-                                </div>
-                                {showLogic ? (
-                                    <ChevronUp className="w-4 h-4 text-slate-400" />
-                                ) : (
-                                    <ChevronDown className="w-4 h-4 text-slate-400" />
-                                )}
-                            </button>
-
-                            {/* Expandable Content */}
-                            <div className={`transition-all duration-300 ease-in-out ${showLogic ? 'max-h-[600px] overflow-y-auto opacity-100 p-5 pt-0' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-                                <div className="pt-4 border-t border-slate-700/50">
-                                    <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-mono bg-black/20 p-4 rounded-lg">
-                                        {prediction.step_by_step_reasoning}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    </ul>
                 </div>
 
-                {/* Bottom decorative bar */}
+                {/* Game State Simulation (New Phase 9) */}
+                {prediction.scenario_analysis && (
+                    <div className="bg-slate-900/50 rounded-xl p-5 border-t border-slate-800 mt-4">
+                        <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                            <Target className="w-4 h-4 text-orange-400" />
+                            Game State Simulation
+                        </h4>
+                        <div className="space-y-4">
+                            <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
+                                <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario A: The Expected Script</h5>
+                                <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_a_expected_script}</p>
+                            </div>
+                            <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
+                                <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario B: The Underdog Disruption</h5>
+                                <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_b_underdog_disruption}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* AI Logic Dropdown (CoT) */}
+                {prediction.step_by_step_reasoning && (
+                    <div className="mt-4 bg-slate-800/20 rounded-xl border border-slate-700/50 overflow-hidden transition-all duration-300">
+                        <button
+                            onClick={() => setShowLogic(!showLogic)}
+                            className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-800/40 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Bolt className="w-4 h-4 text-slate-400" />
+                                <span className="text-sm font-semibold text-slate-300">View AI Internal Logic</span>
+                            </div>
+                            {showLogic ? (
+                                <ChevronUp className="w-4 h-4 text-slate-400" />
+                            ) : (
+                                <ChevronDown className="w-4 h-4 text-slate-400" />
+                            )}
+                        </button>
+
+                        {/* Expandable Content */}
+                        <div className={`transition-all duration-300 ease-in-out ${showLogic ? 'max-h-[600px] overflow-y-auto opacity-100 p-5 pt-0' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                            <div className="pt-4 border-t border-slate-700/50">
+                                <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-mono bg-black/20 p-4 rounded-lg">
+                                    {prediction.step_by_step_reasoning}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 <div className="h-1.5 w-full bg-gradient-to-r from-primary via-accent-purple to-accent-green"></div>
             </div>
 
             {/* Modal for Expanded Insight */}
-            {activeInsight && (
-                <InsightModal
-                    market={activeInsight.market}
-                    analysis={activeInsight.analysis}
-                    onClose={() => setActiveInsight(null)}
-                    getIcon={getMarketIcon}
-                />
-            )}
+            {
+                activeInsight && (
+                    <InsightModal
+                        market={activeInsight.market}
+                        analysis={activeInsight.analysis}
+                        onClose={() => setActiveInsight(null)}
+                        getIcon={getMarketIcon}
+                    />
+                )
+            }
         </>
     );
 };

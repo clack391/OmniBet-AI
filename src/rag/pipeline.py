@@ -82,7 +82,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     If the data above contains a "home_away_split" key, it holds venue-filtered stats:
     - The Home team's stats are from HOME matches ONLY.
     - The Away team's stats are from AWAY matches ONLY.
-    YOU MUST PRIORITIZE these venue-specific splits over the overall "metrics" for predictions involving possession, goals per game, clean sheets, and defensive stats. Teams behave fundamentally differently at home vs away.
+    - PRIORITIZE these splits for home/away specific performance trends.
+    **IF THE "home_away_split" KEY IS MISSING**: This means venue-specific data is unavailable (e.g., early season). You MUST rely on the general "metrics" block but acknowledge in your reasoning that you are using overall form, which may slightly reduce the precision of venue-specific projections.
     
     ### CRITICAL INSTRUCTIONS
     1. **CHECK THE MATCH STATUS**:
@@ -115,6 +116,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
            2. **Tier 2 (Safe)**: Over 1.5 Goals, BTTS, Draw No Bet, Asian Handicap (+0.5 or wider)
            3. **Tier 3 (Moderate)**: Over 2.5 Goals, Match Winner, Team Over 1.5 Goals
            You MUST pick from the highest tier where you have 70%+ confidence. Only drop to Tier 3 if the data overwhelmingly supports it across BOTH scenarios. A "Banker" that loses half the time is not a Banker — it is a gamble.
+          - **Rule 15 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 5 rounds (Matchdays 1-4), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Game 2-3. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -305,6 +307,8 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
        - **CRITICAL INSTRUCTION - CONFLICT RESOLUTION**: Before finalizing your analysis, cross-reference all statistics you are about to output. Your final narrative must be logically consistent. If you downgrade the tip to an "Under" market, ensure the text explicitly cites the data (e.g., missing players or low expected goals).
        - **CRITICAL**: If you downgrade the tip, you MUST choose the absolute safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section that better survives both Scenarios.
         - **THE HEDGING MANDATE (Anti-0-0 Shield)**: If the primary agent's pick is a goal market (Over 2.5, BTTS: Yes, Team Over 1.5), you MUST explicitly calculate the probability of a 0-0 or 1-0 result using the defensive metrics, clean sheet percentages, and "Goals per game" stats from both teams. If the low-scoring probability (Under 1.5 goals) exceeds **15%**, you MUST downgrade to a safer floor: Over 2.5 -> Over 1.5, BTTS -> Team Over 0.5. Never recommend Over 2.5 as a "Banker" unless both teams average 1.5+ goals per game AND have fewer than 3 clean sheets each in their last 10.
+        
+    6. **Early Season Sample Size Audit**: You MUST identify if the primary agent is over-correcting based on Matchday 1 or 2 results. If the agent justifies an 'Under 2.5' or 'No BTTS' pick solely because "Team X failed to score in their opener", you MUST challenge this as **Sample Size Bias**. If Team X had high possession/xG in that opener, they are likely to regress (breakout) in this match. Downgrade any Under 2.5 pick to Under 3.5 or Double Chance if the reasoning relies on a single-game "sterile" performance during the first 4 rounds of the season.
        
     5. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
@@ -547,7 +551,8 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     }}
 
     *** AUDIT RULES ***
-    - MARKET INTERPRETABILITY: You are an expert in ALL global football betting markets (Asian Handicaps, Multi-goals, Combos, etc.). Even if the user's bet is NOT one of the 17 markets predicted by your colleague, you MUST use your own reasoning to interpret the market and validate it against the provided statistics (xG, team form, defensive frailty).
+    - **RULE 1: EARLY SEASON SAMPLE SIZE ALERT**: If this is Matchday 1-4 of the new season, you MUST NOT reject a user's 'Over 2.5' or 'Win' bet purely because the team failed to score in their opener. This is **Sample Size Bias**. One sterile game is not a trend. If the team had high possession/xG but finished poorly, they are likely to breakout. Downgrade their bet if necessary, but do NOT reject it based on Matchday 1 "ineptitude". 
+    - MARKET INTERPRETABILITY: You are an expert in ALL global football betting markets...
     - APPROVED: If the user's bet is mathematically sound and matches the likely Game Script.
     - DOWNGRADED: If the user has the right idea but is being too greedy. (e.g., User picks 'Over 2.5', but stats show a tight game -> Downgrade to 'Over 1.5').
     - REJECTED: If the user is walking into a statistical trap. **CRITICAL RESTRICTION**: You may ONLY reject a user's bet if it would fail in BOTH Scenario A (Expected Script) AND Scenario B (Underdog Disruption). If the user's bet wins in at least ONE scenario, you MUST downgrade it to a safer variant instead of rejecting it outright. The user's instinct has value - your job is to refine it, not override it.

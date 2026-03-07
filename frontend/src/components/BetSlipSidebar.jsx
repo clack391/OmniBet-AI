@@ -90,30 +90,30 @@ const BetSlipSidebar = () => {
     const potentialReturn = (10 * totalOdds).toFixed(2); // Assuming $10 stake unit
 
     return (
-        <div className="fixed right-0 top-0 h-full w-80 bg-gray-900 border-l border-gray-800 shadow-2xl z-50 flex flex-col animate-slideLeft">
-            <div className="p-4 border-b border-gray-800 bg-gray-800/50 flex justify-between items-center">
+        <div className="fixed inset-y-0 right-0 w-full sm:w-80 bg-slate-950/95 backdrop-blur-xl border-l border-white/10 shadow-2xl z-50 flex flex-col animate-slideLeft">
+            <div className="p-4 border-b border-white/5 bg-slate-900/50 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
                         <Trophy className="w-5 h-5 text-yellow-500" /> Bet Slip
                     </h2>
-                    <span className="bg-blue-600 text-xs text-white rounded-full px-2 py-0.5 font-bold">
+                    <span className="bg-primary text-[10px] text-white rounded-full px-2 py-0.5 font-bold">
                         {betSlip.length}
                     </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     <button
                         onClick={clearSlip}
-                        className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                        className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                         title="Clear Slip"
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>
                     <button
                         onClick={() => setIsMinimized(true)}
-                        className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-700/50 rounded transition-colors"
-                        title="Minimize"
+                        className="p-2 text-slate-500 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                        title="Close"
                     >
-                        <ChevronDown className="w-5 h-5" />
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
             </div>
@@ -187,7 +187,7 @@ const BetSlipSidebar = () => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

@@ -28,12 +28,20 @@ def init_db():
             full_analysis_json TEXT,
             safe_bet_tip TEXT,
             confidence INTEGER,
+            home_logo TEXT,
+            away_logo TEXT,
             actual_result TEXT,
             is_correct BOOLEAN,
             visible_in_history BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    try:
+        cursor.execute('ALTER TABLE predictions ADD COLUMN home_logo TEXT')
+        cursor.execute('ALTER TABLE predictions ADD COLUMN away_logo TEXT')
+    except sqlite3.OperationalError:
+        pass # Columns already exist
     
     try:
         cursor.execute('ALTER TABLE predictions ADD COLUMN visible_in_history BOOLEAN DEFAULT 1')
@@ -91,15 +99,17 @@ def save_prediction(data: dict):
     
     try:
         cursor.execute('''
-            INSERT OR REPLACE INTO predictions (match_id, match_date, teams, full_analysis_json, safe_bet_tip, confidence)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO predictions (match_id, match_date, teams, full_analysis_json, safe_bet_tip, confidence, home_logo, away_logo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data.get('match_id'),
             data.get('match_date'),
             data.get('match'),
             json.dumps(data),  # Save the entire prediction object!
             data.get('primary_pick', {}).get('tip', 'Analysis Failed'),
-            data.get('primary_pick', {}).get('confidence', 0)
+            data.get('primary_pick', {}).get('confidence', 0),
+            data.get('home_logo'),
+            data.get('away_logo')
         ))
         conn.commit()
     except Exception as e:
@@ -171,6 +181,8 @@ def get_all_predictions():
             full_pred['match_id'] = db_data['match_id']
             full_pred['match_date'] = db_data['match_date']
             full_pred['teams'] = db_data['teams']
+            full_pred['home_logo'] = db_data['home_logo'] or full_pred.get('home_logo')
+            full_pred['away_logo'] = db_data['away_logo'] or full_pred.get('away_logo')
             full_pred['actual_result'] = db_data['actual_result']
             full_pred['is_correct'] = db_data['is_correct']
             
@@ -423,6 +435,8 @@ def get_matches_by_group(group_id: int):
             full_pred['id'] = db_data['id']
             full_pred['match_date'] = db_data['match_date']
             full_pred['teams'] = db_data['teams']
+            full_pred['home_logo'] = db_data['home_logo'] or full_pred.get('home_logo')
+            full_pred['away_logo'] = db_data['away_logo'] or full_pred.get('away_logo')
             full_pred['actual_result'] = db_data['actual_result']
             full_pred['is_correct'] = db_data['is_correct']
             

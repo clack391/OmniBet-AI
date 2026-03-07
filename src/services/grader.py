@@ -92,26 +92,33 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
     # 3. AI Adjudication
     print(f"⚖️ [Grader] Evaluating {safe_bet_tip} against RapidAPI payload...")
     prompt = f"""
-    Act as a strict sports betting adjudicator.
+    Act as a strict, impartial sports betting adjudicator.
     
-    I am providing you with the exact raw SofaScore data (JSON format) for the match between {team_a} and {team_b}.
+    ### Match Context
+    Target Match: {team_a} vs {team_b} on {match_date}
+    Predicted Tip: `{safe_bet_tip}`
     
-    Based heavily on the 'score_summary', 'statistics', and 'incidents' lists provided below, evaluate if the predicted betting tip `{safe_bet_tip}` won or lost.
-
+    ### Data Source
+    I am providing you with raw SofaScore JSON data. Your first priority is to VERIFY this data belongs to the target match.
+    
     SofaScore Payload Dump:
     {json.dumps(grade_data)[:25000]} 
 
-    ### Rules
-    1. If the match status is not finished, set `status` to "Live" or "Scheduled" and evaluate `is_correct` only if mathematically determined (e.g. Over 2.5 hits when score is 2-1).
-    2. Review corners and cards in the 'statistics' or 'incidents' arrays carefully to grade micro-markets.
-    3. The absolute score string should be your `actual_score` output.
+    ### Mandatory Evaluation Steps
+    1. **Identity Check**: Ensure the teams in the payload match "{team_a}" and "{team_b}". If they are completely different teams, set `is_correct` to null.
+    2. **Temporal Check**: Ensure the match date in the payload is within 24 hours of {match_date}.
+    3. **Market Grading**: 
+       - If status is NOT finished, set `status` to "Live" or "Scheduled".
+       - Only set `is_correct` to true/false if the result is already mathematically certain (e.g. "Over 2.5" score is 3-0).
+       - For micro-markets (corners, cards), parse the 'statistics' or 'incidents' array with extreme precision.
 
     ### Output Format
-    Return ONLY valid JSON matching this exact structure:
+    Return ONLY valid JSON matching this structure:
     {{
         "actual_score": "{actual_score_str}",
-        "status": "e.g., Finished, Live, or Scheduled",
-        "is_correct": true, false, or null
+        "status": "Finished, Live, or Scheduled",
+        "is_correct": true, false, or null,
+        "reasoning": "Brief explanation of the grade"
     }}
     """
     
@@ -125,7 +132,12 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
             contents=prompt
         )
         raw_text = response.text.strip().replace("```json", "").replace("```", "")
-        return json.loads(raw_text)
+        result = json.loads(raw_text)
+        
+        # Log the decision for auditing
+        print(f"✅ [Grader Content] Result: {result.get('is_correct')} | Score: {result.get('actual_score')} | Reason: {result.get('reasoning')}")
+        
+        return result
         
     except Exception as e:
         print(f"Error in RapidAPI Grader: {e}")

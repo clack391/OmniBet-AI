@@ -18,32 +18,39 @@ api.interceptors.request.use((config) => {
 
 const SettingsTab = () => {
     const [provider, setProvider] = useState('football-data');
+    const [automationEnabled, setAutomationEnabled] = useState(true);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
 
     useEffect(() => {
-        const fetchProvider = async () => {
+        const fetchSettings = async () => {
             try {
-                const response = await api.get('/settings/provider');
-                setProvider(response.data.provider);
+                const providerRes = await api.get('/settings/provider');
+                setProvider(providerRes.data.provider);
+
+                const automationRes = await api.get('/settings/automation');
+                setAutomationEnabled(automationRes.data.enabled);
             } catch (err) {
                 console.error("Failed to fetch settings", err);
             } finally {
                 setLoading(false);
             }
         };
-        fetchProvider();
+        fetchSettings();
     }, []);
 
     const handleSave = async () => {
         setSaving(true);
         setMessage(null);
         try {
-            await api.put('/settings/provider', { provider });
-            setMessage({ type: 'success', text: 'Data Provider updated successfully!' });
+            await Promise.all([
+                api.put('/settings/provider', { provider }),
+                api.put('/settings/automation', { enabled: automationEnabled })
+            ]);
+            setMessage({ type: 'success', text: 'Settings updated successfully!' });
         } catch (err) {
-            setMessage({ type: 'error', text: 'Failed to update Data Provider.' });
+            setMessage({ type: 'error', text: 'Failed to update settings.' });
             console.error(err);
         } finally {
             setSaving(false);
@@ -60,12 +67,12 @@ const SettingsTab = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-12">
-            <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
+            <div className="bg-gray-800 rounded-xl p-4 md:p-6 shadow-lg border border-gray-700">
                 <div className="flex items-center gap-3 mb-6 border-b border-gray-700 pb-4">
                     <Database className="w-6 h-6 text-teal-400" />
                     <div>
-                        <h2 className="text-xl font-bold text-white">Data Provider Settings</h2>
-                        <p className="text-sm text-gray-400">Manage the core API sources driving the JIT RAG Pipeline</p>
+                        <h2 className="text-xl font-bold text-white">System Settings</h2>
+                        <p className="text-sm text-gray-400">Manage the core API sources and automated background tasks</p>
                     </div>
                 </div>
 
@@ -76,6 +83,7 @@ const SettingsTab = () => {
                 )}
 
                 <div className="space-y-6">
+                    {/* Data Provider Section */}
                     <div className="bg-gray-900/50 p-5 rounded-lg border border-gray-700">
                         <h3 className="text-lg font-semibold text-gray-200 mb-4">Primary Match Data Source</h3>
 
@@ -130,6 +138,30 @@ const SettingsTab = () => {
                                     </div>
                                 </div>
                             </label>
+                        </div>
+                    </div>
+
+                    {/* AI Automation Section */}
+                    <div className="bg-gray-900/50 p-5 rounded-lg border border-gray-700">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-200">Daily AI Automation</h3>
+                                <p className="text-sm text-gray-400">Enable or disable the automatic 2:00 AM analysis cron job.</p>
+                            </div>
+                            <button
+                                onClick={() => setAutomationEnabled(!automationEnabled)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${automationEnabled ? 'bg-teal-600' : 'bg-gray-700'}`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${automationEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                                />
+                            </button>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                            <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${automationEnabled ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                {automationEnabled ? 'Automation Active' : 'Automation Paused'}
+                            </span>
+                            <span className="text-gray-500 italic">Next run scheduled for 02:00 AM UTC</span>
                         </div>
                     </div>
 

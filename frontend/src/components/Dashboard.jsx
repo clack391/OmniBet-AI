@@ -322,8 +322,8 @@ const Dashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-6 font-sans">
-            <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between border-b border-gray-800 pb-4 gap-4">
+        <div className="min-h-screen bg-gray-950 text-white p-4 md:p-8 font-sans">
+            <header className="mb-8 flex flex-col md:flex-row md:items-center justify-between border-b border-gray-800/50 pb-6 gap-6">
                 <div>
                     <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent flex items-center gap-2">
                         <Trophy className="text-blue-400" /> OmniBet AI
@@ -332,30 +332,30 @@ const Dashboard = () => {
                 </div>
 
                 {/* Community and Admin Controls */}
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 md:gap-3">
                     <a
                         href="https://t.me/+8omIp4SuGL84ZGU0"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-sky-400 hover:text-white transition-colors bg-sky-900/20 border border-sky-500/30 hover:bg-sky-500/20 rounded-md"
+                        className="flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm font-medium text-sky-400 hover:text-white transition-colors bg-sky-900/20 border border-sky-500/30 hover:bg-sky-500/20 rounded-md"
                     >
-                        <Send className="w-4 h-4" /> Join Telegram
+                        <Send className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Join</span> Telegram
                     </a>
 
-                    <div className="flex bg-gray-900 rounded-lg p-1">
+                    <div className="flex bg-gray-900/50 rounded-lg p-1 border border-gray-800">
                         {isLoggedIn ? (
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-400 hover:text-white transition-colors border border-gray-700 rounded-md"
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm text-gray-400 hover:text-white transition-colors border border-gray-700/50 rounded-md"
                             >
-                                <LogOut className="w-4 h-4" /> Admin Logout
+                                <LogOut className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Admin </span>Logout
                             </button>
                         ) : (
                             <button
                                 onClick={() => setShowLoginModal(true)}
-                                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-400 hover:text-white transition-colors bg-emerald-900/20 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-md"
+                                className="flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm font-medium text-emerald-400 hover:text-white transition-colors bg-emerald-900/20 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-md"
                             >
-                                <ShieldAlert className="w-4 h-4" /> Admin Access
+                                <ShieldAlert className="w-3.5 h-3.5 md:w-4 md:h-4" /> <span className="hidden sm:inline">Admin </span>Access
                             </button>
                         )}
                     </div>
@@ -425,26 +425,34 @@ const Dashboard = () => {
                         </div>
 
                         {/* Booking Code Importer */}
-                        <div className="mb-6 bg-gray-700/30 rounded-lg p-4 border border-gray-700 flex flex-col sm:flex-row gap-3 items-center">
-                            <div className="flex-1 w-full">
-                                <label className="block text-xs text-gray-400 mb-1">SportyBet Booking Code</label>
+                        <div className="mb-6 bg-gray-700/30 rounded-lg p-3 md:p-4 border border-gray-700 flex flex-col md:flex-row gap-3 items-center">
+                            <div className="flex-1 w-full text-center md:text-left">
+                                <label className="block text-[10px] md:text-xs text-gray-400 mb-1">SportyBet Booking Code</label>
                                 <input
                                     type="text"
                                     value={bookingCode}
-                                    onChange={(e) => setBookingCode(e.target.value)}
+                                    onChange={(e) => setBookingCode(e.target.value.toUpperCase())}
                                     placeholder="e.g. BC4DF2A..."
-                                    className="w-full bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500 text-purple-300"
+                                    className="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg px-4 py-2.5 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-sm font-mono tracking-wider"
                                 />
                             </div>
                             <button
                                 onClick={handleParseBookingCode}
                                 disabled={!bookingCode.trim() || isParsingCode}
-                                className={`mt-5 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 whitespace-nowrap transition-colors ${!bookingCode.trim() || isParsingCode ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-500 text-white'}`}
+                                className={`w-full md:w-auto mt-2 md:mt-5 px-6 py-2.5 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg ${!bookingCode.trim() || isParsingCode
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-900/20'}`}
                             >
                                 {isParsingCode ? (
-                                    <><Loader2 className="w-4 h-4 animate-spin" /> Scraping...</>
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Scraping...</span>
+                                    </>
                                 ) : (
-                                    <><Search className="w-4 h-4" /> Import Slip</>
+                                    <>
+                                        <Search className="w-4 h-4" />
+                                        <span>Import Slip</span>
+                                    </>
                                 )}
                             </button>
                         </div>

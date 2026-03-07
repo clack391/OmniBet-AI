@@ -42,8 +42,44 @@ from src.database.db import (
 )
 from src.services.grader import fetch_result_with_ai
 from src.utils.auth import get_password_hash, verify_password, create_access_token, get_admin_user
+from fastapi.responses import Response
 
 app = FastAPI()
+
+# --- Team Logo Proxy (bypasses SofaScore Cloudflare 403) ---
+@app.get("/api/team-logo/{team_id}")
+@app.get("/team-logo/{team_id}")
+async def team_logo_proxy(team_id: int):
+    """Proxies SofaScore team images through the backend to bypass Cloudflare and caches them locally."""
+    cache_path = f"data/logos/{team_id}.png"
+    
+    # 1. Check Local Cache (FAST)
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "rb") as f:
+                return Response(content=f.read(), media_type="image/png")
+        except Exception:
+            pass # Fallback to fetch if read fails
+            
+    # 2. Fetch from SofaScore (SLOW)
+    try:
+        from curl_cffi import requests as cffi_requests
+        url = f"https://api.sofascore.com/api/v1/team/{team_id}/image"
+        res = cffi_requests.get(url, impersonate="chrome120", timeout=10)
+        
+        if res.status_code == 200:
+            # Save to Cache for next time
+            os.makedirs("data/logos", exist_ok=True)
+            with open(cache_path, "wb") as f:
+                f.write(res.content)
+            return Response(content=res.content, media_type="image/png")
+            
+    except Exception as e:
+        print(f"Logo proxy error for team {team_id}: {e}")
+        
+    # Fallback: return a 1x1 transparent PNG
+    return Response(content=b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n\xb4\x00\x00\x00\x00IEND\xaeB`\x82', media_type="image/png")
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -73,6 +109,9 @@ class GroupMatchRequest(BaseModel):
 
 class ProviderSettingRequest(BaseModel):
     provider: str
+
+class AutomationSettingRequest(BaseModel):
+    enabled: bool
 
 class BookingCodeRequest(BaseModel):
     booking_code: str
@@ -147,6 +186,7 @@ def fixtures(start_date: str, end_date: str):
         return get_fixtures_by_date(start_date, end_date)
 
 @app.post("/api/sportybet/parse")
+@app.post("/sportybet/parse")
 def parse_sportybet_code(request: BookingCodeRequest):
     from src.services.sportybet_scraper import scrape_sportybet_code
     from src.database.db import find_fixtures_cross_date
@@ -267,8 +307,6 @@ def api_remove_match_from_group(group_id: int, match_id: int, current_user: dict
 def api_get_group_matches(group_id: int):
     return get_matches_by_group(group_id)
 
-# --- Settings API ---
-
 @app.get("/settings/provider")
 def api_get_provider(current_user: dict = Depends(get_admin_user)):
     provider = get_app_setting("primary_provider", "football-data")
@@ -284,6 +322,18 @@ def api_set_provider(req: ProviderSettingRequest, current_user: dict = Depends(g
         raise HTTPException(status_code=500, detail="Failed to update provider setting")
     
     return {"status": "success", "provider": req.provider}
+
+@app.get("/settings/automation")
+def api_get_automation(current_user: dict = Depends(get_admin_user)):
+    enabled = get_app_setting("cron_enabled", "true") == "true"
+    return {"enabled": enabled}
+
+@app.put("/settings/automation")
+def api_set_automation(req: AutomationSettingRequest, current_user: dict = Depends(get_admin_user)):
+    success = set_app_setting("cron_enabled", "true" if req.enabled else "false")
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update automation setting")
+    return {"status": "success", "enabled": req.enabled}
 
 @app.post("/share-betslip")
 def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(get_admin_user)):

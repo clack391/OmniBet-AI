@@ -27,6 +27,11 @@ from src.services.sports_api import get_sofascore_fixtures
 def run_daily_cron():
     print("🚀 Starting OmniBet AI Daily Cron Job...")
     
+    # 0. Check if automation is enabled in settings
+    if get_app_setting("cron_enabled", "true") != "true":
+        print("🛑 AI Automation is currently DISABLED in settings. Exiting.")
+        return
+    
     # 1. Get dates for the custom 2:00 AM to 1:59 AM window
     today_dt = datetime.now(timezone.utc)
     

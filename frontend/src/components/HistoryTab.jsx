@@ -200,17 +200,17 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
 
     return (
         <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700 p-6 w-full mt-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                    <h2 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2">
                         Prediction History
                     </h2>
-                    <p className="text-sm text-gray-400 mt-1">Saved AI analyses from your database.</p>
+                    <p className="text-xs md:text-sm text-gray-400 mt-1">Saved AI analyses from your database.</p>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
+                <div className="flex flex-col items-stretch sm:items-end gap-3 w-full sm:w-auto">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div className="relative w-full sm:w-48">
                             <input
                                 type="number"
                                 step="0.1"
@@ -219,33 +219,33 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 value={targetOdds}
                                 onChange={(e) => setTargetOdds(e.target.value)}
                                 disabled={generatingPicks || history.length === 0}
-                                className="w-48 px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             />
                         </div>
                         <button
                             onClick={handleGenerateBestPicks}
                             disabled={generatingPicks || history.length === 0}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-lg font-bold shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-lg font-bold shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm"
                         >
                             {generatingPicks ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                                 <Zap className="w-4 h-4 fill-current" />
                             )}
-                            {generatingPicks ? 'Analyzing Picks...' : 'AI Accumulator Builder'}
+                            {generatingPicks ? 'Analyzing...' : 'Build Accumulator'}
                         </button>
 
                         {history.length > 0 && (
                             <button
                                 onClick={handleClearHistory}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors"
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
                             >
                                 <Trash2 className="w-4 h-4" /> Clear
                             </button>
                         )}
                     </div>
                     {maxSafeStats.count > 0 && (
-                        <div className="text-[11px] font-mono text-emerald-400/80 uppercase tracking-widest mr-[110px]">
+                        <div className="text-[10px] md:text-[11px] font-mono text-emerald-400/80 uppercase tracking-widest text-center sm:text-right">
                             Odd Limit: <strong className="text-emerald-300">{maxSafeStats.odds}x</strong> from {maxSafeStats.count} safe games
                         </div>
                     )}
@@ -286,7 +286,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                         </button>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6 relative z-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 relative z-10">
                         {bestPicks.picks.map((pick, idx) => (
                             <div key={idx} className="bg-gray-900/80 backdrop-blur-md border border-amber-500/20 rounded-xl p-4 flex gap-4 hover:border-amber-500/40 transition-colors">
                                 <div className="flex-1">
@@ -399,14 +399,14 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 </div>
 
                                 {/* Status / Actions */}
-                                <div className="flex items-center justify-end md:w-48 shrink-0">
+                                <div className="flex items-center justify-end w-full md:w-48 shrink-0">
                                     {item.is_correct === 1 || item.is_correct === true ? (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 w-full justify-center">
+                                        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 w-full justify-center">
                                             <CheckCircle className="w-5 h-5" />
                                             <span className="font-bold">WIN</span>
                                         </div>
                                     ) : item.is_correct === 0 || item.is_correct === false ? (
-                                        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 w-full justify-center">
+                                        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 w-full justify-center">
                                             <XCircle className="w-5 h-5" />
                                             <span className="font-bold">LOSS</span>
                                         </div>
@@ -417,7 +417,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                                 handleGradePrediction(item.match_id);
                                             }}
                                             disabled={isGrading}
-                                            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-semibold shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                            className="w-full flex items-center justify-center gap-2 px-4 py-3 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                         >
                                             {isGrading ? (
                                                 <Loader2 className="w-5 h-5 animate-spin" />

@@ -131,8 +131,8 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
                                 "away": event.get("awayScore", {}).get("current", None)
                             }
                         },
-                        "home_logo": f"https://api.sofascore.app/api/v1/team/{home_id}/image" if home_id else None,
-                        "away_logo": f"https://api.sofascore.app/api/v1/team/{away_id}/image" if away_id else None,
+                        "home_logo": f"/api/team-logo/{home_id}" if home_id else None,
+                        "away_logo": f"/api/team-logo/{away_id}" if away_id else None,
                         "_timestamp": event.get("startTimestamp", 0) # Temporary key for sorting
                     }
                     all_matches.append(mapped_match)
@@ -441,12 +441,16 @@ def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
 
 def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None) -> int:
     """
-    RapidAPI SofaScore6 does not have a reliable team name search endpoint.
-    To avoid using expensive Apify scraper credits for every lookup, we use
-    `curl_cffi` to perfectly impersonate a Chrome browser TLS signature, which
-    bypasses Cloudflare's 403 blocks against standard Python requests.
-    We hit the official SofaScore search API directly.
+    Resolves the SofaScore match ID for a given fixture.
+    Enhanced with fuzzy team name matching and date tolerance to ensure 
+    the correct match is graded, even if team names or dates differ slightly 
+    between providers (e.g., 'Chelyabinsk' vs 'FC Chelyabinsk').
     """
+    from difflib import SequenceMatcher
+
+    def normalize(name):
+        return name.lower().replace("fc", "").replace("afc", "").replace("united", "utd").strip()
+
     try:
         from curl_cffi import requests as cffi_requests
     except ImportError:
@@ -458,7 +462,6 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
         query = f"{team_a} {team_b}"
         url = f"https://api.sofascore.com/api/v1/search/events?q={urllib.parse.quote(query)}"
         
-        # We don't need heavy headers, just the TLS impersonation
         try:
             res = cffi_requests.get(url, impersonate="chrome120", timeout=10)
         except Exception as req_e:
@@ -471,27 +474,63 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
             if not results:
                 return None
 
-            # Filter by date if provided
+            best_match = None
+            highest_score = 0.0
+            
+            target_date_dt = None
             if match_date:
-                # Expected match_date format: 'YYYY-MM-DD'
-                for r in results:
-                    if r.get('type') != 'event': continue
-                    entity = r.get('entity', {})
-                    ts = entity.get('startTimestamp')
-                    if ts:
-                        res_date = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
-                        if res_date == match_date:
-                            print(f"✅ Found matching SofaScore ID {entity.get('id')} for date {match_date}")
-                            return entity.get('id')
-                
-                # Loose fallback: Check if anything matches the year/month at least? 
-                # Or just pick the first one if it's "recent" (last 10 years).
-                # But for now, strict date match is safest for Grader.
+                try:
+                    target_date_dt = datetime.strptime(match_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
 
-            # Final fallback: return the first event found
             for r in results:
-                if r.get('type') == 'event':
-                    return r.get('entity', {}).get('id')
+                if r.get('type') != 'event': continue
+                entity = r.get('entity', {})
+                ts = entity.get('startTimestamp')
+                if not ts: continue
+                
+                res_date_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+                res_date_str = res_date_dt.strftime("%Y-%m-%d")
+
+                # 1. Date Check (Strict or +/- 1 day tolerance)
+                is_date_ok = False
+                if not match_date:
+                    is_date_ok = True # No date filter requested
+                elif res_date_str == match_date:
+                    is_date_ok = True # Exact match
+                elif target_date_dt:
+                    diff = abs((res_date_dt - target_date_dt).days)
+                    if diff <= 1:
+                        is_date_ok = True # Tolerance match for timezones/scheduling shifts
+
+                if not is_date_ok:
+                    continue
+
+                # 2. Team Name Fuzzy Matching
+                h_name = normalize(entity.get('homeTeam', {}).get('name', ''))
+                a_name = normalize(entity.get('awayTeam', {}).get('name', ''))
+                t_h_name = normalize(team_a)
+                t_a_name = normalize(team_b)
+
+                # Check both orientations (SofaScore sometimes swaps)
+                score_normal = SequenceMatcher(None, h_name, t_h_name).ratio() + SequenceMatcher(None, a_name, t_a_name).ratio()
+                score_swapped = SequenceMatcher(None, h_name, t_a_name).ratio() + SequenceMatcher(None, a_name, t_h_name).ratio()
+                
+                current_score = max(score_normal, score_swapped)
+                
+                # Bonus for exact date match
+                if res_date_str == match_date:
+                    current_score += 0.5 
+
+                if current_score > highest_score:
+                    highest_score = current_score
+                    best_match = entity.get('id')
+
+            # Threshold for a "Good Match" (1.4 is safe, 2.0+ is very strong with bonus)
+            if best_match and highest_score > 1.3:
+                print(f"✅ Resolved SofaScore ID {best_match} with confidence score {round(highest_score, 2)}")
+                return best_match
                 
         return None
     except Exception as e:
@@ -662,8 +701,8 @@ def get_sofascore_match_stats(sofascore_match_id: int):
         "metadata": {
             "home_team": home_name,
             "away_team": away_name,
-            "home_logo": f"https://api.sofascore.app/api/v1/team/{home_id}/image" if home_id else None,
-            "away_logo": f"https://api.sofascore.app/api/v1/team/{away_id}/image" if away_id else None,
+            "home_logo": f"/api/team-logo/{home_id}" if home_id else None,
+            "away_logo": f"/api/team-logo/{away_id}" if away_id else None,
             "match_date": datetime.fromtimestamp(event_data.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if event_data.get("startTimestamp") else None,
             "referee": referee_name,
             "tournament": tournament_name,
