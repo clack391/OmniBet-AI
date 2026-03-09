@@ -484,13 +484,13 @@ const Dashboard = () => {
                                                 }`}>
                                                 {selectedMatches.some(m => m.id === match.id) && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="font-semibold text-gray-200">{match.homeTeam.name}</span>
-                                                    <span className="text-xs text-gray-400">vs</span>
-                                                    <span className="font-semibold text-gray-200">{match.awayTeam.name}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-center gap-2">
+                                                    <span className="font-semibold text-gray-200 truncate">{match.homeTeam.name}</span>
+                                                    <span className="text-xs text-gray-400 shrink-0">vs</span>
+                                                    <span className="font-semibold text-gray-200 truncate text-right">{match.awayTeam.name}</span>
                                                 </div>
-                                                <div className="text-xs text-gray-400 mt-1">
+                                                <div className="text-xs text-gray-400 mt-1 truncate">
                                                     {new Date(match.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {match.competition.name}
                                                 </div>
                                             </div>

@@ -103,42 +103,42 @@ const PredictionCard = ({ prediction }) => {
                     </div>
 
                     {/* Teams Display */}
-                    <div className="flex items-center justify-between gap-2 md:gap-4">
+                    <div className="flex items-center justify-between gap-2 md:gap-4 min-w-0">
                         {/* Home Team */}
-                        <div className="flex flex-col items-center gap-2 md:gap-3 flex-1">
-                            <div className="relative">
+                        <div className="flex flex-col items-center gap-2 md:gap-3 flex-1 min-w-0">
+                            <div className="relative shrink-0">
                                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 shadow-lg overflow-hidden group p-1.5 md:p-2 bg-white">
                                     {prediction.home_logo ? (
-                                        <img src={getLogoUrl(prediction.home_logo)} alt={homeTeam} className="w-full h-full object-contain drop-shadow-sm" />
+                                        <img src={getLogoUrl(prediction.home_logo)} alt={homeTeam} className="w-full h-full object-contain drop-shadow-sm shrink-0" />
                                     ) : (
-                                        <span className="text-base md:text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors">{homeTeam?.substring(0, 2).toUpperCase()}</span>
+                                        <span className="text-base md:text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors shrink-0">{homeTeam?.substring(0, 2).toUpperCase()}</span>
                                     )}
                                 </div>
                             </div>
-                            <div className="text-center">
-                                <h3 className="text-base md:text-lg font-extrabold text-white leading-tight break-words max-w-[100px] md:max-w-[120px]">{homeTeam}</h3>
+                            <div className="text-center w-full min-w-0">
+                                <h3 className="text-base md:text-lg font-extrabold text-white leading-tight truncate px-1">{homeTeam}</h3>
                                 <p className="text-[10px] md:text-sm text-slate-400 font-medium whitespace-nowrap">Home</p>
                             </div>
                         </div>
 
                         {/* VS Divider */}
-                        <div className="flex flex-col items-center justify-center pt-2">
+                        <div className="flex flex-col items-center justify-center pt-2 shrink-0">
                             <span className="text-lg md:text-2xl font-black text-slate-600 italic">VS</span>
                         </div>
 
                         {/* Away Team */}
-                        <div className="flex flex-col items-center gap-2 md:gap-3 flex-1">
-                            <div className="relative">
+                        <div className="flex flex-col items-center gap-2 md:gap-3 flex-1 min-w-0">
+                            <div className="relative shrink-0">
                                 <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-slate-800 flex items-center justify-center border-2 border-slate-700 shadow-lg overflow-hidden group p-1.5 md:p-2 bg-white">
                                     {prediction.away_logo ? (
-                                        <img src={getLogoUrl(prediction.away_logo)} alt={awayTeam} className="w-full h-full object-contain drop-shadow-sm" />
+                                        <img src={getLogoUrl(prediction.away_logo)} alt={awayTeam} className="w-full h-full object-contain drop-shadow-sm shrink-0" />
                                     ) : (
-                                        <span className="text-base md:text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors">{awayTeam?.substring(0, 2).toUpperCase()}</span>
+                                        <span className="text-base md:text-lg font-bold text-slate-500 group-hover:text-slate-800 transition-colors shrink-0">{awayTeam?.substring(0, 2).toUpperCase()}</span>
                                     )}
                                 </div>
                             </div>
-                            <div className="text-center">
-                                <h3 className="text-base md:text-lg font-extrabold text-white leading-tight break-words max-w-[100px] md:max-w-[120px]">{awayTeam}</h3>
+                            <div className="text-center w-full min-w-0">
+                                <h3 className="text-base md:text-lg font-extrabold text-white leading-tight truncate px-1">{awayTeam}</h3>
                                 <p className="text-[10px] md:text-sm text-slate-400 font-medium whitespace-nowrap">Away</p>
                             </div>
                         </div>

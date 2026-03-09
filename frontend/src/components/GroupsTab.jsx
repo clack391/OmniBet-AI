@@ -148,7 +148,7 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                 onClick={() => onSelectHistoryItem && onSelectHistoryItem(item)}
                                 className="bg-gray-900 border border-gray-700 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-blue-500/50 hover:bg-gray-800/80 cursor-pointer transition-all shadow-sm"
                             >
-                                <div className="flex-1 w-full">
+                                <div className="flex-1 w-full min-w-0">
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="text-[10px] md:text-xs text-gray-400 font-mono">
                                             {new Date(item.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
@@ -172,13 +172,13 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <div className="flex items-center gap-2 bg-gray-950/30 px-3 py-1.5 rounded-lg border border-gray-800/50">
-                                            {item.home_logo && <img src={getLogoUrl(item.home_logo)} alt="H" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
-                                            <span className="text-base font-bold text-white">{item.teams ? item.teams.split(' vs ')[0] : "Home"}</span>
-                                            <span className="text-gray-500 text-xs font-black px-1">VS</span>
-                                            <span className="text-base font-bold text-white">{item.teams ? item.teams.split(' vs ')[1] : "Away"}</span>
-                                            {item.away_logo && <img src={getLogoUrl(item.away_logo)} alt="A" className="w-8 h-8 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                    <div className="flex items-center gap-3 mb-2 min-w-0">
+                                        <div className="flex items-center gap-2 bg-gray-950/30 px-3 py-1.5 rounded-lg border border-gray-800/50 min-w-0">
+                                            {item.home_logo && <img src={getLogoUrl(item.home_logo)} alt="H" className="w-8 h-8 shrink-0 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
+                                            <span className="text-base font-bold text-white truncate">{item.teams ? item.teams.split(' vs ')[0] : "Home"}</span>
+                                            <span className="text-gray-500 text-xs font-black px-1 shrink-0">VS</span>
+                                            <span className="text-base font-bold text-white truncate">{item.teams ? item.teams.split(' vs ')[1] : "Away"}</span>
+                                            {item.away_logo && <img src={getLogoUrl(item.away_logo)} alt="A" className="w-8 h-8 shrink-0 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-2">

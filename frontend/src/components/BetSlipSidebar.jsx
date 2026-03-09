@@ -120,23 +120,23 @@ const BetSlipSidebar = () => {
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                 {betSlip.map((bet) => (
-                    <div key={bet.match_id} className="bg-gray-800 rounded-lg p-3 border border-gray-700 relative group">
+                    <div key={bet.match_id} className="bg-gray-800 rounded-lg p-3 border border-gray-700 relative group min-w-0">
                         <button
                             onClick={() => removeFromSlip(bet.match_id)}
-                            className="absolute top-2 right-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="absolute top-2 right-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                         >
                             <X className="w-4 h-4" />
                         </button>
-                        <div className="text-xs text-gray-400 mb-1 font-semibold">{bet.match}</div>
+                        <div className="text-xs text-gray-400 mb-1 font-semibold truncate pr-4">{bet.match}</div>
                         {bet.match_date && (
-                            <div className="text-[10px] text-gray-500 mb-2 font-mono">
+                            <div className="text-[10px] text-gray-500 mb-2 font-mono truncate">
                                 {new Date(bet.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
                             </div>
                         )}
-                        <div className="text-blue-300 font-bold">{bet.selection}</div>
-                        <div className="text-xs text-green-400 mt-1 flex justify-between">
-                            <span>Safe Bet</span>
-                            <span className="font-mono bg-gray-900 px-1 rounded">@{bet.odds}</span>
+                        <div className="text-blue-300 font-bold truncate">{bet.selection}</div>
+                        <div className="text-xs text-green-400 mt-1 flex justify-between gap-2">
+                            <span className="truncate">Safe Bet</span>
+                            <span className="font-mono bg-gray-900 px-1 rounded shrink-0">@{bet.odds}</span>
                         </div>
                     </div>
                 ))}
