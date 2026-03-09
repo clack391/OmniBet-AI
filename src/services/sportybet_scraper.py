@@ -22,36 +22,88 @@ def scrape_sportybet_code(booking_code: str):
         page = browser.new_page()
         
         try:
-            # Navigate to the Nigerian platform
-            page.goto("https://www.sportybet.com/ng/")
+            # Navigate with a longer timeout and wait for idle
+            page.goto("https://www.sportybet.com/ng/", timeout=60000, wait_until="networkidle")
             
-            # Locate the "Booking Code" input field and type the code
-            print("Typing booking code...")
-            page.fill('input[placeholder="Booking Code"]', booking_code, timeout=10000)
+            # Locate the "Booking Code" input field
+            # Refined for strict mode: Targeting the unique data-op attribute for this field
+            input_selector = 'input[data-op="desktop-booking-code-input"]'
+            page.wait_for_selector(input_selector, timeout=20000)
             
-            # Click the "Load" button
+            # 1. Focus and Fill (More robust than keyboard typing for reactive fields)
+            print(f"Typing booking code: {booking_code}")
+            input_el = page.locator(input_selector)
+            input_el.click()
+            input_el.fill(booking_code)
+            
+            # 2. Force events and verify value
+            page.evaluate("""([sel, val]) => {
+                const el = document.querySelector(sel);
+                if (el) {
+                    el.value = val;
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                    el.blur(); 
+                }
+            }""", [input_selector, booking_code])
+            
+            # VERIFICATION: Check if the value actually stuck
+            current_val = input_el.input_value()
+            print(f"DEBUG: Input value verification: '{current_val}'")
+            
+            page.wait_for_timeout(1000) 
+            
+            # 3. Click the "Load" button
             print("Clicking Load button...")
-            page.click('button:has-text("Load")', timeout=10000)
+            load_button_selector = 'button[data-op="desktop-booking-code-load-button"], button:has-text("Load"), .m-booking-code-load, .m-btn-load'
             
-            # Wait for the betslip matches to render on the screen
-            print("Waiting for network...")
+            # Force enable if still disabled
+            page.evaluate(f"""(sel) => {{
+                const btn = document.querySelector(sel);
+                if (btn) {{
+                    btn.disabled = false;
+                    btn.classList.remove('is-disabled');
+                }}
+            }}""", 'button[data-op="desktop-booking-code-load-button"], .m-booking-code-load, .m-btn-load')
+            
             try:
-                # Target the actual betslip content area
-                page.wait_for_selector('.m-betslip-content, .m-bet-wrapper', timeout=15000)
+                # Try clicking the button
+                page.click(load_button_selector, timeout=5000)
+            except Exception as e:
+                print(f"⚠️ Button click failed ({e}), forcing click via JavaScript...")
+                page.evaluate(f"document.querySelector('{load_button_selector}').click()")
+            # 4. Wait for the betslip matches to render on the screen
+            print("Waiting for network (extended 30s timeout)...")
+            try:
+                # Target the actual betslip match cards or container
+                # Increased timeout to 30s for slower sessions
+                page.wait_for_selector('.m-betslip-item, .m-bet-item, .m-betslip-content', timeout=30000)
             except Exception:
-                print("Could not find betslip content, slip might be empty or invalid.")
+                print("Could not find betslip content. Capturing debug screenshot...")
+                # Save screenshot to artifacts directory for visual diagnosis
+                artifact_dir = "/home/jay/.gemini/antigravity/brain/cfcbe240-1576-429d-95e3-c80ca50c546c"
+                screenshot_path = os.path.join(artifact_dir, f"sportybet_status_{booking_code}.png")
+                page.screenshot(path=screenshot_path)
+                print(f"📸 Debug screenshot saved: {screenshot_path}")
+                
+                # Check for error messages in the raw text
+                raw_text_brief = page.locator('body').inner_text()[:1000]
+                print(f"📄 Page Text Snippet: {raw_text_brief}")
+                
+                if "invalid" in raw_text_brief.lower() or "not found" in raw_text_brief.lower():
+                    return {"booking_status": "failed", "error": f"SportyBet reported: {raw_text_brief[:100]}"}
             
-            # Extract specific betslip items
+            # 5. Extract specific betslip items
             print("Extracting betslip items...")
             betslip_raw_text = ""
             try:
                 # Target the individual match cards in the betslip
-                items = page.locator('.m-betslip-item').all_inner_texts()
+                items = page.locator('.m-betslip-item, .m-bet-item').all_inner_texts()
                 if items:
                     betslip_raw_text = "\n---\n".join(items)
                     print(f"✅ Found {len(items)} items in the actual betslip.")
             except Exception as e:
-                print(f"⚠️ Failed to find .m-betslip-item: {e}")
+                print(f"⚠️ Failed to find items: {e}")
 
             if not betslip_raw_text:
                 try:
@@ -96,6 +148,7 @@ def parse_betslip_with_ai(raw_text: str):
         {
           "home_team": "string",
           "away_team": "string",
+          "match_date": "string (e.g. '2026-03-09' or 'Today')",
           "user_selected_bet": "string (e.g., 'Over 2.5 Goals', 'Home Win', 'GG/BTTS')"
         }
       ]

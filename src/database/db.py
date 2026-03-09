@@ -505,7 +505,7 @@ def _clean_team_name(name: str) -> set:
         name = re.sub(rf'\b{old}\b', new, name)
 
     # Remove standard noise words
-    noise = ['fc', 'ca', 'united', 'city', 'sc', 'cf', 'de', 'afc', 'as', 'fk', 'rio', 'v', 'vs']
+    noise = ['fc', 'ca', 'united', 'city', 'sc', 'cf', 'de', 'afc', 'as', 'fk', 'rio', 'v', 'vs', 'al']
     for word in noise:
         name = re.sub(rf'\b{word}\b', '', name)
         
@@ -536,12 +536,9 @@ def find_fixtures_cross_date(parsed_matches: list):
         for row in rows:
             date_str = row[0]
             
-            # STRICTURE: If we are in SofaScore mode, only look at SofaScore-prefixed keys
-            # and vice versa. This prevents ID collisions between providers.
-            if provider == "sofascore" and not date_str.startswith("sofascore_"):
-                continue
-            if provider == "football-data" and date_str.startswith("sofascore_"):
-                continue
+            # RELAXED: We search across ALL cached fixtures regardless of provider.
+            # This allows a SportyBet code to match against ANY data we have stored.
+            # We still tag the date_str to maintain context.
 
             if row[1]:
                 raw_json = json.loads(row[1])

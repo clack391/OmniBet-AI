@@ -89,6 +89,7 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
     
     for i in range(delta.days + 1):
         target_date = (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
+        print(f"🌐 Fetching fixtures for {target_date} from SofaScore...")
         url = f"https://api.sofascore.com/api/v1/sport/football/scheduled-events/{target_date}"
         
         try:

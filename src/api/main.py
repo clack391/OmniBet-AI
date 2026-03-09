@@ -218,6 +218,44 @@ def parse_sportybet_code(request: BookingCodeRequest):
     # 2. Enrich the parsed string names with actual our API match IDs and Dates
     enriched_results = find_fixtures_cross_date(result.get("matches", []))
     
+    # 3. PROACTIVE FALLBACK: If we have unmatched matches, fetch fixtures 
+    # for the relevant dates to ensure our cache is populated.
+    if enriched_results.get("unmatched"):
+        from src.services.sports_api import get_fixtures_by_date, get_sofascore_fixtures
+        from datetime import datetime, timedelta
+        
+        # Identify all unique dates mentioned in the parsed matches
+        # Fallback to today/tomorrow if specific dates aren't clear
+        target_dates = set()
+        for pm in result.get("matches", []):
+            extracted_date = pm.get("match_date", "")
+            if extracted_date and len(extracted_date) >= 10:
+                 # Extract 2026-03-09 from longer strings if needed
+                 try:
+                     d = extracted_date[:10]
+                     datetime.strptime(d, "%Y-%m-%d")
+                     target_dates.add(d)
+                 except: pass
+        
+        # If no specific dates could be parsed, default to Today + 3 Days
+        if not target_dates:
+            today = datetime.now()
+            for i in range(4):
+                target_dates.add((today + timedelta(days=i)).strftime("%Y-%m-%d"))
+        
+        # Respect the primary provider setting
+        provider = get_app_setting("primary_provider", "football-data")
+        print(f"⚠️ Unmatched matches detected. Proactively fetching fixtures for {target_dates} using {provider} to populate cache...")
+        
+        for d_str in target_dates:
+            if provider == "sofascore":
+                get_sofascore_fixtures(d_str, d_str)
+            else:
+                get_fixtures_by_date(d_str, d_str)
+        
+        # Try matching one more time with the fresh cache
+        enriched_results = find_fixtures_cross_date(result.get("matches", []))
+
     # Maintain backwards compatibility with the raw output for the frontend
     return {
         "booking_status": "success",
