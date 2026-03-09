@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target, Flag, AlertTriangle, User } from 'lucide-react';
+import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target, Flag, AlertTriangle, User, Scale, Gavel, Share2, MapPin, Loader2, Info, CheckCircle2, XCircle } from 'lucide-react';
+import SupremeCourtCard from './SupremeCourtCard';
 import { useBetSlip } from '../context/BetSlipContext';
 
 const PredictionCard = ({ prediction }) => {
@@ -143,6 +144,11 @@ const PredictionCard = ({ prediction }) => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Agent 3: Supreme Court Ruling Component */}
+            <div className="mx-6 mb-6">
+                <SupremeCourtCard supreme_court={prediction.supreme_court} />
             </div>
 
             {/* Dual Expert Picks Section */}

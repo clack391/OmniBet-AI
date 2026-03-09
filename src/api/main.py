@@ -17,7 +17,7 @@ from src.services.sports_api import (
     resolve_sofascore_match_id,
     get_sofascore_match_stats
 )
-from src.rag.pipeline import predict_match, risk_manager_review, generate_best_picks
+from src.rag.pipeline import predict_match, risk_manager_review, generate_best_picks, supreme_court_judge
 from src.database.db import (
     DB_NAME,
     save_prediction,
@@ -304,8 +304,11 @@ def api_get_groups():
 
 @app.delete("/groups/{group_id}")
 def api_delete_group(group_id: int, current_user: dict = Depends(get_admin_user)):
-    delete_group(group_id)
-    return {"status": "success"}
+    try:
+        delete_group(group_id)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to delete group: {str(e)}")
 
 @app.post("/groups/{group_id}/matches")
 def api_add_match_to_group(group_id: int, req: GroupMatchRequest, current_user: dict = Depends(get_admin_user)):
@@ -455,6 +458,7 @@ def grade_history(request: GradeRequest, current_user: dict = Depends(get_admin_
     update_prediction_result(
         request.match_id,
         result_data.get("actual_score", "Unknown"),
+        result_data.get("status", "Unknown"),
         result_data.get("is_correct")
     )
 
@@ -525,6 +529,13 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
             )
             
             final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+            
+            # Agent 3: The Supreme Court Judge (Final Resolution Tier)
+            # For predict-batch, we use Agent 1 and Agent 2 to feed into Agent 3
+            # We treat Agent 2's review as the 'critique'
+            supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, final_prediction)
+            final_prediction['supreme_court'] = supreme_verdict
+
             final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
             final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
             final_prediction['match_id'] = match_id
@@ -631,6 +642,11 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
         # 11. Risk Manager Review (Agent 2)
         final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
 
+        # Agent 3: The Supreme Court Judge (Final Resolution Tier)
+        # We pass advanced_stats (which might be None or populated)
+        supreme_verdict = supreme_court_judge(advanced_stats or stats, initial_prediction, final_prediction)
+        final_prediction['supreme_court'] = supreme_verdict
+
         # 11. Prepare Output logos
         if provider == "sofascore":
             final_prediction['home_logo'] = home_logo
@@ -718,10 +734,17 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
             # Agent 2: The Lead Risk Manager Auditor
             audit_verdict_json = audit_match(initial_prediction, user_selected_bet, match_date=match_date)
             
+            # Agent 3: The Supreme Court Judge (Final Resolution Tier)
+            from src.rag.pipeline import supreme_court_judge
+            supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, audit_verdict_json)
+            
             # Merge the output
             initial_prediction['audit_verdict'] = audit_verdict_json.get('audit_verdict')
             initial_prediction['internal_debate'] = audit_verdict_json.get('internal_debate')
             initial_prediction['verdict_reasoning'] = audit_verdict_json.get('verdict_reasoning')
+            
+            # Supreme Court Layer
+            initial_prediction['supreme_court'] = supreme_verdict
             
             initial_prediction['home_team'] = home_team
             initial_prediction['away_team'] = away_team
@@ -777,10 +800,15 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
         # Agent 2: The Lead Risk Manager Auditor
         audit_verdict_json = audit_match(initial_prediction, user_selected_bet, match_date=match_date)
         
+        # Agent 3: The Supreme Court Judge (Final Resolution Tier)
+        from src.rag.pipeline import supreme_court_judge
+        supreme_verdict = supreme_court_judge(advanced_stats or stats, initial_prediction, audit_verdict_json)
+        
         # Merge the output
         initial_prediction['audit_verdict'] = audit_verdict_json.get('audit_verdict')
         initial_prediction['internal_debate'] = audit_verdict_json.get('internal_debate')
         initial_prediction['verdict_reasoning'] = audit_verdict_json.get('verdict_reasoning')
+        initial_prediction['supreme_court'] = supreme_verdict
 
         initial_prediction['home_team'] = home_team
         initial_prediction['away_team'] = away_team

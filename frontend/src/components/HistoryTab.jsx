@@ -418,7 +418,11 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                     </div>
                                     {item.actual_result && (
                                         <div className="mt-2 text-sm text-gray-300">
-                                            Result: <span className="font-mono bg-black/30 px-2 py-0.5 rounded">{item.actual_result}</span>
+                                            Result: <span className="font-mono bg-black/30 px-2 py-0.5 rounded">
+                                                {item.actual_result === "Not available" && item.status
+                                                    ? `[${item.status}]`
+                                                    : item.actual_result}
+                                            </span>
                                         </div>
                                     )}
                                 </div>

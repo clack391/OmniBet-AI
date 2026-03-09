@@ -108,21 +108,22 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Rule 8 - The Derby Chaos Directive**: If your Google Search confirms this match is a historic or fierce local derby/rivalry, recognize that Derbies are emotionally charged. While this can sometimes mean goals, it very often means cagey, foul-heavy, and violently defensive 0-0 or 1-0 matches. You MUST analyze the underlying offensive stats: if both teams are missing playmakers, the derby will likely be a low-scoring battle of attrition. Do not force an Over 2.5 prediction purely because it is a derby.
        - **Rule 9 - The Star Player Trap**: Do not overreact to the absence of a famous, aging "star" player (e.g., Radamel Falcao, Lionel Messi). While a big name missing generates news, professional teams often adapt by playing a tighter, more cohesive, and devastating tactical counter-attack system without them. A historic club missing a star striker is NEVER guaranteed to lose. Do NOT automatically downgrade a team just because a famous name is injured.
         - **Rule 10 - The Derby Form Toss (Superclásico Rule)**: If this is a massive historic rivalry, "Superclásico", or a high-stakes Cup Qualifier between two giant clubs in the same country, you MUST heavily discount recent domestic league form (like a 4-0-0 home streak). In one-off emotional bloodbaths, sheer tactical spite and underdog motivation routinely violently override sterile statistical home streaks. Underdogs in these situations are extremely dangerous and often win outright.
-        - **Rule 11 - The Demoralization Catalyst (Blowout Detection)**: If a top-tier Home team (high xG, high possession) faces a bottom-tier opponent with abysmal defensive metrics and high goals-conceded averages, do NOT automatically predict "Under 2.5" just because the Home team is tired or missing a striker. Demoralized underdogs often stop defending entirely after conceding the second goal. In these "Mismatch" scenarios, fatigue is a catalyst for a 4-0 or 5-0 blowout, not a reason for a 1-0 snoozer.
-         - **Rule 12 - The Confidence Ceiling (Anti-Inflation Mandate)**: Football is inherently chaotic. You MUST NOT assign a confidence score above **80%** to ANY single-match prediction unless ALL of these conditions are met: (a) the team is 15+ points clear at the top of their league, (b) playing at home, (c) facing a bottom-3 team, AND (d) has zero key injuries. In all other cases, your confidence MUST reflect the realistic upset probability. A "safe" bet in football is 70-78%. Reserve 80%+ for rare, data-proven situations only. **THE EXCEPTION**: If your chosen Banker pick survives BOTH Scenario A AND Scenario B, AND the H2H record shows 10+ consecutive favorable results, you MAY raise confidence to a maximum of **85%**. But NEVER above 85% — football chaos is real. Remember: if your 88% predictions fail 2 out of 3 times, your calibration is broken.
-         - **Rule 13 - Elite Club Resilience (The Galactico Factor)**: If a club has won 3+ domestic league titles in the last 10 years (e.g., Real Madrid, Bayern Munich, PSG, Man City, Juventus, Inter Milan), you MUST NOT over-penalize them for missing 2-3 key players. These clubs have world-class squad depth, winning mentality, and tactical adaptability that smaller clubs lack. Missing players should reduce your confidence by 10-15%, NOT 30-40%. History shows elite clubs routinely win "impossible" games with B-squads through sheer institutional excellence. Do NOT treat an injured Real Madrid the same as an injured Heracles.
-         - **Rule 14 - Banker Market Priority (The Survival Rule)**: For your `primary_pick` (The Banker), you MUST NOT default to "Match Winner (1X2)" unless the predicted winner wins in BOTH Scenario A AND Scenario B. The 1X2 market has only a ~33% base probability and is one of the RISKIEST markets. Instead, prioritize markets with the highest dual-scenario survival rate. Use this priority ladder for the Banker:
+        - **Rule 11 - Goal Logic Anchoring**: You MUST NOT predict 'Under' for matches where both teams have a combined expected goals (xG) > 3.0 or where defensive fatigue is 'High'. Conversely, you MUST NOT predict 'Over' if the total xG + historical matchup average is < 2.0. If the tactical data is conflicted, you MUST remain neutral (e.g., "Goal outcome highly variant").
+        - **Rule 12 - The Demoralization Catalyst (Blowout Detection)**: If a top-tier Home team (high xG, high possession) faces a bottom-tier opponent with abysmal defensive metrics and high goals-conceded averages, do NOT automatically predict "Under 2.5" just because the Home team is tired or missing a striker. Demoralized underdogs often stop defending entirely after conceding the second goal. In these "Mismatch" scenarios, fatigue is a catalyst for a 4-0 or 5-0 blowout, not a reason for a 1-0 snoozer.
+         - **Rule 13 - The Confidence Ceiling (Anti-Inflation Mandate)**: Football is inherently chaotic. You MUST NOT assign a confidence score above **80%** to ANY single-match prediction unless ALL of these conditions are met: (a) the team is 15+ points clear at the top of their league, (b) playing at home, (c) facing a bottom-3 team, AND (d) has zero key injuries. In all other cases, your confidence MUST reflect the realistic upset probability. A "safe" bet in football is 70-78%. Reserve 80%+ for rare, data-proven situations only. **THE EXCEPTION**: If your chosen Banker pick survives BOTH Scenario A AND Scenario B, AND the H2H record shows 10+ consecutive favorable results, you MAY raise confidence to a maximum of **85%**. But NEVER above 85% — football chaos is real. Remember: if your 88% predictions fail 2 out of 3 times, your calibration is broken.
+         - **Rule 14 - Elite Club Resilience (The Galactico Factor)**: If a club has won 3+ domestic league titles in the last 10 years (e.g., Real Madrid, Bayern Munich, PSG, Man City, Juventus, Inter Milan), you MUST NOT over-penalize them for missing 2-3 key players. These clubs have world-class squad depth, winning mentality, and tactical adaptability that smaller clubs lack. Missing players should reduce your confidence by 10-15%, NOT 30-40%. History shows elite clubs routinely win "impossible" games with B-squads through sheer institutional excellence. Do NOT treat an injured Real Madrid the same as an injured Heracles.
+         - **Rule 15 - Banker Market Priority (The Survival Rule)**: For your `primary_pick` (The Banker), you MUST NOT default to "Match Winner (1X2)" unless the predicted winner wins in BOTH Scenario A AND Scenario B. The 1X2 market has only a ~33% base probability and is one of the RISKIEST markets. Instead, prioritize markets with the highest dual-scenario survival rate. Use this priority ladder for the Banker:
            1. **Tier 1 (Safest)**: Over 0.5 Goals, Double Chance, Team Over 0.5 Goals
            2. **Tier 2 (Safe)**: Over 1.5 Goals, BTTS, Draw No Bet, Asian Handicap (+0.5 or wider)
            3. **Tier 3 (Moderate)**: Over 2.5 Goals, Match Winner, Team Over 1.5 Goals
            You MUST pick from the highest tier where you have 70%+ confidence. Only drop to Tier 3 if the data overwhelmingly supports it across BOTH scenarios. A "Banker" that loses half the time is not a Banker — it is a gamble.
-          - **Rule 15 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 5 rounds (Matchdays 1-4), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Game 2-3. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
-
+          - **Rule 16 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 5 rounds (Matchdays 1-4), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Game 2-3. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
+    
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
        - **Scenario A (The Expected Script)**: If the pre-match favorite (or Home team) scores first within 30 minutes, how does the opponent historically respond? Do they have the tactical discipline to avoid a blowout, or do they collapse?
        - **Scenario B (The Underdog Disruption)**: If the underdog (or Away team) scores first against the run of play, what happens? Does the favorite have the attacking metrics to break down a low block, or do they leave themselves vulnerable to devastating counter-attacks?
-
+    
     4. **Analyze the following 17 Core Betting Markets**:
        - **Match Winner (1X2)**: Home, Draw, or Away?
        - **Match Total Goals**: Over/Under 2.5?
@@ -141,7 +142,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **Highest Scoring Half**: 1st Half, 2nd Half, or Tie.
        - **10 Minute Draw**: Prediction on whether the match will realistically be a draw at the 10:00 minute mark (Yes/No).
        - **Player Props**: e.g. Anytime Goalscorer, Shots on Target for specific players.
-
+    
     5. **Mathematical Synthesis**:
        - Weigh probabilities of ALL 17 markets against each other.
        - **Cross-Reference**:
@@ -153,7 +154,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - SECOND: For the 'Total Match Cards' market, check the "referee" field in the metadata. If a referee name is provided, use your Google Search tool to find that specific referee's historical average cards per game. If no referee is in the metadata, search for who is assigned. This is MANDATORY for accurate card predictions.
        - THIRD: Check the "tournament" and "round" fields in the metadata. Use this to assess match importance (e.g., Cup Final vs. early round, relegation battle vs. mid-table). Factor motivation into all markets.
        - FOURTH: Analyze the offensive stats vs defensive stats, xG, and Fatigue.
-
+    
     7. **Select the Dual Expert Tips (DETERMINISTIC SELECTION)**:
        - **RESTRICTION**: You are STRICTLY FORBIDDEN from inventing or using outside betting markets (e.g., "Win to Nil", "Team to Score in Both Halves", "Player to Score 2+"). Both your Primary and Alternative picks MUST be selected directly from the 17 core markets you analyzed above.
        - **Primary Pick (The Banker)**: Must be the absolute SAFEST mathematical bet from the 17 core markets. You MUST select the single market that has the highest mathematical probability of winning. If the data screams 'Over 1.5 Goals' or 'BTTS: Yes' as the safest possible outcome over 'Double Chance', you must choose that. Act as a pure quantitative expert finding the most undeniable edge.
@@ -236,7 +237,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             except requests.exceptions.RequestException as e:
                 if attempt < max_retries - 1:
                     import time
-                    print(f"⚠️ Network Error during API call. Retrying {attempt + 1}/{max_retries} in 5 seconds ...")
+                    print(f"⚠️ Network Error during API call. Retrying {attempt + 1}/{max_retries} in 5s ...")
                     time.sleep(5)
                 else:
                     raise
@@ -452,8 +453,9 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     You are a Chief Risk Officer building the ultimate, safest sports accumulator.
     
     ### Task
-    Review the following JSON list of analyzed matches. Each match now contains a `primary_pick` (the safest bet), an `alternative_pick`, and a deep `scenario_analysis`.
-    Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip (either the primary or alternative) that balances supreme safety with reasonable accumulator odds.
+    Review the following JSON list of analyzed matches. Each match now contains a `primary_pick`, an `alternative_pick`, a `scenario_analysis`, and often a `supreme_court` ruling.
+    Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip that balances supreme safety with reasonable accumulator odds.
+    - **JUDICIAL OVERRIDE**: If a match contains a `supreme_court` object, you MUST prioritize its verdict. If the court overturned the original pick, you MUST NOT use the overturned pick. Use the `primary_safe_pick` from the supreme court ruling instead.
     - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive BOTH Scenario A (Expected Script) AND Scenario B (Underdog Disruption), you must throw the match out.
     {target_instruction}
     Return ONLY the absolute safest, highest-confidence matches for the master parlay.
@@ -636,4 +638,106 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
                 "risk_level": "Extreme"
             },
             "verdict_reasoning": "Could not extract statistical data to verify bet safety."
+        }
+
+def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique: dict) -> dict:
+    """
+    The Final Risk Arbiter (Pipeline B - Phase 3).
+    Resolves the debate between Agent 1 (Tactical) and Agent 2 (Risk Manager).
+    Applies the OmniBet 17-Market Correlation Matrix for EV calculation.
+    """
+    prompt = f"""
+    You are the Supreme Court Judge and Final Risk Arbiter for OmniBet AI.
+    You are evaluating a multi-agent debate regarding a football match.
+    
+    ### 1. RAW MATCH DATA (Tactical metrics)
+    {json.dumps(match_data, indent=2)}
+    
+    ### 2. AGENT 1'S PITCH (The Optimist)
+    {json.dumps(agent_1_pitch, indent=2)}
+    
+    ### 3. AGENT 2'S CRITIQUE (The Pessimist)
+    {json.dumps(agent_2_critique, indent=2)}
+    
+    ### YOUR EXCLUSIVE JOB: RESOLVE THE DEBATE
+    Calculate the Expected Value (EV) and the absolute safest mathematical probability.
+    Follow the "OMNIBET 17-MARKET CORRELATION MATRIX" rules:
+    - BUCKET 1 (Match Control): 1X2, Double Chance, DNB, Asian Handicap.
+    - BUCKET 2 (Attack vs Defense): Match Goals, BTTS, Team Goals, Team Exact Goals.
+    - BUCKET 3 (Timing & Fatigue): 1st/2nd Half Goals, Highest Scoring Half, HT/FT.
+    - BUCKET 4 (Pressure): Total Corners.
+    - BUCKET 5 (Chaos): Total Cards.
+    - BUCKET 6 (Stalemate): 10 Minute Draw, Correct Score.
+    - BUCKET 7 (Micro-Target): Player Props.
+
+    Return your ruling STRICTLY in JSON:
+    {{
+      "supreme_court_reasoning": "string (A detailed, multi-paragraph judicial opinion. Provide a cold, deep analytical breakdown of 5-8 heavy sentences that connects tactical data, internal agent debate, and mathematical EV logic into one authoritative verdict.)",
+      "variance_warning": "string (Explain how this bet could lose...)",
+      "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
+      "primary_safe_pick": {{
+        "market": "string",
+        "tip": "string",
+        "confidence": "integer (0-100)"
+      }},
+      "alternative_value_pick": {{
+        "market": "string",
+        "tip": "string",
+        "confidence": "integer (0-100)",
+        "value_reasoning": "string"
+      }}
+    }}
+    
+    *** RULES ***
+    - NO_BET: If data is too chaotic/high variance.
+    - CONFIRMED: Agree with Agent 1.
+    - OVERTURNED: Agent 2 proved a trap; PIVOT to a safer market trigger.
+    - GOAL INTEGRITY: You MUST NOT confirm an 'Under' pick if Agent 1's pitch shows combined xG > 2.8. You MUST NOT confirm an 'Over' pick if combined xG < 1.8.
+    """
+    
+    try:
+        print(f"⚖️ [Supreme Court] Adjudicating {agent_1_pitch.get('match')}...")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("API Key is missing")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        payload = {
+            "contents": [({"parts": [{"text": prompt}]})],
+            "generationConfig": {
+                "temperature": 0.0, 
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        # Judge is purely logic-driven, usually doesn't need fresh search but we'll allow it if future match
+        is_historical = False
+        match_date = agent_1_pitch.get('match_date')
+        if match_date:
+            try:
+                match_dt = datetime.fromisoformat(match_date.replace("Z", "+00:00"))
+                now_dt = datetime.now(timezone.utc)
+                if (now_dt - match_dt).total_seconds() > 0:
+                    is_historical = True
+            except: pass
+            
+        if not is_historical:
+            payload["tools"] = [{"google_search": {}}]
+
+        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+        response.raise_for_status()
+        
+        response_json = response.json()
+        raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
+        
+        return json.loads(raw_text)
+        
+    except Exception as e:
+        print(f"Supreme Court Error: {e}")
+        return {
+            "supreme_court_reasoning": "The supreme court failed due to an technical error.",
+            "variance_warning": "Technical variance is too high.",
+            "verdict_status": "NO_BET",
+            "primary_safe_pick": {"market": "N/A", "tip": "N/A", "confidence": 0},
+            "alternative_value_pick": {"market": "N/A", "tip": "N/A", "confidence": 0, "value_reasoning": "Error occurred."}
         }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send, Plus, Check, X } from 'lucide-react';
+import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send, Plus, Check, X, Scale, Gavel } from 'lucide-react';
 import PredictionCard from './PredictionCard';
+import SupremeCourtCard from './SupremeCourtCard';
 import HistoryTab from './HistoryTab';
 import GroupsTab from './GroupsTab';
 import SettingsTab from './SettingsTab';
@@ -621,10 +622,16 @@ const Dashboard = () => {
                         {predictions.map((pred, i) => (
                             pred.audit_verdict ? (
                                 <div key={i} className="mb-10 space-y-4 border border-blue-900/50 rounded-2xl p-4 bg-blue-900/10">
-                                    <div className="flex items-center gap-2 mb-2 text-blue-400 px-2">
-                                        <ShieldAlert className="w-5 h-5" />
-                                        <span className="font-bold tracking-widest uppercase text-sm">Dual-Agent Auditor Report</span>
+                                    <div className="flex items-center justify-between mb-2 px-2">
+                                        <div className="flex items-center gap-2 text-blue-400">
+                                            <ShieldAlert className="w-5 h-5" />
+                                            <span className="font-bold tracking-widest uppercase text-sm">Triple-Agent Strategic Report</span>
+                                        </div>
                                     </div>
+
+                                    {/* Agent 3: Supreme Court Ruling Component */}
+                                    <SupremeCourtCard supreme_court={pred.supreme_court} />
+
                                     <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-xl mb-4">
                                         <div className={`p-4 border-b ${pred.audit_verdict.status === 'APPROVED' ? 'bg-green-900/30 border-green-800' :
                                             pred.audit_verdict.status === 'DOWNGRADED' ? 'bg-yellow-900/30 border-yellow-800' :
@@ -725,67 +732,70 @@ const Dashboard = () => {
                         ))}
                     </div>
                 </main>
-            )}
+            )
+            }
 
             {/* Admin Login Modal */}
-            {showLoginModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
-                        <button
-                            onClick={() => !loginLoading && setShowLoginModal(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-white"
-                        >
-                            ×
-                        </button>
-
-                        <div className="mb-6 text-center">
-                            <ShieldAlert className="w-12 h-12 text-blue-500 mx-auto mb-3" />
-                            <h3 className="text-xl font-bold text-white">Admin Authentication</h3>
-                            <p className="text-sm text-gray-400 mt-1">Please log in to perform this action.</p>
-                        </div>
-
-                        <form onSubmit={handleLogin} className="space-y-4">
-                            {loginError && (
-                                <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
-                                    {loginError}
-                                </div>
-                            )}
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
-                                <input
-                                    type="text"
-                                    value={loginForm.username}
-                                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
-                                <input
-                                    type="password"
-                                    value={loginForm.password}
-                                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                    required
-                                />
-                            </div>
-
+            {
+                showLoginModal && (
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
                             <button
-                                type="submit"
-                                disabled={loginLoading}
-                                className="w-full py-2.5 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-4"
+                                onClick={() => !loginLoading && setShowLoginModal(false)}
+                                className="absolute top-4 right-4 text-gray-400 hover:text-white"
                             >
-                                {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
-                                Login
+                                ×
                             </button>
-                        </form>
+
+                            <div className="mb-6 text-center">
+                                <ShieldAlert className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+                                <h3 className="text-xl font-bold text-white">Admin Authentication</h3>
+                                <p className="text-sm text-gray-400 mt-1">Please log in to perform this action.</p>
+                            </div>
+
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                {loginError && (
+                                    <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
+                                        {loginError}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                                    <input
+                                        type="text"
+                                        value={loginForm.username}
+                                        onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                                        className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                                    <input
+                                        type="password"
+                                        value={loginForm.password}
+                                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                                        className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                                        required
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={loginLoading}
+                                    className="w-full py-2.5 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-4"
+                                >
+                                    {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+                                    Login
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

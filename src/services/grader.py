@@ -12,6 +12,36 @@ load_dotenv(dotenv_path=env_path)
 # Use the same model as the main pipeline
 MODEL_NAME = "gemini-3-pro-preview"
 
+def _extract_json(text: str) -> dict:
+    """Helper to robustly extract JSON from AI text responses."""
+    if not text:
+        return {}
+    
+    import re
+    # 1. Look for ```json ... ``` blocks
+    json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except:
+            pass
+            
+    # 2. Look for any {...} block
+    any_json = re.search(r'(\{.*\})', text, re.DOTALL)
+    if any_json:
+        try:
+            return json.loads(any_json.group(1))
+        except:
+            pass
+
+    # 3. Last ditch: strip common markdown
+    cleaned = text.strip().replace("```json", "").replace("```", "").strip()
+    try:
+        return json.loads(cleaned)
+    except:
+        return {}
+
+
 def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, safe_bet_tip: str) -> dict:
     """
     The original Google Search-based grader used as a fallback if RapidAPI completely fails
@@ -53,8 +83,10 @@ def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, saf
         )
         
         # Parse JSON block from pure text string
-        raw_text = response.text.strip().replace("```json", "").replace("```", "")
-        return json.loads(raw_text)
+        result = _extract_json(response.text)
+        if not result:
+             raise ValueError(f"Empty or invalid JSON extracted from: {response.text[:100]}...")
+        return result
         
     except Exception as e:
         print(f"Error in fetch_result_with_ai_fallback: {e}")
@@ -134,8 +166,9 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
             model='gemini-2.0-flash',
             contents=prompt
         )
-        raw_text = response.text.strip().replace("```json", "").replace("```", "")
-        result = json.loads(raw_text)
+        result = _extract_json(response.text)
+        if not result:
+             raise ValueError(f"Empty or invalid JSON extracted from: {response.text[:100]}...")
         
         # Log the decision for auditing
         print(f"✅ [Grader Content] Result: {result.get('is_correct')} | Score: {result.get('actual_score')} | Reason: {result.get('reasoning')}")

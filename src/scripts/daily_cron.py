@@ -20,7 +20,7 @@ from src.services.sports_api import (
     resolve_sofascore_match_id,
     get_sofascore_match_stats
 )
-from src.rag.pipeline import predict_match, risk_manager_review
+from src.rag.pipeline import predict_match, risk_manager_review, supreme_court_judge
 from src.database.db import get_cached_prediction, save_prediction, get_app_setting
 from src.services.sports_api import get_sofascore_fixtures
 
@@ -113,6 +113,10 @@ def run_daily_cron():
                 )
                 
                 final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+                
+                # Agent 3: Supreme Court Final Adjudication
+                supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, final_prediction)
+                final_prediction['supreme_court'] = supreme_verdict
                 final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
                 final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
                 
@@ -180,6 +184,10 @@ def run_daily_cron():
             
             # 9. Agent 2
             final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+            
+            # 9.5 Agent 3: Supreme Court Final Adjudication
+            supreme_verdict = supreme_court_judge(advanced_stats or stats, initial_prediction, final_prediction)
+            final_prediction['supreme_court'] = supreme_verdict
             
             # 10. Prepare and Save
             final_prediction['home_logo'] = match.get('homeTeam', {}).get('crest', '').replace("http://", "https://") if match.get('homeTeam', {}).get('crest') else None

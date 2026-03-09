@@ -31,11 +31,17 @@ def init_db():
             home_logo TEXT,
             away_logo TEXT,
             actual_result TEXT,
+            status TEXT,
             is_correct BOOLEAN,
             visible_in_history BOOLEAN DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    try:
+        cursor.execute('ALTER TABLE predictions ADD COLUMN status TEXT')
+    except sqlite3.OperationalError:
+        pass # Column already exists
     
     try:
         cursor.execute('ALTER TABLE predictions ADD COLUMN home_logo TEXT')
@@ -146,7 +152,7 @@ def get_cached_prediction(match_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT full_analysis_json, actual_result, is_correct FROM predictions WHERE match_id = ?', (match_id,))
+        cursor.execute('SELECT full_analysis_json, actual_result, status, is_correct FROM predictions WHERE match_id = ?', (match_id,))
         row = cursor.fetchone()
         if row:
             # We return the exact parsed JSON object that was initially generated
@@ -154,7 +160,8 @@ def get_cached_prediction(match_id: int):
             cached_pred = json.loads(row[0]) if row[0] else {}
             # Reattach grading history if any exists
             cached_pred['actual_result'] = row[1]
-            cached_pred['is_correct'] = row[2]
+            cached_pred['status'] = row[2]
+            cached_pred['is_correct'] = row[3]
             return cached_pred
         return None
     except Exception as e:
@@ -184,6 +191,7 @@ def get_all_predictions():
             full_pred['home_logo'] = db_data['home_logo'] or full_pred.get('home_logo')
             full_pred['away_logo'] = db_data['away_logo'] or full_pred.get('away_logo')
             full_pred['actual_result'] = db_data['actual_result']
+            full_pred['status'] = db_data['status']
             full_pred['is_correct'] = db_data['is_correct']
             
             # Safety: in case primary_pick isn't neatly in full_pred text
@@ -244,15 +252,15 @@ def restore_to_history(match_id: int):
     finally:
         conn.close()
 
-def update_prediction_result(match_id: int, actual_result: str, is_correct: bool):
+def update_prediction_result(match_id: int, actual_result: str, status: str, is_correct: bool):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
         cursor.execute('''
             UPDATE predictions 
-            SET actual_result = ?, is_correct = ? 
+            SET actual_result = ?, status = ?, is_correct = ? 
             WHERE match_id = ?
-        ''', (actual_result, is_correct, match_id))
+        ''', (actual_result, status, is_correct, match_id))
         conn.commit()
     except Exception as e:
         print(f"Error updating result: {e}")
@@ -374,15 +382,18 @@ def delete_group(group_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        # Strict hard delete: wipe the underlying predictions and best picks associated with this group first
-        cursor.execute('DELETE FROM predictions WHERE match_id IN (SELECT match_id FROM group_matches WHERE group_id = ?)', (group_id,))
-        cursor.execute('DELETE FROM ai_best_picks WHERE match_id IN (SELECT match_id FROM group_matches WHERE group_id = ?)', (group_id,))
-        # Then delete the group routing data
+        # 1. Remove the link between matches and this group first
+        # We do NOT delete the predictions themselves, as they belong to the main history.
         cursor.execute('DELETE FROM group_matches WHERE group_id = ?', (group_id,))
+        
+        # 2. Delete the group definition
         cursor.execute('DELETE FROM prediction_groups WHERE id = ?', (group_id,))
+        
         conn.commit()
     except Exception as e:
         print(f"Error deleting group {group_id}: {e}")
+        conn.rollback()
+        raise e # Re-raise so the API endpoint knows it failed
     finally:
         conn.close()
 
