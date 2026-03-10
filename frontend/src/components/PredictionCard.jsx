@@ -298,6 +298,14 @@ const PredictionCard = ({ prediction }) => {
                                 <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario B: The Underdog Disruption</h5>
                                 <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_b_underdog_disruption}</p>
                             </div>
+                            {prediction.scenario_analysis.scenario_c_red_card_disruption && (
+                                <div className="bg-slate-800/40 p-3 rounded-lg border border-red-500/20">
+                                    <h5 className="text-xs font-bold text-red-400 uppercase mb-1 flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3 text-red-400" /> Scenario C: The Red Card Disruption
+                                    </h5>
+                                    <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_c_red_card_disruption}</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

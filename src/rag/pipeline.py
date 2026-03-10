@@ -121,8 +121,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
-       - **Scenario A (The Expected Script)**: If the pre-match favorite (or Home team) scores first within 30 minutes, how does the opponent historically respond? Do they have the tactical discipline to avoid a blowout, or do they collapse?
-       - **Scenario B (The Underdog Disruption)**: If the underdog (or Away team) scores first against the run of play, what happens? Does the favorite have the attacking metrics to break down a low block, or do they leave themselves vulnerable to devastating counter-attacks?
+       - **Scenario A (The Expected Script)**: If the pre-match favorite (Home or Away) scores first within 30 minutes, how does the opponent historically respond? Do they have the tactical discipline to avoid a blowout, or do they collapse?
+       - **Scenario B (The Underdog Disruption)**: If the underdog (Home or Away) scores first against the run of play, what happens? Does the favorite have the attacking metrics to break down a low block, or do they leave themselves vulnerable to devastating counter-attacks?
+       - **Scenario C (The Red Card Disruption)**: If the match favorite (or the team your primary pick favors) receives a red card before the 60th minute, detail exactly how they will alter their tactical formation (e.g., dropping into a deep low block). State exactly how this will impact the 'Total Corners' market for the 11-man team and whether the 'Match Goals' market will explode (due to defensive collapse) or freeze (due to defensive stubbornness).
     
     4. **Analyze the following 17 Core Betting Markets**:
        - **Match Winner (1X2)**: Home, Draw, or Away?
@@ -168,7 +169,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         "step_by_step_reasoning": "Sentence 1 MUST state exactly who is injured/missing/transferred from the starting lineups based on your search. Sentence 2 MUST state how this changes your confidence. Then write your normal thought process.",
         "scenario_analysis": {{
             "scenario_a_expected_script": "Detailed projection of what happens if the favorite/home team scores first and controls possession.",
-            "scenario_b_underdog_disruption": "Detailed projection of what happens if the underdog/away team scores first and forces the favorite to chase the game."
+            "scenario_b_underdog_disruption": "Detailed projection of what happens if the underdog/away team scores first and forces the favorite to chase the game.",
+            "scenario_c_red_card_disruption": "Detailed simulation of the favorite receiving a red card, tactical shifts, corner impacts for the opponent, and goal market projections."
         }},
         "match": "{team_a} vs {team_b}",
         "full_analysis": {{
@@ -303,7 +305,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
     4. **The "Derby Caution Directive"**: If the primary agent upgraded a goal market purely because it is a "Derby", exercise extreme caution. Derbies are notoriously tight, card-heavy, defensive struggles. If the baseline data points to a low-scoring match, OVERRULE the agent's derby narrative and reinstate the mathematically sound Under/Conservative pick.
 
     5. **Scrutinize the `primary_pick` (The Banker)**: Is it truly the safest mathematical edge among all 17 markets? 
-       - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. The primary pick might be 'Match Winner', 'Over 1.5', 'BTTS', etc. Whatever it is, if it completely fails in "Scenario B (The Underdog Disruption)", it is NOT a safe banker. Downgrade it to a safer, more resilient market.
+       - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. The primary pick might be 'Match Winner', 'Over 1.5', 'BTTS', etc. Whatever it is, if it completely fails in **Scenario B (Underdog Disruption)** OR **Scenario C (Red Card Disruption)**, it is NOT a safe banker. Downgrade it to a safer, more resilient market (e.g. pivoting from 'Match Winner' to 'Double Chance' or 'Draw No Bet').
        - **HONOR INJURY NEWS**: If the primary agent chose a goal-dependent market (Over 2.5, BTTS) but discovered injuries to top strikers, you MUST downgrade the pick. Do not ignore structural problems just because of a narrative.
        - **CRITICAL INSTRUCTION - CONFLICT RESOLUTION**: Before finalizing your analysis, cross-reference all statistics you are about to output. Your final narrative must be logically consistent. If you downgrade the tip to an "Under" market, ensure the text explicitly cites the data (e.g., missing players or low expected goals).
        - **CRITICAL**: If you downgrade the tip, you MUST choose the absolute safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section that better survives both Scenarios.
@@ -456,7 +458,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     Review the following JSON list of analyzed matches. Each match now contains a `primary_pick`, an `alternative_pick`, a `scenario_analysis`, and often a `supreme_court` ruling.
     Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip that balances supreme safety with reasonable accumulator odds.
     - **JUDICIAL OVERRIDE**: If a match contains a `supreme_court` object, you MUST prioritize its verdict. If the court overturned the original pick, you MUST NOT use the overturned pick. Use the `primary_safe_pick` from the supreme court ruling instead.
-    - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive BOTH Scenario A (Expected Script) AND Scenario B (Underdog Disruption), you must throw the match out.
+    - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive Scenarios A, B, AND C, you must throw the match out. A safe parlay choice MUST be resilient to an early red card or an underdog goal.
     {target_instruction}
     Return ONLY the absolute safest, highest-confidence matches for the master parlay.
     
@@ -692,6 +694,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - NO_BET: If data is too chaotic/high variance.
     - CONFIRMED: Agree with Agent 1.
     - OVERTURNED: Agent 2 proved a trap; PIVOT to a safer market trigger.
+    - SCENARIO C RESILIENCE: You MUST NOT confirm a 'Primary' pick if it cannot survive a red card to the favorite (Scenario C). If the favorite dropping into a low block would ruin the bet, you MUST OVERTURN it to a more defensive market.
     - GOAL INTEGRITY: You MUST NOT confirm an 'Under' pick if Agent 1's pitch shows combined xG > 2.8. You MUST NOT confirm an 'Over' pick if combined xG < 1.8.
     """
     
