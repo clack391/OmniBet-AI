@@ -237,10 +237,10 @@ def parse_sportybet_code(request: BookingCodeRequest):
                      target_dates.add(d)
                  except: pass
         
-        # If no specific dates could be parsed, default to Today + 3 Days
+        # If no specific dates could be parsed, default to Today + 7 Days
         if not target_dates:
             today = datetime.now()
-            for i in range(4):
+            for i in range(8):
                 target_dates.add((today + timedelta(days=i)).strftime("%Y-%m-%d"))
         
         # Respect the primary provider setting
@@ -253,8 +253,15 @@ def parse_sportybet_code(request: BookingCodeRequest):
             else:
                 get_fixtures_by_date(d_str, d_str)
         
-        # Try matching one more time with the fresh cache
-        enriched_results = find_fixtures_cross_date(result.get("matches", []))
+        # 4. FINAL HYDRATION: Re-run matching after cache update
+        final_results = find_fixtures_cross_date(result.get("matches", []))
+        return {
+            "booking_code": request.booking_code,
+            "booking_status": "success",
+            "matches": final_results.get("matched", []),
+            "enriched_matches": final_results.get("matched", []),
+            "unmatched_names": final_results.get("unmatched", [])
+        }
 
     # Maintain backwards compatibility with the raw output for the frontend
     return {

@@ -474,8 +474,10 @@ def _clean_team_name(name: str) -> set:
     if not name: return set()
     name = name.lower()
     
+    # Norway/Denmark explicit mapping BEFORE stripping
+    name = name.replace('ø', 'oe').replace('æ', 'ae')
+    
     # Universal Normalization: Removes ALL accents/diacritics (e.g., á -> a, ñ -> n, ç -> c)
-    # This works for every language on Earth.
     name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('utf-8')
     
     # Strip everything except lowercase and spaces before replacements
@@ -483,18 +485,30 @@ def _clean_team_name(name: str) -> set:
     
     # Handle common translations/abbreviations
     replacements = {
-        "munchen": "munich",
+        "munchen": "bayern",
+        "munich": "bayern",
         "mgladbach": "monchengladbach",
         "gladb": "monchengladbach",
         "utd": "united",
+        "man": "manchester",
+        "man u": "manchester united",
+        "man city": "manchester city",
+        "atletico madrid": "atletico",
         "psg": "paris saint germain",
         "wolves": "wolverhampton",
         "spurs": "tottenham",
-        "atl": "atletico",
         "intl": "internacional",
         "ahli": "al ahli",
         "ittihad": "al ittihad",
-        "sparkasse": "",
+        "stade": "",
+        "athletic": "",
+        "club": "",
+        "clube": "",
+        "deportivo": "",
+        "depor": "",
+        "cp": "sporting",
+        "lisbon": "sporting",
+        "braga": "sporting braga",
         "amateur": "",
         "u19": "",
         "u21": "",
@@ -505,7 +519,7 @@ def _clean_team_name(name: str) -> set:
         name = re.sub(rf'\b{old}\b', new, name)
 
     # Remove standard noise words
-    noise = ['fc', 'ca', 'united', 'city', 'sc', 'cf', 'de', 'afc', 'as', 'fk', 'rio', 'v', 'vs', 'al']
+    noise = ['fc', 'ca', 'united', 'city', 'sc', 'cf', 'de', 'afc', 'as', 'fk', 'rio', 'v', 'vs', 'al', 'stade', 'club', 'clube', 'desportivo']
     for word in noise:
         name = re.sub(rf'\b{word}\b', '', name)
         
@@ -589,17 +603,21 @@ def find_fixtures_cross_date(parsed_matches: list):
                 is_swapped = home_swap > 0 and away_swap > 0
                 
                 # Calculate a total confidence score
-                score = (home_direct + away_direct) if is_direct else (home_swap + away_swap) if is_swapped else 0
+                # Direct matches are significantly more likely to be correct than swaps.
+                # We weight direct matches higher and require a threshold.
+                score = 0
+                if is_direct:
+                    score = (home_direct + away_direct) * 2  # Double weight for direct
+                elif is_swapped:
+                    score = (home_swap + away_swap)          # Normal weight for swap
                 
-                # STRICTURE: We require at least ONE word from BOTH teams to match
-                # This prevents 'Heracles vs Utrecht' matching 'Heracles vs PSV'
                 if score > max_score:
                     max_score = score
                     best_match = f
             
-            # We need a minimum threshold of score to be confident
-            # Usually 1 word from each team = 2
-            if best_match and max_score >= 1:
+            # We need a minimum threshold to be confident
+            # 2 is the floor (e.g., 1 word match per team in a swap, or 1/2 match in a direct)
+            if best_match and max_score >= 2:
                 print(f"✅ Match Found: '{pm.get('home_team')} vs {pm.get('away_team')}' -> '{best_match.get('homeTeam',{}).get('name')} vs {best_match.get('awayTeam',{}).get('name')}' (Score: {max_score})")
                 # Pass the user's original bet to the frontend
                 if 'user_selected_bet' in pm:
