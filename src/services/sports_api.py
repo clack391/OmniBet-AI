@@ -153,23 +153,46 @@ def map_sofascore_event(event):
     """
     Standardizes a SofaScore event (from either Web API or RapidAPI) 
     into the internal schema used by the frontend.
+    
+    Handles schema differences between the two APIs:
+    - RapidAPI uses 'timestamp' instead of 'startTimestamp'
+    - RapidAPI uses empty lists [] for homeScore/awayScore on unplayed matches
+    - RapidAPI puts 'uniqueTournament' at the top level, not nested in 'tournament'
     """
     status_type = event.get("status", {}).get("type")
     status = "TIMED"
     if status_type == "finished":
         status = "FINISHED"
-    elif status_type == "inprogress":
+    elif status_type in ("inprogress", "live"):
         status = "IN_PLAY"
+    elif status_type == "notstarted":
+        status = "TIMED"
         
     home_id = event.get("homeTeam", {}).get("id")
     away_id = event.get("awayTeam", {}).get("id")
     
+    # Handle timestamp: RapidAPI uses 'timestamp', WWW API uses 'startTimestamp'
+    start_ts = event.get("startTimestamp") or event.get("timestamp") or 0
+    
+    # Handle scores: RapidAPI returns empty list [] for unplayed matches, WWW returns dict {}
+    home_score_raw = event.get("homeScore")
+    away_score_raw = event.get("awayScore")
+    home_score = home_score_raw.get("current", None) if isinstance(home_score_raw, dict) else None
+    away_score = away_score_raw.get("current", None) if isinstance(away_score_raw, dict) else None
+    
+    # Handle tournament ID: RapidAPI puts uniqueTournament at top level
+    tournament_id = None
+    if isinstance(event.get("tournament", {}).get("uniqueTournament"), dict):
+        tournament_id = event["tournament"]["uniqueTournament"].get("id")
+    if not tournament_id and isinstance(event.get("uniqueTournament"), dict):
+        tournament_id = event["uniqueTournament"].get("id")
+    
     return {
         "id": event.get("id"), # We pass the SofaScore event ID
-        "utcDate": datetime.fromtimestamp(event.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "utcDate": datetime.fromtimestamp(start_ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "status": status,
         "competition": {
-            "id": event.get("tournament", {}).get("uniqueTournament", {}).get("id") or 2021,
+            "id": tournament_id or 2021,
             "name": event.get("tournament", {}).get("name", "Unknown")
         },
         "homeTeam": {
@@ -182,13 +205,13 @@ def map_sofascore_event(event):
         },
         "score": {
             "fullTime": {
-                "home": event.get("homeScore", {}).get("current", None),
-                "away": event.get("awayScore", {}).get("current", None)
+                "home": home_score,
+                "away": away_score
             }
         },
         "home_logo": f"/team-logo/{home_id}" if home_id else None,
         "away_logo": f"/team-logo/{away_id}" if away_id else None,
-        "_timestamp": event.get("startTimestamp", 0) # Temporary key for sorting
+        "_timestamp": start_ts # Temporary key for sorting
     }
 
 @rate_limit(calls_per_minute=6)
