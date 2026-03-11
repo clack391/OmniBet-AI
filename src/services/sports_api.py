@@ -224,7 +224,7 @@ def fetch_latest_odds(team_a: str, team_b: str):
     regions = 'uk,eu'
     markets = 'h2h,totals' # 1X2 and Over/Under
     
-    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds"
+    url = f"https://api.the-odds-api.com/v4/sports/upcoming/odds"
     params = {
         "apiKey": api_key,
         "regions": regions,
@@ -233,6 +233,12 @@ def fetch_latest_odds(team_a: str, team_b: str):
     
     try:
         response = requests.get(url, params=params)
+        
+        # Gracefully handle quota limits or unauthorized errors from The Odds API
+        if response.status_code == 401:
+            print("⚠️ The Odds API Error: Unauthorized or OUT_OF_USAGE_CREDITS. Proceeding without live odds.")
+            return None
+            
         response.raise_for_status()
         data = response.json()
         
