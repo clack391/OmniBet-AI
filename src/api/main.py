@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 import sqlite3
 import json
@@ -123,7 +123,7 @@ class GroupCreateRequest(BaseModel):
     name: str
 
 class GroupMatchRequest(BaseModel):
-    match_id: int
+    prediction_id: int
 
 class ProviderSettingRequest(BaseModel):
     provider: str
@@ -224,28 +224,23 @@ def parse_sportybet_code(request: BookingCodeRequest):
         from src.services.sports_api import get_fixtures_by_date, get_sofascore_fixtures
         from datetime import datetime, timedelta
         
-        # Identify all unique dates mentioned in the parsed matches
-        # Fallback to today/tomorrow if specific dates aren't clear
         target_dates = set()
         for pm in result.get("matches", []):
             extracted_date = pm.get("match_date", "")
             if extracted_date and len(extracted_date) >= 10:
-                 # Extract 2026-03-09 from longer strings if needed
                  try:
                      d = extracted_date[:10]
                      datetime.strptime(d, "%Y-%m-%d")
                      target_dates.add(d)
                  except: pass
         
-        # If no specific dates could be parsed, default to Today + 7 Days
         if not target_dates:
             today = datetime.now()
             for i in range(8):
                 target_dates.add((today + timedelta(days=i)).strftime("%Y-%m-%d"))
         
-        # Respect the primary provider setting
         provider = get_app_setting("primary_provider", "football-data")
-        print(f"⚠️ Unmatched matches detected. Proactively fetching fixtures for {target_dates} using {provider} to populate cache...")
+        print(f"⚠️ Unmatched matches detected. Proactive sync for {target_dates} using {provider}...")
         
         for d_str in target_dates:
             if provider == "sofascore":
@@ -253,23 +248,70 @@ def parse_sportybet_code(request: BookingCodeRequest):
             else:
                 get_fixtures_by_date(d_str, d_str)
         
-        # 4. FINAL HYDRATION: Re-run matching after cache update
-        final_results = find_fixtures_cross_date(result.get("matches", []))
-        return {
-            "booking_code": request.booking_code,
-            "booking_status": "success",
-            "matches": final_results.get("matched", []),
-            "enriched_matches": final_results.get("matched", []),
-            "unmatched_names": final_results.get("unmatched", [])
-        }
+        # Re-run matching after cache update
+        enriched_results = find_fixtures_cross_date(result.get("matches", []))
 
-    # Maintain backwards compatibility with the raw output for the frontend
+    # 4. DEEP SEARCH FALLBACK: For anything still unmatched, try a direct SofaScore search
+    if enriched_results.get("unmatched") and get_app_setting("primary_provider", "") == "sofascore":
+        from src.services.sports_api import resolve_sofascore_match_id
+        from datetime import datetime, timezone
+        try:
+            from curl_cffi import requests as cffi_requests
+        except ImportError:
+            cffi_requests = None
+
+        print(f"🔍 Deep searching for {len(enriched_results.get('unmatched'))} still unmatched fixtures...")
+        
+        for pm in result.get("matches", []):
+            name_key = f"{pm.get('home_team')} vs {pm.get('away_team')}"
+            # Check if this specific match is in the unmatched list
+            if not any(name_key in u for u in enriched_results.get("unmatched", [])):
+                continue
+
+            home = pm.get('home_team')
+            away = pm.get('away_team')
+            match_date = pm.get('match_date', '')[:10]
+            
+            print(f"🔎 Direct Search: {home} vs {away} ({match_date})")
+            ss_id = resolve_sofascore_match_id(home, away, match_date)
+            
+            if ss_id and cffi_requests:
+                try:
+                    url = f"https://api.sofascore.com/api/v1/event/{ss_id}"
+                    res = cffi_requests.get(url, impersonate="chrome120", timeout=15)
+                    if res.status_code == 200:
+                        event = res.json().get('event', {})
+                        
+                        status_type = event.get("status", {}).get("type")
+                        status = "TIMED" if status_type == "notstarted" else "FINISHED" if status_type == "finished" else "IN_PLAY"
+                        
+                        mapped_match = {
+                            "id": event.get("id"),
+                            "utcDate": datetime.fromtimestamp(event.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            "status": status,
+                            "competition": {"name": event.get("tournament", {}).get("name", "Unknown")},
+                            "homeTeam": {"name": event.get("homeTeam", {}).get("name")},
+                            "awayTeam": {"name": event.get("awayTeam", {}).get("name")},
+                            "home_logo": f"/team-logo/{event.get('homeTeam', {}).get('id')}",
+                            "away_logo": f"/team-logo/{event.get('awayTeam', {}).get('id')}"
+                        }
+                        
+                        if 'user_selected_bet' in pm:
+                            mapped_match['_user_selected_bet'] = pm['user_selected_bet']
+                        
+                        enriched_results["matched"].append(mapped_match)
+                        enriched_results["unmatched"] = [u for u in enriched_results["unmatched"] if name_key not in u]
+                        print(f"✅ Deep Search Success: {home} vs {away} -> ID {ss_id}")
+                except Exception as e:
+                    print(f"Deep Search Detail Fetch Error for {ss_id}: {e}")
+
     return {
+        "booking_code": request.booking_code,
         "booking_status": "success",
-        "total_matches_found": result.get("total_matches_found", 0),
-        "matches": result.get("matches", []),         # The raw strings exactly as scraped
-        "enriched_matches": enriched_results.get("matched", []), # Fully hydrated Fixture objects
-        "unmatched_names": enriched_results.get("unmatched", []) # Strings that failed cross-date checks
+        "matches": enriched_results.get("matched", []),
+        "enriched_matches": enriched_results.get("matched", []),
+        "unmatched_names": enriched_results.get("unmatched", []),
+        "raw_scraped_matches": result.get("matches", [])
     }
 
 @app.get("/stats/{match_id}")
@@ -289,17 +331,17 @@ def clear_history(current_user: dict = Depends(get_admin_user)):
     clear_predictions()
     return {"message": "Prediction history cleared."}
 
-@app.delete("/history/{match_id}")
-def delete_single_history(match_id: int, current_user: dict = Depends(get_admin_user)):
-    delete_prediction(match_id)
-    return {"status": "deleted", "match_id": match_id}
+@app.delete("/history/{prediction_id}")
+def delete_single_history(prediction_id: int, current_user: dict = Depends(get_admin_user)):
+    delete_prediction(prediction_id)
+    return {"status": "deleted", "prediction_id": prediction_id}
 
-@app.post("/history/{match_id}/restore")
-def restore_prediction_to_history(match_id: int, current_user: dict = Depends(get_admin_user)):
-    success = restore_to_history(match_id)
+@app.post("/history/{prediction_id}/restore")
+def restore_prediction_to_history(prediction_id: int, current_user: dict = Depends(get_admin_user)):
+    success = restore_to_history(prediction_id)
     if not success:
         raise HTTPException(status_code=400, detail="Failed to restore prediction to history.")
-    return {"status": "restored", "match_id": match_id}
+    return {"status": "restored", "prediction_id": prediction_id}
 
 class BestPicksRequest(BaseModel):
     target_odds: float | None = None
@@ -357,16 +399,16 @@ def api_delete_group(group_id: int, current_user: dict = Depends(get_admin_user)
 
 @app.post("/groups/{group_id}/matches")
 def api_add_match_to_group(group_id: int, req: GroupMatchRequest, current_user: dict = Depends(get_admin_user)):
-    success = add_match_to_group(group_id, req.match_id)
+    success = add_match_to_group(group_id, req.prediction_id)
     if not success:
-        raise HTTPException(status_code=400, detail="Failed to add match to group.")
+        raise HTTPException(status_code=400, detail="Failed to add prediction to group.")
     return {"status": "success"}
 
-@app.delete("/groups/{group_id}/matches/{match_id}")
-def api_remove_match_from_group(group_id: int, match_id: int, current_user: dict = Depends(get_admin_user)):
-    success = remove_match_from_group(group_id, match_id)
+@app.delete("/groups/{group_id}/matches/{prediction_id}")
+def api_remove_match_from_group(group_id: int, prediction_id: int, current_user: dict = Depends(get_admin_user)):
+    success = remove_match_from_group(group_id, prediction_id)
     if not success:
-        raise HTTPException(status_code=400, detail="Failed to remove match from group.")
+        raise HTTPException(status_code=400, detail="Failed to remove prediction from group.")
     return {"status": "success"}
 
 @app.get("/groups/{group_id}/matches")
@@ -715,12 +757,14 @@ class AuditItem(BaseModel):
     user_selected_bet: str
 
 class AuditBatchRequest(BaseModel):
-    items: list[AuditItem]
+    items: List[AuditItem]
+    booking_code: Optional[str] = None
 
 @app.post("/predict-audit")
 def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_admin_user)):
     from src.rag.pipeline import audit_match
     results = []
+    booking_code = request.booking_code
 
     for item in request.items:
         match_id = item.match_id
@@ -797,6 +841,8 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
             initial_prediction['away_logo'] = away_logo
             initial_prediction['match_id'] = match_id
             initial_prediction['match_date'] = match_date
+            initial_prediction['booking_code'] = booking_code
+            initial_prediction['user_selected_bet'] = user_selected_bet
             
             save_prediction(initial_prediction)
             results.append(initial_prediction)
@@ -861,6 +907,8 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
         initial_prediction['away_logo'] = stats.get('awayTeam', {}).get('crest', '').replace("http://", "https://") if stats.get('awayTeam', {}).get('crest') else None
         initial_prediction['match_id'] = match_id
         initial_prediction['match_date'] = match_date
+        initial_prediction['booking_code'] = booking_code
+        initial_prediction['user_selected_bet'] = user_selected_bet
         
         save_prediction(initial_prediction)
         results.append(initial_prediction)

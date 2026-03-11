@@ -110,7 +110,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
 
     const handleAddToExistingGroup = async (groupId) => {
         try {
-            await api.post(`/groups/${groupId}/matches`, { match_id: selectedMatchForGroup.match_id });
+            await api.post(`/groups/${groupId}/matches`, { prediction_id: selectedMatchForGroup.id });
             alert("Match successfully added to group!");
             setShowGroupModal(false);
             fetchGroups(); // refresh counts
@@ -124,7 +124,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
         try {
             const res = await api.post('/groups', { name: newGroupName });
             const newGroupId = res.data.id;
-            await api.post(`/groups/${newGroupId}/matches`, { match_id: selectedMatchForGroup.match_id });
+            await api.post(`/groups/${newGroupId}/matches`, { prediction_id: selectedMatchForGroup.id });
             alert("Group created and match added!");
             setNewGroupName('');
             setShowGroupModal(false);
@@ -145,8 +145,8 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
         }
     };
 
-    const handleGradePrediction = async (match_id) => {
-        setGradingIds(prev => [...prev, match_id]);
+    const handleGradePrediction = async (id, match_id) => {
+        setGradingIds(prev => [...prev, id]);
         try {
             const response = await api.post(`/grade-history`, { match_id });
             const gradedResult = response.data.graded_result;
@@ -163,18 +163,18 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
             console.error(err);
             alert("Failed to grade prediction. AI Agent may have timed out or hit search limits.");
         } finally {
-            setGradingIds(prev => prev.filter(id => id !== match_id));
+            setGradingIds(prev => prev.filter(p_id => p_id !== id));
         }
     };
 
-    const handleDeletePrediction = async (e, match_id) => {
+    const handleDeletePrediction = async (e, id) => {
         // Prevent clicking the card behind the button
         e.stopPropagation();
 
         try {
-            await api.delete(`/history/${match_id}`);
+            await api.delete(`/history/${id}`);
             // Filter out the deleted match from React state instantly
-            setHistory(prevHistory => prevHistory.filter(item => item.match_id !== match_id));
+            setHistory(prevHistory => prevHistory.filter(item => item.id !== id));
         } catch (err) {
             console.error("Failed to delete prediction:", err);
             alert("Failed to delete prediction from database.");
@@ -351,7 +351,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
             ) : (
                 <div className="space-y-4">
                     {history.map((item) => {
-                        const isGrading = gradingIds.includes(item.match_id);
+                        const isGrading = gradingIds.includes(item.id);
 
                         return (
                             <div
@@ -365,6 +365,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="text-xs text-gray-400 font-mono">
                                             {new Date(item.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
+                                            {item.booking_code && <span className="ml-2 text-purple-400 font-bold border-l border-gray-700 pl-2">Slip: {item.booking_code}</span>}
                                         </div>
                                         <div className="flex gap-2">
                                             {isLoggedIn && (
@@ -381,7 +382,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={(e) => handleDeletePrediction(e, item.match_id)}
+                                                onClick={(e) => handleDeletePrediction(e, item.id)}
                                                 className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                                                 title="Delete Prediction"
                                             >
@@ -415,6 +416,12 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                                 </span>
                                             </div>
                                         )}
+                                        {item.selection && (
+                                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-900/10 border border-purple-500/20 w-fit">
+                                                <span className="text-[10px] text-purple-400 mr-2 font-bold uppercase tracking-wider">Your Selection:</span>
+                                                <span className="text-sm font-black text-purple-200">{item.selection}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     {item.actual_result && (
                                         <div className="mt-2 text-sm text-gray-300">
@@ -443,7 +450,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleGradePrediction(item.match_id);
+                                                handleGradePrediction(item.id, item.match_id);
                                             }}
                                             disabled={isGrading}
                                             className="w-full flex items-center justify-center gap-2 px-4 py-3 md:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-bold shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"

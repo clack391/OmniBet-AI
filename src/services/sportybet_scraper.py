@@ -81,8 +81,11 @@ def scrape_sportybet_code(booking_code: str):
             except Exception:
                 print("Could not find betslip content. Capturing debug screenshot...")
                 # Save screenshot to artifacts directory for visual diagnosis
-                artifact_dir = "/home/jay/.gemini/antigravity/brain/cfcbe240-1576-429d-95e3-c80ca50c546c"
-                screenshot_path = os.path.join(artifact_dir, f"sportybet_status_{booking_code}.png")
+                # Save screenshot to project root debug directory for environment safety
+                debug_dir = os.path.join(os.getcwd(), "debug")
+                if not os.path.exists(debug_dir):
+                    os.makedirs(debug_dir)
+                screenshot_path = os.path.join(debug_dir, f"sportybet_status_{booking_code}.png")
                 page.screenshot(path=screenshot_path)
                 print(f"📸 Debug screenshot saved: {screenshot_path}")
                 

@@ -71,13 +71,13 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
         fetchGroups(); // refresh counts
     };
 
-    const handleRemoveFromGroup = async (e, matchId) => {
+    const handleRemoveFromGroup = async (e, id) => {
         e.stopPropagation();
         if (!selectedGroup) return;
 
         try {
-            await api.delete(`/groups/${selectedGroup.id}/matches/${matchId}`);
-            setGroupMatches(prev => prev.filter(m => m.match_id !== matchId));
+            await api.delete(`/groups/${selectedGroup.id}/matches/${id}`);
+            setGroupMatches(prev => prev.filter(m => m.id !== id));
         } catch (err) {
             alert("Failed to remove match from folder.");
         }
@@ -95,10 +95,10 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
         }
     };
 
-    const handleCopyToHistory = async (e, matchId) => {
+    const handleCopyToHistory = async (e, id) => {
         e.stopPropagation();
         try {
-            await api.post(`/history/${matchId}/restore`);
+            await api.post(`/history/${id}/restore`);
             alert("Match successfully restored to History tab!");
         } catch (err) {
             alert("Failed to restore match to history.");
@@ -155,7 +155,7 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                         </div>
                                         <div className="flex gap-2">
                                             <button
-                                                onClick={(e) => handleCopyToHistory(e, item.match_id)}
+                                                onClick={(e) => handleCopyToHistory(e, item.id)}
                                                 className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors border border-blue-500/20"
                                                 title="Copy to Prediction History"
                                             >
@@ -163,7 +163,7 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                             </button>
                                             {isLoggedIn && (
                                                 <button
-                                                    onClick={(e) => handleRemoveFromGroup(e, item.match_id)}
+                                                    onClick={(e) => handleRemoveFromGroup(e, item.id)}
                                                     className="p-1.5 text-gray-500 hover:text-orange-500 hover:bg-orange-500/10 rounded-lg transition-colors"
                                                     title="Remove from Folder"
                                                 >

@@ -22,7 +22,9 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS predictions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            match_id INTEGER UNIQUE,
+            match_id INTEGER,
+            booking_code TEXT,
+            selection TEXT,
             match_date TEXT,
             teams TEXT,
             full_analysis_json TEXT,
@@ -34,25 +36,57 @@ def init_db():
             status TEXT,
             is_correct BOOLEAN,
             visible_in_history BOOLEAN DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(match_id, booking_code)
         )
     ''')
     
+    # --- MIGRATION BLOCK: predictions ---
     try:
-        cursor.execute('ALTER TABLE predictions ADD COLUMN status TEXT')
-    except sqlite3.OperationalError:
-        pass # Column already exists
+        cursor.execute('ALTER TABLE predictions ADD COLUMN booking_code TEXT')
+    except sqlite3.OperationalError: pass
+    try: 
+        cursor.execute('ALTER TABLE predictions ADD COLUMN selection TEXT')
+    except sqlite3.OperationalError: pass
+
+    # Check if we need to remove the UNIQUE(match_id) constraint
+    cursor.execute("PRAGMA index_list('predictions')")
+    indices = cursor.fetchall()
+    needs_pred_mig = False
+    for idx in indices:
+        if idx[2] == 1: # Unique
+            cursor.execute(f"PRAGMA index_info('{idx[1]}')")
+            cols = [c[2] for c in cursor.fetchall()]
+            if len(cols) == 1 and cols[0] == 'match_id':
+                needs_pred_mig = True
+                break
     
-    try:
-        cursor.execute('ALTER TABLE predictions ADD COLUMN home_logo TEXT')
-        cursor.execute('ALTER TABLE predictions ADD COLUMN away_logo TEXT')
-    except sqlite3.OperationalError:
-        pass # Columns already exist
-    
-    try:
-        cursor.execute('ALTER TABLE predictions ADD COLUMN visible_in_history BOOLEAN DEFAULT 1')
-    except sqlite3.OperationalError:
-        pass # Column already exists
+    if needs_pred_mig:
+        print("🛠️ Migrating predictions: Transitioning to per-slip audit storage...")
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS predictions_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                match_id INTEGER,
+                booking_code TEXT,
+                selection TEXT,
+                match_date TEXT,
+                teams TEXT,
+                full_analysis_json TEXT,
+                safe_bet_tip TEXT,
+                confidence INTEGER,
+                home_logo TEXT,
+                away_logo TEXT,
+                actual_result TEXT,
+                status TEXT,
+                is_correct BOOLEAN,
+                visible_in_history BOOLEAN DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(match_id, booking_code)
+            )
+        ''')
+        cursor.execute("INSERT INTO predictions_new (id, match_id, booking_code, selection, match_date, teams, full_analysis_json, safe_bet_tip, confidence, home_logo, away_logo, actual_result, status, is_correct, visible_in_history, created_at) SELECT id, match_id, booking_code, selection, match_date, teams, full_analysis_json, safe_bet_tip, confidence, home_logo, away_logo, actual_result, status, is_correct, visible_in_history, created_at FROM predictions")
+        cursor.execute("DROP TABLE predictions")
+        cursor.execute("ALTER TABLE predictions_new RENAME TO predictions")
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS daily_fixtures (
@@ -78,16 +112,40 @@ def init_db():
         )
     ''')
     
+    # --- MIGRATION BLOCK: group_matches ---
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS group_matches (
             group_id INTEGER,
-            match_id INTEGER,
+            prediction_id INTEGER,
             added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (group_id, match_id),
+            PRIMARY KEY (group_id, prediction_id),
             FOREIGN KEY (group_id) REFERENCES prediction_groups (id) ON DELETE CASCADE,
-            FOREIGN KEY (match_id) REFERENCES predictions (match_id) ON DELETE CASCADE
+            FOREIGN KEY (prediction_id) REFERENCES predictions (id) ON DELETE CASCADE
         )
     ''')
+
+    # Detect if we are on the old schema (match_id instead of prediction_id)
+    cursor.execute("PRAGMA table_info(group_matches)")
+    gm_cols = [r[1] for r in cursor.fetchall()]
+    if "match_id" in gm_cols and "prediction_id" not in gm_cols:
+         print("🛠️ Migrating group_matches: Transitioning to ID-based linking...")
+         cursor.execute("ALTER TABLE group_matches ADD COLUMN prediction_id INTEGER")
+         # Link existing matches to the first available prediction ID
+         cursor.execute("UPDATE group_matches SET prediction_id = (SELECT id FROM predictions WHERE predictions.match_id = group_matches.match_id LIMIT 1)")
+         # Recreate group_matches to set PK correctly
+         cursor.execute("ALTER TABLE group_matches RENAME TO group_matches_old")
+         cursor.execute('''
+            CREATE TABLE group_matches (
+                group_id INTEGER,
+                prediction_id INTEGER,
+                added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (group_id, prediction_id),
+                FOREIGN KEY (group_id) REFERENCES prediction_groups (id) ON DELETE CASCADE,
+                FOREIGN KEY (prediction_id) REFERENCES predictions (id) ON DELETE CASCADE
+            )
+        ''')
+         cursor.execute("INSERT INTO group_matches (group_id, prediction_id, added_at) SELECT group_id, prediction_id, added_at FROM group_matches_old WHERE prediction_id IS NOT NULL")
+         cursor.execute("DROP TABLE group_matches_old")
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS app_settings (
@@ -105,15 +163,17 @@ def save_prediction(data: dict):
     
     try:
         cursor.execute('''
-            INSERT OR REPLACE INTO predictions (match_id, match_date, teams, full_analysis_json, safe_bet_tip, confidence, home_logo, away_logo)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO predictions (match_id, booking_code, selection, match_date, teams, full_analysis_json, safe_bet_tip, confidence, home_logo, away_logo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             data.get('match_id'),
+            data.get('booking_code') or '',
+            data.get('user_selected_bet') or '',
             data.get('match_date'),
             data.get('match'),
-            json.dumps(data),  # Save the entire prediction object!
-            data.get('primary_pick', {}).get('tip', 'Analysis Failed'),
-            data.get('primary_pick', {}).get('confidence', 0),
+            json.dumps(data),
+            data.get('primary_pick', {}).get('tip', data.get('safe_bet_tip', 'Analysis Failed')),
+            data.get('primary_pick', {}).get('confidence', data.get('confidence', 0)),
             data.get('home_logo'),
             data.get('away_logo')
         ))
@@ -148,17 +208,21 @@ def get_accuracy_stats():
     finally:
         conn.close()
 
-def get_cached_prediction(match_id: int):
+def get_cached_prediction(match_id: int, booking_code: str = None):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT full_analysis_json, actual_result, status, is_correct FROM predictions WHERE match_id = ?', (match_id,))
+        if booking_code:
+            cursor.execute('SELECT full_analysis_json, actual_result, status, is_correct, id FROM predictions WHERE match_id = ? AND booking_code = ?', (match_id, booking_code))
+        else:
+            # If no code provided, get the most recent non-audit or any recent prediction
+            cursor.execute('SELECT full_analysis_json, actual_result, status, is_correct, id FROM predictions WHERE match_id = ? ORDER BY created_at DESC LIMIT 1', (match_id,))
+        
         row = cursor.fetchone()
         if row:
-            # We return the exact parsed JSON object that was initially generated
-            # so the frontend receives the identical nested format.
             cached_pred = json.loads(row[0]) if row[0] else {}
             # Reattach grading history if any exists
+            cached_pred['id'] = row[4]
             cached_pred['actual_result'] = row[1]
             cached_pred['status'] = row[2]
             cached_pred['is_correct'] = row[3]
@@ -226,28 +290,28 @@ def clear_predictions():
     finally:
         conn.close()
 
-def delete_prediction(match_id: int):
+def delete_prediction(prediction_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
         # User requested a strict hard delete across all associations
-        cursor.execute('DELETE FROM group_matches WHERE match_id = ?', (match_id,))
-        cursor.execute('DELETE FROM predictions WHERE match_id = ?', (match_id,))
+        cursor.execute('DELETE FROM group_matches WHERE prediction_id = ?', (prediction_id,))
+        cursor.execute('DELETE FROM predictions WHERE id = ?', (prediction_id,))
         conn.commit()
     except Exception as e:
-        print(f"Error deleting prediction {match_id}: {e}")
+        print(f"Error deleting prediction {prediction_id}: {e}")
     finally:
         conn.close()
 
-def restore_to_history(match_id: int):
+def restore_to_history(prediction_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        cursor.execute('UPDATE predictions SET visible_in_history = 1 WHERE match_id = ?', (match_id,))
+        cursor.execute('UPDATE predictions SET visible_in_history = 1 WHERE id = ?', (prediction_id,))
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error restoring prediction {match_id}: {e}")
+        print(f"Error restoring prediction {prediction_id}: {e}")
         return False
     finally:
         conn.close()
@@ -364,7 +428,7 @@ def get_groups():
     cursor = conn.cursor()
     try:
         cursor.execute('''
-            SELECT g.id, g.name, g.created_at, COUNT(gm.match_id) as match_count 
+            SELECT g.id, g.name, g.created_at, COUNT(gm.prediction_id) as match_count 
             FROM prediction_groups g
             LEFT JOIN group_matches gm ON g.id = gm.group_id
             GROUP BY g.id
@@ -397,32 +461,32 @@ def delete_group(group_id: int):
     finally:
         conn.close()
 
-def add_match_to_group(group_id: int, match_id: int):
+def add_match_to_group(group_id: int, prediction_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
-        cursor.execute('INSERT OR IGNORE INTO group_matches (group_id, match_id) VALUES (?, ?)', (group_id, match_id))
+        cursor.execute('INSERT OR IGNORE INTO group_matches (group_id, prediction_id) VALUES (?, ?)', (group_id, prediction_id))
         # Hide the match from the main Prediction History Tab automatically
-        cursor.execute('UPDATE predictions SET visible_in_history = 0 WHERE match_id = ?', (match_id,))
+        cursor.execute('UPDATE predictions SET visible_in_history = 0 WHERE id = ?', (prediction_id,))
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error adding match {match_id} to group {group_id}: {e}")
+        print(f"Error adding prediction {prediction_id} to group {group_id}: {e}")
         return False
     finally:
         conn.close()
 
-def remove_match_from_group(group_id: int, match_id: int):
+def remove_match_from_group(group_id: int, prediction_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     try:
         # Soft unarchive: remove from the specific folder but restore visibility in the main history feed
-        cursor.execute('DELETE FROM group_matches WHERE group_id = ? AND match_id = ?', (group_id, match_id))
-        cursor.execute('UPDATE predictions SET visible_in_history = 1 WHERE match_id = ?', (match_id,))
+        cursor.execute('DELETE FROM group_matches WHERE group_id = ? AND prediction_id = ?', (group_id, prediction_id))
+        cursor.execute('UPDATE predictions SET visible_in_history = 1 WHERE id = ?', (prediction_id,))
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error removing match {match_id} from group {group_id}: {e}")
+        print(f"Error removing prediction {prediction_id} from group {group_id}: {e}")
         return False
     finally:
         conn.close()
@@ -519,7 +583,7 @@ def _clean_team_name(name: str) -> set:
         name = re.sub(rf'\b{old}\b', new, name)
 
     # Remove standard noise words
-    noise = ['fc', 'ca', 'united', 'city', 'sc', 'cf', 'de', 'afc', 'as', 'fk', 'rio', 'v', 'vs', 'al', 'stade', 'club', 'clube', 'desportivo']
+    noise = ['fc', 'ca', 'sc', 'cf', 'de', 'afc', 'as', 'fk', 'rio', 'v', 'vs', 'al', 'stade', 'club', 'clube', 'desportivo']
     for word in noise:
         name = re.sub(rf'\b{word}\b', '', name)
         

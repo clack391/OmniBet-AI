@@ -61,6 +61,7 @@ const Dashboard = () => {
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
     const [bookingCode, setBookingCode] = useState('');
+    const [activeBookingCode, setActiveBookingCode] = useState(null);
     const [isParsingCode, setIsParsingCode] = useState(false);
 
     // Admin Auth State
@@ -261,9 +262,10 @@ const Dashboard = () => {
 
         try {
             const response = await api.post(`/predict-audit`, {
+                booking_code: activeBookingCode || null,
                 items: selectedMatches.map(m => ({
-                    match_id: m.id,
-                    user_selected_bet: m._user_selected_bet || "Unknown Bet"
+                    match_id: m.id || m.match_id,
+                    user_selected_bet: m._user_selected_bet || m.selection || "Unknown Bet"
                 }))
             });
             setPredictions(response.data);
@@ -314,6 +316,7 @@ const Dashboard = () => {
                 setTimeout(() => setError(''), 4000);
             }
 
+            setActiveBookingCode(bookingCode.trim());
             setBookingCode(''); // Clear input
 
         } catch (err) {
@@ -569,7 +572,7 @@ const Dashboard = () => {
                                     <div className="flex justify-between items-center mb-2">
                                         <span className="text-sm font-semibold text-gray-300">Selected Matches ({selectedMatches.length})</span>
                                         <button
-                                            onClick={() => setSelectedMatches([])}
+                                            onClick={() => { setSelectedMatches([]); setActiveBookingCode(null); }}
                                             className="text-xs text-red-400 hover:text-red-300 underline"
                                         >
                                             Clear All

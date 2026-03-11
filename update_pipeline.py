@@ -305,7 +305,7 @@ def risk_manager_review(initial_prediction_json: dict) -> dict:
 # We need to preserve the imports and other functions at the bottom of pipeline.py
 # Let's read the whole file, replace the functions, and write it back.
 
-with open('/home/jay/OmniBet AI/src/rag/pipeline.py', 'r') as f:
+with open('src/rag/pipeline.py', 'r') as f:
     orig = f.read()
 
 # We identify the boundaries of predict_match and risk_manager_review
