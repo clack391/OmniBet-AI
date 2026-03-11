@@ -508,6 +508,11 @@ def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
 def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None) -> int:
     """
     Resolves the SofaScore match ID for a given fixture.
+    
+    Uses a tiered approach:
+    - TIER 1: RapidAPI match/list (works on EC2, no IP blocking)
+    - TIER 2: SofaScore WWW search API via curl_cffi (works locally, blocked on EC2)
+    
     Enhanced with fuzzy team name matching and date tolerance to ensure 
     the correct match is graded, even if team names or dates differ slightly 
     between providers (e.g., 'Chelyabinsk' vs 'FC Chelyabinsk').
@@ -517,6 +522,66 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
     def normalize(name):
         return name.lower().replace("fc", "").replace("afc", "").replace("united", "utd").strip()
 
+    def _fuzzy_match_from_events(events, team_a, team_b, match_date):
+        """Shared fuzzy matching logic that works against any list of event dicts."""
+        best_match = None
+        highest_score = 0.0
+        t_h_name = normalize(team_a)
+        t_a_name = normalize(team_b)
+        
+        for event in events:
+            if not isinstance(event, dict):
+                continue
+                
+            # Get timestamp (RapidAPI uses 'timestamp', WWW uses 'startTimestamp')
+            ts = event.get('startTimestamp') or event.get('timestamp')
+            if not ts:
+                continue
+            
+            event_date_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+            
+            # Date filter (only if match_date is provided)
+            if match_date and event_date_str != match_date:
+                continue
+            
+            # Fuzzy team name matching
+            h_name = normalize(event.get('homeTeam', {}).get('name', ''))
+            a_name = normalize(event.get('awayTeam', {}).get('name', ''))
+            
+            score_normal = SequenceMatcher(None, h_name, t_h_name).ratio() + SequenceMatcher(None, a_name, t_a_name).ratio()
+            score_swapped = SequenceMatcher(None, h_name, t_a_name).ratio() + SequenceMatcher(None, a_name, t_h_name).ratio()
+            current_score = max(score_normal, score_swapped)
+            
+            # Bonus for exact date match
+            if match_date and event_date_str == match_date:
+                current_score += 0.5
+            
+            if current_score > highest_score:
+                highest_score = current_score
+                best_match = event.get('id')
+        
+        if best_match and highest_score > 1.3:
+            return best_match, highest_score
+        return None, 0.0
+
+    # ---- TIER 1: RapidAPI match/list (EC2-safe, no IP blocking) ----
+    if RAPID_API_KEY and match_date:
+        try:
+            rapid_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/list"
+            res = requests.get(rapid_url, 
+                             headers={"x-rapidapi-host": RAPID_API_HOST, "x-rapidapi-key": RAPID_API_KEY},
+                             params={"sport_slug": "football", "date": match_date}, timeout=15)
+            if res.status_code == 200:
+                events = res.json()
+                if isinstance(events, list):
+                    match_id, score = _fuzzy_match_from_events(events, team_a, team_b, match_date)
+                    if match_id:
+                        print(f"✅ Resolved SofaScore ID {match_id} via RapidAPI with confidence {round(score, 2)}")
+                        return match_id
+        except Exception as e:
+            print(f"⚠️ RapidAPI ID Resolution failed: {e}")
+
+    # ---- TIER 2: SofaScore WWW search API via curl_cffi (local fallback) ----
     try:
         from curl_cffi import requests as cffi_requests
     except ImportError:
@@ -526,7 +591,6 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
     try:
         import urllib.parse
         query = f"{team_a} {team_b}"
-        # Use www.sofascore.com instead of api.sofascore.com for consistency and EC2 reliability
         url = f"https://www.sofascore.com/api/v1/search/events?q={urllib.parse.quote(query)}"
         
         try:
@@ -541,63 +605,20 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
             if not results:
                 return None
 
-            best_match = None
-            highest_score = 0.0
-            
-            target_date_dt = None
-            if match_date:
-                try:
-                    target_date_dt = datetime.strptime(match_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
-                except ValueError:
-                    pass
-
+            # Convert search results to flat event list for the shared matcher
+            search_events = []
             for r in results:
                 if r.get('type') != 'event': continue
                 entity = r.get('entity', {})
-                ts = entity.get('startTimestamp')
-                if not ts: continue
-                
-                res_date_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
-                res_date_str = res_date_dt.strftime("%Y-%m-%d")
-
-                # 1. Date Check (Strict or +/- 1 day tolerance)
-                is_date_ok = False
-                if not match_date:
-                    is_date_ok = True # No date filter requested
-                elif res_date_str == match_date:
-                    is_date_ok = True # Exact match
-                elif target_date_dt:
-                    diff = abs((res_date_dt - target_date_dt).days)
-                    if diff <= 1:
-                        is_date_ok = True # Tolerance match for timezones/scheduling shifts
-
-                if not is_date_ok:
-                    continue
-
-                # 2. Team Name Fuzzy Matching
-                h_name = normalize(entity.get('homeTeam', {}).get('name', ''))
-                a_name = normalize(entity.get('awayTeam', {}).get('name', ''))
-                t_h_name = normalize(team_a)
-                t_a_name = normalize(team_b)
-
-                # Check both orientations (SofaScore sometimes swaps)
-                score_normal = SequenceMatcher(None, h_name, t_h_name).ratio() + SequenceMatcher(None, a_name, t_a_name).ratio()
-                score_swapped = SequenceMatcher(None, h_name, t_a_name).ratio() + SequenceMatcher(None, a_name, t_h_name).ratio()
-                
-                current_score = max(score_normal, score_swapped)
-                
-                # Bonus for exact date match
-                if res_date_str == match_date:
-                    current_score += 0.5 
-
-                if current_score > highest_score:
-                    highest_score = current_score
-                    best_match = entity.get('id')
-
-            # Threshold for a "Good Match" (1.4 is safe, 2.0+ is very strong with bonus)
-            if best_match and highest_score > 1.3:
-                print(f"✅ Resolved SofaScore ID {best_match} with confidence score {round(highest_score, 2)}")
-                return best_match
+                if entity.get('startTimestamp'):
+                    search_events.append(entity)
+            
+            match_id, score = _fuzzy_match_from_events(search_events, team_a, team_b, match_date)
+            if match_id:
+                print(f"✅ Resolved SofaScore ID {match_id} with confidence score {round(score, 2)}")
+                return match_id
+        elif res.status_code in [403, 401]:
+            print(f"⚠️ SofaScore search blocked ({res.status_code}) — RapidAPI was already attempted above.")
                 
         return None
     except Exception as e:
