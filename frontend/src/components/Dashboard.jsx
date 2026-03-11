@@ -57,6 +57,7 @@ const Dashboard = () => {
     const [selectedMatches, setSelectedMatches] = useState([]); // Now stores full match objects: { id, homeTeam, awayTeam }
     const [loadingFixtures, setLoadingFixtures] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
+    const [progressInfo, setProgressInfo] = useState({ current: 0, total: 0, matchName: '' });
     const [predictions, setPredictions] = useState([]);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
@@ -191,22 +192,74 @@ const Dashboard = () => {
         });
     };
 
+    // --- Resilient API wrapper: auto-retries when mobile browser kills connection ---
+    const waitForPageVisible = () => {
+        return new Promise((resolve) => {
+            if (document.visibilityState === 'visible') {
+                resolve();
+                return;
+            }
+            const handler = () => {
+                if (document.visibilityState === 'visible') {
+                    document.removeEventListener('visibilitychange', handler);
+                    // Small delay to let network reconnect after screen wake
+                    setTimeout(resolve, 1500);
+                }
+            };
+            document.addEventListener('visibilitychange', handler);
+        });
+    };
+
+    const resilientApiCall = async (callFn, matchLabel, maxRetries = 3) => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return await callFn();
+            } catch (err) {
+                const isNetworkError = !err.response; // No server response = connection dropped
+                if (isNetworkError && attempt < maxRetries) {
+                    console.warn(`⚠️ Connection lost for "${matchLabel}". Waiting for screen...`);
+                    setProgressInfo(prev => ({ ...prev, matchName: `📡 Reconnecting... (${matchLabel})` }));
+                    await waitForPageVisible();
+                    console.log(`🔄 Screen back. Retrying "${matchLabel}" (attempt ${attempt + 1})...`);
+                    continue;
+                }
+                throw err; // Genuine server error or max retries exhausted
+            }
+        }
+    };
+
     const handleAnalyze = async () => {
         if (selectedMatches.length === 0) return;
 
         setAnalyzing(true);
         setPredictions([]);
+        setError(null);
+        const total = selectedMatches.length;
+        const allResults = [];
 
         try {
-            const response = await api.post(`/predict-batch`, {
-                match_ids: selectedMatches.map(m => m.id)
-            });
-            setPredictions(response.data);
+            for (let i = 0; i < total; i++) {
+                const match = selectedMatches[i];
+                const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
+                setProgressInfo({ current: i + 1, total, matchName: matchLabel });
+
+                const response = await resilientApiCall(
+                    () => api.post(`/predict-batch`, { match_ids: [match.id] }),
+                    matchLabel
+                );
+                allResults.push(...response.data);
+                setPredictions([...allResults]);
+            }
         } catch (err) {
             console.error(err);
-            setError("Analysis failed. Please try again.");
+            if (err.response) {
+                setError("Analysis failed. Please try again.");
+            } else {
+                setError("Connection lost. Your analysis is still running on the server — check History for results.");
+            }
         } finally {
             setAnalyzing(false);
+            setProgressInfo({ current: 0, total: 0, matchName: '' });
         }
     };
 
@@ -215,42 +268,55 @@ const Dashboard = () => {
 
         setAnalyzing(true);
         setPredictions([]);
+        setError(null);
+        const total = selectedMatches.length;
+        const allResults = [];
 
         try {
-            const response = await api.post(`/predict-batch`, {
-                match_ids: selectedMatches.map(m => m.id)
-            });
+            for (let i = 0; i < total; i++) {
+                const match = selectedMatches[i];
+                const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
+                setProgressInfo({ current: i + 1, total, matchName: matchLabel });
 
-            const results = response.data;
-            setPredictions(results);
+                const response = await resilientApiCall(
+                    () => api.post(`/predict-batch`, { match_ids: [match.id] }),
+                    matchLabel
+                );
+                const result = response.data[0];
+                allResults.push(result);
+                setPredictions([...allResults]);
 
-            // Auto-add safe bets to the context
-            results.forEach(prediction => {
-                if (!prediction.error) {
-                    const primaryPick = prediction.primary_pick;
-                    const tipToAdd = primaryPick?.tip || prediction.safe_bet_tip || "Unknown Tip";
+                // Auto-add safe bet as soon as it arrives
+                if (result && !result.error) {
+                    const primaryPick = result.primary_pick;
+                    const tipToAdd = primaryPick?.tip || result.safe_bet_tip || "Unknown Tip";
                     const oddsToAdd = primaryPick?.odds ? parseFloat(primaryPick.odds) : 1.85;
 
                     const bet = {
-                        match_id: prediction.match_id || Math.random(),
-                        match: prediction.match,
-                        match_date: prediction.match_date,
+                        match_id: result.match_id || Math.random(),
+                        match: result.match,
+                        match_date: result.match_date,
                         selection: tipToAdd,
                         type: 'Primary',
                         odds: oddsToAdd
                     };
                     addToSlip(bet);
                 }
-            });
+            }
 
             // Clear queue on success
             setSelectedMatches([]);
 
         } catch (err) {
             console.error(err);
-            setError("Auto-Generate failed. Please try again.");
+            if (err.response) {
+                setError("Auto-Generate failed. Please try again.");
+            } else {
+                setError("Connection lost. Your analysis is still running on the server — check History for results.");
+            }
         } finally {
             setAnalyzing(false);
+            setProgressInfo({ current: 0, total: 0, matchName: '' });
         }
     };
 
@@ -258,22 +324,40 @@ const Dashboard = () => {
         if (selectedMatches.length === 0) return;
 
         setAnalyzing(true);
-        setPredictions([]); // We reuse the predictions state to hold the audit array
+        setPredictions([]);
+        setError(null);
+        const total = selectedMatches.length;
+        const allResults = [];
 
         try {
-            const response = await api.post(`/predict-audit`, {
-                booking_code: activeBookingCode || null,
-                items: selectedMatches.map(m => ({
-                    match_id: m.id || m.match_id,
-                    user_selected_bet: m._user_selected_bet || m.selection || "Unknown Bet"
-                }))
-            });
-            setPredictions(response.data);
+            for (let i = 0; i < total; i++) {
+                const match = selectedMatches[i];
+                const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
+                setProgressInfo({ current: i + 1, total, matchName: matchLabel });
+
+                const response = await resilientApiCall(
+                    () => api.post(`/predict-audit`, {
+                        booking_code: activeBookingCode || null,
+                        items: [{
+                            match_id: match.id || match.match_id,
+                            user_selected_bet: match._user_selected_bet || match.selection || "Unknown Bet"
+                        }]
+                    }),
+                    matchLabel
+                );
+                allResults.push(...response.data);
+                setPredictions([...allResults]);
+            }
         } catch (err) {
             console.error(err);
-            setError("Betslip Auditor failed. Please try again.");
+            if (err.response) {
+                setError("Betslip Auditor failed. Please try again.");
+            } else {
+                setError("Connection lost. Your audit is still running on the server — check History for results.");
+            }
         } finally {
             setAnalyzing(false);
+            setProgressInfo({ current: 0, total: 0, matchName: '' });
         }
     };
 
@@ -515,7 +599,7 @@ const Dashboard = () => {
                                 {analyzing ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        Analyzing...
+                                        Analyzing {progressInfo.current} of {progressInfo.total}...
                                     </>
                                 ) : (
                                     <>
@@ -536,7 +620,7 @@ const Dashboard = () => {
                                 {analyzing ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        Generating Safe Bets...
+                                        Generating {progressInfo.current} of {progressInfo.total}...
                                     </>
                                 ) : (
                                     <>
@@ -557,7 +641,7 @@ const Dashboard = () => {
                                 {analyzing ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        Auditing Slip...
+                                        Auditing {progressInfo.current} of {progressInfo.total}...
                                     </>
                                 ) : (
                                     <>
@@ -602,9 +686,20 @@ const Dashboard = () => {
                             )}
 
                             {analyzing && (
-                                <p className="text-xs text-center text-gray-400 mt-2">
-                                    Respecting API rate limits (24s delay per match for Deep Form Analysis). Please wait.
-                                </p>
+                                <div className="mt-3 space-y-2">
+                                    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                                        <div
+                                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                                            style={{ width: `${progressInfo.total > 0 ? (progressInfo.current / progressInfo.total) * 100 : 0}%` }}
+                                        />
+                                    </div>
+                                    <p className="text-xs text-center text-gray-400">
+                                        ⚡ Analyzing: <span className="text-blue-400 font-medium">{progressInfo.matchName}</span>
+                                    </p>
+                                    <p className="text-[10px] text-center text-gray-500">
+                                        Match {progressInfo.current} of {progressInfo.total} • Respecting API rate limits
+                                    </p>
+                                </div>
                             )}
                             {error && <p className="text-sm text-red-400 mt-2 text-center">{error}</p>}
                         </div>
