@@ -275,25 +275,52 @@ def parse_sportybet_code(request: BookingCodeRequest):
             print(f"🔎 Direct Search: {home} vs {away} ({match_date})")
             ss_id = resolve_sofascore_match_id(home, away, match_date)
             
-            if ss_id and cffi_requests:
+            if ss_id:
                 try:
-                    url = f"https://api.sofascore.com/api/v1/event/{ss_id}"
-                    res = cffi_requests.get(url, impersonate="chrome120", timeout=15)
-                    if res.status_code == 200:
-                        event = res.json().get('event', {})
-                        
+                    event = None
+                    
+                    # TIER 1: Use RapidAPI for event details (EC2-safe)
+                    rapid_api_key = os.getenv("RAPID_API_KEY")
+                    rapid_api_host = os.getenv("RAPID_API_HOST", "sofascore6.p.rapidapi.com")
+                    if rapid_api_key:
+                        import requests as std_requests
+                        detail_url = f"https://{rapid_api_host}/api/sofascore/v1/match/details"
+                        detail_res = std_requests.get(detail_url, 
+                            headers={"x-rapidapi-host": rapid_api_host, "x-rapidapi-key": rapid_api_key},
+                            params={"match_id": ss_id}, timeout=15)
+                        if detail_res.status_code == 200:
+                            event_data = detail_res.json()
+                            # RapidAPI returns the event directly (not wrapped in 'event' key)
+                            if isinstance(event_data, list) and len(event_data) > 0:
+                                event = event_data[0]
+                            elif isinstance(event_data, dict):
+                                event = event_data
+                    
+                    # TIER 2: Fallback to SofaScore WWW (works locally)
+                    if not event and cffi_requests:
+                        url = f"https://api.sofascore.com/api/v1/event/{ss_id}"
+                        res = cffi_requests.get(url, impersonate="chrome120", timeout=15)
+                        if res.status_code == 200:
+                            event = res.json().get('event', {})
+                    
+                    if event:
                         status_type = event.get("status", {}).get("type")
-                        status = "TIMED" if status_type == "notstarted" else "FINISHED" if status_type == "finished" else "IN_PLAY"
+                        status = "TIMED" if status_type in ("notstarted", None) else "FINISHED" if status_type == "finished" else "IN_PLAY"
+                        
+                        # Handle timestamp: RapidAPI uses 'timestamp', WWW uses 'startTimestamp'
+                        start_ts = event.get("startTimestamp") or event.get("timestamp") or 0
+                        home_id = event.get('homeTeam', {}).get('id')
+                        away_id = event.get('awayTeam', {}).get('id')
                         
                         mapped_match = {
                             "id": event.get("id"),
-                            "utcDate": datetime.fromtimestamp(event.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                            "utcDate": datetime.fromtimestamp(start_ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                             "status": status,
                             "competition": {"name": event.get("tournament", {}).get("name", "Unknown")},
                             "homeTeam": {"name": event.get("homeTeam", {}).get("name")},
                             "awayTeam": {"name": event.get("awayTeam", {}).get("name")},
-                            "home_logo": f"/team-logo/{event.get('homeTeam', {}).get('id')}",
-                            "away_logo": f"/team-logo/{event.get('awayTeam', {}).get('id')}"
+                            "home_logo": f"/team-logo/{home_id}" if home_id else None,
+                            "away_logo": f"/team-logo/{away_id}" if away_id else None
                         }
                         
                         if 'user_selected_bet' in pm:
