@@ -91,6 +91,26 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
     
     for i in range(delta.days + 1):
         target_date = (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
+        day_matches = []
+        
+        # TIER 1: RapidAPI (Most Reliable for EC2)
+        if RAPID_API_KEY:
+            print(f"🚀 Fetching fixtures for {target_date} from SofaScore6 RapidAPI...")
+            rapid_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/list"
+            try:
+                res = requests.get(rapid_url, headers={"x-rapidapi-host": RAPID_API_HOST, "x-rapidapi-key": RAPID_API_KEY}, 
+                                  params={"sport_slug": "football", "date": target_date}, timeout=15)
+                if res.status_code == 200:
+                    events = res.json()
+                    if isinstance(events, list):
+                        for event in events:
+                            day_matches.append(map_sofascore_event(event))
+                        all_matches.extend(day_matches)
+                        continue # Successfully fetched this day
+            except Exception as e:
+                print(f"⚠️ RapidAPI Fixture Fetch Error for {target_date}: {e}")
+
+        # TIER 2: Stealth WWW Scraper (Local/Non-EC2 fallback)
         print(f"🌐 Fetching fixtures for {target_date} from SofaScore (Stealth WWW)...")
         # Use www.sofascore.com instead of api.sofascore.com to bypass EC2 IP blocks
         url = f"https://www.sofascore.com/api/v1/sport/football/scheduled-events/{target_date}"
@@ -106,49 +126,14 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
             if res.status_code == 200:
                 data = res.json()
                 events = data.get("events", [])
-                
+
                 for event in events:
-                    # Filter for top level or specific tournaments if needed
-                    status_type = event.get("status", {}).get("type")
-                    status = "TIMED"
-                    if status_type == "finished":
-                        status = "FINISHED"
-                    elif status_type == "inprogress":
-                        status = "IN_PLAY"
-                        
-                    home_id = event.get("homeTeam", {}).get("id")
-                    away_id = event.get("awayTeam", {}).get("id")
-                    
-                    mapped_match = {
-                        "id": event.get("id"), # We pass the SofaScore event ID
-                        "utcDate": datetime.fromtimestamp(event.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                        "status": status,
-                        "competition": {
-                            "id": event.get("tournament", {}).get("uniqueTournament", {}).get("id") or 2021,
-                            "name": event.get("tournament", {}).get("name", "Unknown")
-                        },
-                        "homeTeam": {
-                            "id": home_id,
-                            "name": event.get("homeTeam", {}).get("name")
-                        },
-                        "awayTeam": {
-                            "id": away_id,
-                            "name": event.get("awayTeam", {}).get("name")
-                        },
-                        "score": {
-                            "fullTime": {
-                                "home": event.get("homeScore", {}).get("current", None),
-                                "away": event.get("awayScore", {}).get("current", None)
-                            }
-                        },
-                        "home_logo": f"/team-logo/{home_id}" if home_id else None,
-                        "away_logo": f"/team-logo/{away_id}" if away_id else None,
-                        "_timestamp": event.get("startTimestamp", 0) # Temporary key for sorting
-                    }
-                    all_matches.append(mapped_match)
+                    day_matches.append(map_sofascore_event(event))
+
+                all_matches.extend(day_matches)
         except Exception as e:
             print(f"SofaScore Date Fetch Error for {target_date}: {e}")
-            
+
     # Sort matches chronologically
     all_matches.sort(key=lambda x: x.get("_timestamp", 0))
     
@@ -163,6 +148,48 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
     save_fixtures_cache(cache_key, final_data)
     
     return final_data
+
+def map_sofascore_event(event):
+    """
+    Standardizes a SofaScore event (from either Web API or RapidAPI) 
+    into the internal schema used by the frontend.
+    """
+    status_type = event.get("status", {}).get("type")
+    status = "TIMED"
+    if status_type == "finished":
+        status = "FINISHED"
+    elif status_type == "inprogress":
+        status = "IN_PLAY"
+        
+    home_id = event.get("homeTeam", {}).get("id")
+    away_id = event.get("awayTeam", {}).get("id")
+    
+    return {
+        "id": event.get("id"), # We pass the SofaScore event ID
+        "utcDate": datetime.fromtimestamp(event.get("startTimestamp", 0), tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "status": status,
+        "competition": {
+            "id": event.get("tournament", {}).get("uniqueTournament", {}).get("id") or 2021,
+            "name": event.get("tournament", {}).get("name", "Unknown")
+        },
+        "homeTeam": {
+            "id": home_id,
+            "name": event.get("homeTeam", {}).get("name")
+        },
+        "awayTeam": {
+            "id": away_id,
+            "name": event.get("awayTeam", {}).get("name")
+        },
+        "score": {
+            "fullTime": {
+                "home": event.get("homeScore", {}).get("current", None),
+                "away": event.get("awayScore", {}).get("current", None)
+            }
+        },
+        "home_logo": f"/team-logo/{home_id}" if home_id else None,
+        "away_logo": f"/team-logo/{away_id}" if away_id else None,
+        "_timestamp": event.get("startTimestamp", 0) # Temporary key for sorting
+    }
 
 @rate_limit(calls_per_minute=6)
 def get_match_stats(match_id: int):
