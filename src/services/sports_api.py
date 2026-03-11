@@ -91,8 +91,9 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
     
     for i in range(delta.days + 1):
         target_date = (start_dt + timedelta(days=i)).strftime("%Y-%m-%d")
-        print(f"🌐 Fetching fixtures for {target_date} from SofaScore...")
-        url = f"https://api.sofascore.com/api/v1/sport/football/scheduled-events/{target_date}"
+        print(f"🌐 Fetching fixtures for {target_date} from SofaScore (Stealth WWW)...")
+        # Use www.sofascore.com instead of api.sofascore.com to bypass EC2 IP blocks
+        url = f"https://www.sofascore.com/api/v1/sport/football/scheduled-events/{target_date}"
         
         try:
             res = cffi_requests.get(url, impersonate="chrome120", timeout=15)
@@ -469,7 +470,8 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
     try:
         import urllib.parse
         query = f"{team_a} {team_b}"
-        url = f"https://api.sofascore.com/api/v1/search/events?q={urllib.parse.quote(query)}"
+        # Use www.sofascore.com instead of api.sofascore.com for consistency and EC2 reliability
+        url = f"https://www.sofascore.com/api/v1/search/events?q={urllib.parse.quote(query)}"
         
         try:
             res = cffi_requests.get(url, impersonate="chrome120", timeout=10)
