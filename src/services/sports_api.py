@@ -18,7 +18,9 @@ API_KEY = os.getenv("FOOTBALL_DATA_API_KEY")
 BASE_URL = "https://api.football-data.org/v4"
 
 # Initialize Gemini for Fallbacks
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Use GEMINI_API_KEY or GOOGLE_API_KEY interchangeably
+gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=gemini_key)
 model = genai.GenerativeModel("gemini-3-pro-preview")
 
 # Cache for league standings with TTL 
@@ -94,6 +96,12 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
         
         try:
             res = cffi_requests.get(url, impersonate="chrome120", timeout=15)
+            
+            # CRITICAL: Detect if EC2 IP is blocked (403 Forbidden)
+            if res.status_code in [403, 401]:
+                print(f"⚠️ SofaScore BLOCKED this IP ({res.status_code}). Failing over to Football-Data...")
+                return get_fixtures_by_date(start_date, end_date)
+                
             if res.status_code == 200:
                 data = res.json()
                 events = data.get("events", [])

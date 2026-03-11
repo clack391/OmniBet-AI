@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Gemini
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Use GEMINI_API_KEY or GOOGLE_API_KEY interchangeably
+gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=gemini_key)
 model = genai.GenerativeModel("gemini-3-flash-preview")
 
 def scrape_sportybet_code(booking_code: str):
@@ -80,7 +82,6 @@ def scrape_sportybet_code(booking_code: str):
                 page.wait_for_selector('.m-betslip-item, .m-bet-item, .m-betslip-content', timeout=30000)
             except Exception:
                 print("Could not find betslip content. Capturing debug screenshot...")
-                # Save screenshot to artifacts directory for visual diagnosis
                 # Save screenshot to project root debug directory for environment safety
                 debug_dir = os.path.join(os.getcwd(), "debug")
                 if not os.path.exists(debug_dir):
@@ -107,7 +108,6 @@ def scrape_sportybet_code(booking_code: str):
                     print(f"✅ Found {len(items)} items in the actual betslip.")
             except Exception as e:
                 print(f"⚠️ Failed to find items: {e}")
-
             if not betslip_raw_text:
                 try:
                     # Fallback to the specific content container
@@ -139,6 +139,7 @@ def parse_betslip_with_ai(raw_text: str):
     """
     prompt = """
     You are a precision data extraction tool for OmniBet AI. 
+    I will provide you with raw, messy scraped text from a sports betting betslip. 
     I will provide you with raw, messy scraped text from a sports betting betslip. 
 
     Your ONLY job is to identify the football matches AND the specific bet the user placed on that match.

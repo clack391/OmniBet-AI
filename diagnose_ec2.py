@@ -35,12 +35,12 @@ def diagnose():
     # 3. API Keys
     fd_key = os.getenv("FOOTBALL_DATA_API_KEY")
     rapid_key = os.getenv("RAPID_API_KEY")
-    gemini_key = os.getenv("GEMINI_API_KEY")
+    gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     
     print(f"\nAPI Keys Configured:")
     print(f"- Football-Data: {'✅ Set' if fd_key else '❌ MISSING'}")
     print(f"- RapidAPI: {'✅ Set' if rapid_key else '❌ MISSING (Required for Grading)'}")
-    print(f"- Gemini: {'✅ Set' if gemini_key else '❌ MISSING'}")
+    print(f"- Gemini (via GEMINI or GOOGLE Key): {'✅ Set' if gemini_key else '❌ MISSING'}")
 
     # 4. Connectivity Test
     print("\nConnectivity Tests:")
@@ -57,6 +57,8 @@ def diagnose():
         from curl_cffi import requests as cffi_requests
         sf_res = cffi_requests.get("https://api.sofascore.com/api/v1/sport/football/scheduled-events/2026-03-12", impersonate="chrome120", timeout=10)
         print(f"- SofaScore (via curl_cffi): {sf_res.status_code} ({'BLOCKED' if sf_res.status_code == 403 else 'OK' if sf_res.status_code == 200 else 'Error'})")
+        if sf_res.status_code in [403, 401]:
+             print("  💡 TIP: SofaScore is blocking this EC2 IP. My new update will automatically failover to Football-Data!")
     except ImportError:
         print("- SofaScore (via curl_cffi): ❌ curl_cffi NOT INSTALLED")
     except Exception as e:
