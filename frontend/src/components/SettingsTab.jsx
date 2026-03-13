@@ -19,6 +19,7 @@ api.interceptors.request.use((config) => {
 const SettingsTab = () => {
     const [provider, setProvider] = useState('football-data');
     const [automationEnabled, setAutomationEnabled] = useState(true);
+    const [telegramMode, setTelegramMode] = useState('text');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
@@ -31,6 +32,9 @@ const SettingsTab = () => {
 
                 const automationRes = await api.get('/settings/automation');
                 setAutomationEnabled(automationRes.data.enabled);
+
+                const telegramRes = await api.get('/settings/telegram-mode');
+                setTelegramMode(telegramRes.data.mode);
             } catch (err) {
                 console.error("Failed to fetch settings", err);
             } finally {
@@ -46,7 +50,8 @@ const SettingsTab = () => {
         try {
             await Promise.all([
                 api.put('/settings/provider', { provider }),
-                api.put('/settings/automation', { enabled: automationEnabled })
+                api.put('/settings/automation', { enabled: automationEnabled }),
+                api.put('/settings/telegram-mode', { mode: telegramMode })
             ]);
             setMessage({ type: 'success', text: 'Settings updated successfully!' });
         } catch (err) {
@@ -135,6 +140,49 @@ const SettingsTab = () => {
                                         <p className="text-sm text-gray-400 mt-1">
                                             Aggressive data scraping pipeline bypassing football-data logic entirely to extract deep tactical metrics and advanced team statistics.
                                         </p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Telegram Delivery Mode Section */}
+                    <div className="bg-gray-900/50 p-5 rounded-lg border border-gray-700">
+                        <h3 className="text-lg font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                            <span className="text-[#0088cc]">Telegram</span> Prediction Style
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <label className={`cursor-pointer border rounded-xl p-4 transition-all ${telegramMode === 'text' ? 'bg-blue-900/30 border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.15)]' : 'bg-gray-800 border-gray-600 hover:border-gray-500'}`}>
+                                <div className="flex items-start gap-3">
+                                    <input
+                                        type="radio"
+                                        name="telegramMode"
+                                        value="text"
+                                        checked={telegramMode === 'text'}
+                                        onChange={(e) => setTelegramMode(e.target.value)}
+                                        className="mt-1"
+                                    />
+                                    <div>
+                                        <div className="font-bold text-white">📝 Standard Text</div>
+                                        <p className="text-xs text-gray-400 mt-1">Faster delivery with clean Markdown formatting and links.</p>
+                                    </div>
+                                </div>
+                            </label>
+
+                            <label className={`cursor-pointer border rounded-xl p-4 transition-all ${telegramMode === 'image' ? 'bg-indigo-900/30 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.15)]' : 'bg-gray-800 border-gray-600 hover:border-gray-500'}`}>
+                                <div className="flex items-start gap-3">
+                                    <input
+                                        type="radio"
+                                        name="telegramMode"
+                                        value="image"
+                                        checked={telegramMode === 'image'}
+                                        onChange={(e) => setTelegramMode(e.target.value)}
+                                        className="mt-1"
+                                    />
+                                    <div>
+                                        <div className="font-bold text-white">🖼️ Elite Card (Image)</div>
+                                        <p className="text-xs text-gray-400 mt-1">Premium 1080x1080 social media cards based on your template.</p>
                                     </div>
                                 </div>
                             </label>

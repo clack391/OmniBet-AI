@@ -309,17 +309,24 @@ const PredictionCard = ({ prediction }) => {
                     Market Insights (Click to Expand)
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                    {/* Render all 8 items as Insight Cards */}
-                    {Object.entries(prediction.full_analysis || {}).map(([market, analysis], i) => (
-                        <InsightCard
-                            key={market}
-                            market={market}
-                            analysis={analysis}
-                            index={i}
-                            getIcon={getMarketIcon}
-                            onClick={() => setActiveInsight({ market, analysis })}
-                        />
-                    ))}
+                    {/* Render all items as Insight Cards, merging Supreme Court corrections */}
+                    {Object.entries({
+                        ...(prediction.full_analysis || {}),
+                        ...(prediction.supreme_court?.grid_corrections || {})
+                    }).map(([market, analysis], i) => {
+                        const isCorrection = !!(prediction.supreme_court?.grid_corrections?.[market]);
+                        return (
+                            <InsightCard
+                                key={market}
+                                market={market}
+                                analysis={analysis}
+                                index={i}
+                                isCorrection={isCorrection}
+                                getIcon={getMarketIcon}
+                                onClick={() => setActiveInsight({ market, analysis, isCorrection })}
+                            />
+                        );
+                    })}
                 </div>
 
                 {/* Reasoning Section - Adjusted title since cards also have reasoning */}
@@ -413,7 +420,7 @@ const PredictionCard = ({ prediction }) => {
 };
 
 // Simplified Card Component (Triggers Modal)
-const InsightCard = ({ market, analysis, index, getIcon, onClick }) => {
+const InsightCard = ({ market, analysis, index, isCorrection, getIcon, onClick }) => {
     // Basic Parsing for Preview
     const parts = analysis.split('. ');
     const predictionText = parts[0]?.replace('Prediction: ', '').replace('Prediction:', '') || 'N/A';
@@ -421,12 +428,20 @@ const InsightCard = ({ market, analysis, index, getIcon, onClick }) => {
     return (
         <div
             onClick={onClick}
-            className="group cursor-pointer bg-slate-800/30 border border-slate-700/50 rounded-xl p-3 flex flex-col justify-between hover:bg-slate-800/80 hover:border-primary/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10 h-24"
+            className={`group cursor-pointer bg-slate-800/30 border rounded-xl p-3 flex flex-col justify-between hover:bg-slate-800/80 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg h-24 ${isCorrection
+                ? 'border-indigo-500/50 shadow-indigo-500/10'
+                : 'border-slate-700/50 hover:border-primary/50 hover:shadow-primary/10'
+                }`}
         >
             <div className="flex justify-between items-start">
-                <p className={`text-[10px] font-bold uppercase tracking-wide ${index % 2 === 0 ? 'text-accent-purple' : 'text-accent-green'}`}>
-                    {market.replace(/_/g, " ")}
-                </p>
+                <div className="flex flex-col">
+                    <p className={`text-[10px] font-bold uppercase tracking-wide ${index % 2 === 0 ? 'text-accent-purple' : 'text-accent-green'}`}>
+                        {market.replace(/_/g, " ")}
+                    </p>
+                    {isCorrection && (
+                        <span className="text-[7px] font-black bg-indigo-500 text-white px-1 py-0.5 rounded uppercase mt-0.5 w-fit">Judicial Override</span>
+                    )}
+                </div>
                 <div className="p-1 rounded-full bg-slate-700/50 group-hover:bg-primary/20 transition-colors">
                     <Maximize2 className="w-3 h-3 text-slate-400 group-hover:text-primary" />
                 </div>
@@ -444,8 +459,11 @@ const InsightCard = ({ market, analysis, index, getIcon, onClick }) => {
 
 // Pop-out Modal Component
 const InsightModal = ({ market, analysis, onClose, getIcon }) => {
+    const isCorrection = analysis.isCorrection; // Check if passed via activeInsight object
+    const finalAnalysis = typeof analysis === 'object' ? analysis.analysis : analysis;
+
     // Detailed Parsing
-    const parts = analysis.split('. ');
+    const parts = finalAnalysis.split('. ');
     const predictionText = parts[0]?.replace('Prediction: ', '').replace('Prediction:', '') || 'N/A';
     const reasoningText = parts.slice(1).join('. ') || 'No detailed reasoning provided.';
 
@@ -462,13 +480,18 @@ const InsightModal = ({ market, analysis, onClose, getIcon }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-700/50 bg-slate-800/50">
                     <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-slate-700/50">
+                        <div className={`p-2 rounded-lg ${isCorrection ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-700/50'}`}>
                             {getIcon(market)}
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                {market.replace(/_/g, " ")}
-                            </p>
+                            <div className="flex items-center gap-2">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                    {market.replace(/_/g, " ")}
+                                </p>
+                                {isCorrection && (
+                                    <span className="text-[8px] font-black bg-indigo-500 text-white px-2 py-0.5 rounded uppercase">Judicial Override</span>
+                                )}
+                            </div>
                             <h3 className="text-xl font-black text-white">
                                 {predictionText}
                             </h3>

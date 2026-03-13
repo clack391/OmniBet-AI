@@ -590,6 +590,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
       1. **THE "FIRST-LEG" FALLACY**: Do NOT automatically assume 1st Leg matches will be low-scoring or conservative. Base your verdict strictly on the teams' xG and defensive metrics.
       2. **THE "SYSTEM VS. INDIVIDUAL" RULE**: If a superior team (e.g., an away favorite) is missing a star striker, do NOT automatically downgrade them to 'Under' or 'Draw' if their underlying team system creates high possession and high Big Chances. Trust the system to overcome the individual absence.
       3. **ESTIMATED ODDS**: You MUST provide a realistic `estimated_odds` (Decimal format) for your recommended bet. Use Agent 1's odds or the Odds API payload as a reference. If no odds are available, estimate based on the implied probability of your own tactical analysis.
+      4. **GRID CORRECTIONS (CONSISTENCY)**: If you OVERTURN a ruling (Scenario 1), you MUST provide a `grid_corrections` object. This object should contain corrected prediction strings for matching keys in the `full_analysis` grid (specifically `Match_Goals`, `BTTS`, and `Correct_Score`) to ensure the entire card is logically consistent with your Verdict. If Agent 2 changed the score to "1-0" but you ruled "Over 1.5 Goals," you MUST provide a correction for `Correct_Score` (e.g., "2-1").
       3. **STATISTICAL RELIABILITY (SAMPLE SIZE)**: If your colleagues rely on venue-specific trends from fewer than 5 matches, you MUST prioritize the broader season metrics. Do not approve a high-risk bet justified solely by a 3-game "venue streak" if the overall data is conflicting.
     """
     
@@ -692,6 +693,11 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "supreme_court_reasoning": "string (A detailed, multi-paragraph judicial opinion. Provide a cold, deep analytical breakdown of 5-8 heavy sentences that connects tactical data, internal agent debate, and mathematical EV logic into one authoritative verdict.)",
       "variance_warning": "string (Explain how this bet could lose...)",
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
+      "grid_corrections": {{
+        "Match_Goals": "string (e.g., 'Over 2.5 Goals. [Reason...]')",
+        "BTTS": "string (e.g., 'Yes. [Reason...]')",
+        "Correct_Score": "string (e.g., '2-1. [Reason...]')"
+      }},
       "primary_safe_pick": {{
         "market": "string",
         "tip": "string",
@@ -715,6 +721,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       1. **REJECT THE "FIRST-LEG" FALLACY**: Do not allow Agent 2 to overturn a goal market based on "first-leg caution" if the tactical metrics (possession, big chances) show two attacking systems colliding.
       2. **DEFEND THE SYSTEM**: If a favorite is missing a striker but maintains elite offensive metrics (Agent 1's report), defend the "System" against Agent 2's individual-focused pessimism.
       3. **ODDS MANDATE**: You MUST provide realistic `odds` (Decimal format) for both pick buckets. If real-time odds aren't available, derive them from the implied probability of Agent 1's Pitch.
+      4. **GRID HARMONY**: Ensure your `grid_corrections` (if OVERTURNED) fix the most blatant contradictions in the Market Insights grid. If you disagree with a 'low-scoring' audit, fix the `Correct_Score` and `Match_Goals` fields.
     """
     
     try:
