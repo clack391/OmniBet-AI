@@ -34,22 +34,68 @@ const Dashboard = () => {
 
     const { betSlip, addToSlip } = useBetSlip();
 
-    const handleAddAudit = (pred) => {
-        if (!pred.audit_verdict || !pred.audit_verdict.ai_recommended_bet) return;
+    const findMarketOdds = (prediction, tip) => {
+        if (!prediction.odds_data || !tip) return null;
+        const normalizedTip = tip.toLowerCase().replace(/[\s\-_]/g, '');
+
+        const allOutcomes = [];
+        prediction.odds_data.forEach(bookie => {
+            bookie.markets?.forEach(market => {
+                market.outcomes?.forEach(outcome => {
+                    allOutcomes.push({
+                        name: outcome.name,
+                        price: outcome.price,
+                        point: outcome.point
+                    });
+                });
+            });
+        });
+
+        for (const outcome of allOutcomes) {
+            const name = outcome.name.toLowerCase();
+            if (normalizedTip.includes(name.replace(/\s/g, ''))) return outcome.price;
+            if (outcome.point) {
+                if (normalizedTip.includes('over') && name.includes('over') && normalizedTip.includes(outcome.point.toString())) return outcome.price;
+                if (normalizedTip.includes('under') && name.includes('under') && normalizedTip.includes(outcome.point.toString())) return outcome.price;
+            }
+            if (normalizedTip.includes('draw') && name.includes('draw')) return outcome.price;
+            if ((normalizedTip.includes('btts') || normalizedTip.includes('bothteams')) &&
+                ((normalizedTip.includes('yes') && name.includes('yes')) || (normalizedTip.includes('no') && name.includes('no')))) return outcome.price;
+        }
+        return null;
+    };
+
+    const handleAddAudit = (pred, customPick = null, customType = null) => {
+        const tipStr = customPick?.tip || customPick || pred.audit_verdict?.ai_recommended_bet;
+        if (!tipStr) return;
+
+        const type = customType || 'Auditor Recommendation';
+        // Try to find real market odds from the odds_data payload
+        let extractedOdds = typeof customPick === 'object' && customPick?.odds ? parseFloat(customPick.odds) : null;
+
+        if (!extractedOdds) {
+            extractedOdds = findMarketOdds(pred, tipStr);
+        }
+
+        // Final AI fallback if no market odds found
+        const aiFallbackOdds = pred.audit_verdict?.estimated_odds ? parseFloat(pred.audit_verdict.estimated_odds) :
+            (type === 'Value' ? 2.50 : 1.85);
+
         const bet = {
             match_id: pred.match_id || Math.random(),
             match: `${pred.home_team || 'Home'} vs ${pred.away_team || 'Away'}`,
             match_date: pred.match_date,
-            selection: pred.audit_verdict.ai_recommended_bet,
-            type: 'Auditor Recommendation',
-            odds: 1.85
+            selection: tipStr,
+            type: type, // 'Primary' or 'Value'
+            odds: extractedOdds || aiFallbackOdds
         };
         addToSlip(bet);
     };
 
-    const isAuditAdded = (pred) => {
-        if (!pred.audit_verdict || !pred.audit_verdict.ai_recommended_bet) return false;
-        return betSlip.some(bet => bet.match_id === pred.match_id && bet.selection === pred.audit_verdict.ai_recommended_bet);
+    const isAuditAdded = (pred, tipStr = null) => {
+        const targetTip = tipStr || pred.audit_verdict?.ai_recommended_bet;
+        if (!targetTip) return false;
+        return betSlip.some(bet => bet.match_id === pred.match_id && bet.selection === targetTip);
     };
 
     const [date, setDate] = useState('');
@@ -728,7 +774,11 @@ const Dashboard = () => {
                                     </div>
 
                                     {/* Agent 3: Supreme Court Ruling Component */}
-                                    <SupremeCourtCard supreme_court={pred.supreme_court} />
+                                    <SupremeCourtCard
+                                        supreme_court={pred.supreme_court}
+                                        handleAdd={(pick, type) => handleAddAudit(pred, pick, type)}
+                                        isPickAdded={(tip) => isAuditAdded(pred, tip)}
+                                    />
 
                                     <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-xl mb-4">
                                         <div className={`p-4 border-b ${pred.audit_verdict.status === 'APPROVED' ? 'bg-green-900/30 border-green-800' :
@@ -794,6 +844,11 @@ const Dashboard = () => {
                                                             {pred.away_logo && <img src={getLogoUrl(pred.away_logo)} className="w-6 h-6 rounded-full border border-gray-700 bg-white p-0.5 object-contain" alt="A" />}
                                                         </div>
                                                         <div className="text-lg font-black text-white">{pred.audit_verdict.ai_recommended_bet}</div>
+                                                        {pred.audit_verdict.estimated_odds && (
+                                                            <div className="text-[10px] font-black text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                                                                @{parseFloat(pred.audit_verdict.estimated_odds).toFixed(2)}
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     {pred.audit_verdict.status !== 'REJECTED' && (

@@ -82,8 +82,8 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     If the data above contains a "home_away_split" key, it holds venue-filtered stats:
     - The Home team's stats are from HOME matches ONLY.
     - The Away team's stats are from AWAY matches ONLY.
-    - PRIORITIZE these splits for home/away specific performance trends.
-    **IF THE "home_away_split" KEY IS MISSING**: This means venue-specific data is unavailable (e.g., early season). You MUST rely on the general "metrics" block but acknowledge in your reasoning that you are using overall form, which may slightly reduce the precision of venue-specific projections.
+    - **SAMPLE SIZE MANDATE**: If the number of matches in the split is $< 5$, you MUST "blend" this data with the general "metrics" block. Do NOT anchor exclusively on a 3-match venue streak, as it is statistically noisy. Use the general season metrics as the baseline and only use the venue split to "adjust" your confidence slightly. 
+    - **IF THE "home_away_split" KEY IS MISSING**: This means venue-specific data is unavailable. You MUST rely on the general "metrics" block.
     
     ### CRITICAL INSTRUCTIONS
     1. **CHECK THE MATCH STATUS**:
@@ -118,6 +118,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
            3. **Tier 3 (Moderate)**: Over 2.5 Goals, Match Winner, Team Over 1.5 Goals
            You MUST pick from the highest tier where you have 70%+ confidence. Only drop to Tier 3 if the data overwhelmingly supports it across BOTH scenarios. A "Banker" that loses half the time is not a Banker — it is a gamble.
           - **Rule 16 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 5 rounds (Matchdays 1-4), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Game 2-3. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
+        - **Rule 17 - THE ANTI-BIAS PROTOCOL (CRITICAL)**: You must actively resist two common analytical biases:
+            1. **THE "FIRST-LEG" FALLACY**: Do NOT automatically assume 1st Leg matches will be low-scoring or conservative. Base your Match Goals and 1X2 predictions strictly on the teams' xG and defensive metrics, not on tournament tropes.
+            2. **THE "SYSTEM VS. INDIVIDUAL" RULE**: If a superior team (e.g., an away favorite) is missing a star striker, do NOT automatically downgrade them to 'Under' or 'Draw'. If their underlying team system creates high possession and high Big Chances, trust the system to overcome the injury. Do not let Agent 2 panic you into downgrading a fundamentally superior team just because a name is missing from the lineup.
+        - **Rule 18 - THE SMALL SAMPLE WEIGHTING DIRECTIVE**: If your analysis relies on a venue-specific metric (like a "home win streak") derived from fewer than 5 matches, you MUST explicitly state in your reasoning: "Venue data is based on a small sample size ($N < 5$); results have been blended with overall season metrics for reliability." Failing to do so is a statistical error.
     
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -300,34 +304,39 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
 
     2. **Catching the "Gambler's Fallacy"**: Do not assume extreme streaks (e.g., 5 games without scoring) will continue indefinitely; enforce Regression to the Mean when probabilistically appropriate.
 
-    3. **The "Squad Depth" & Ineptitude Audit**: If the primary agent justified an aggressive 'Over 2.5' or 'BTTS: Yes' pick but a top scorer is missing, perform a **Squad Depth Check**. Search for the backup striker's current form or the team's goals-per-game without that star player. If depth is confirmed, you may approve the pick with a minor confidence penalty. If no depth exists and the team averages < 0.8 goals/game, you MUST downgrade to a safer Under/Conservative market.
+    3. **Small Sample Size Audit**: If Agent 1 cites a "perfect home record" or "leaky away defense" based on fewer than 5 games, you MUST discount the weight of that claim. If the overall season stats contradict the small home/away sample, you MUST prioritize the larger dataset and potentially downgrade or overrule the pick if it is too risky.
 
-    4. **The "Derby Caution Directive"**: If the primary agent upgraded a goal market purely because it is a "Derby", exercise extreme caution. Derbies are notoriously tight, card-heavy, defensive struggles. If the baseline data points to a low-scoring match, OVERRULE the agent's derby narrative and reinstate the mathematically sound Under/Conservative pick.
+    4. **The "Squad Depth" & Ineptitude Audit**: If the primary agent justified an aggressive 'Over 2.5' or 'BTTS: Yes' pick but a top scorer is missing, perform a **Squad Depth Check**. Search for the backup striker's current form or the team's goals-per-game without that star player. If depth is confirmed, you may approve the pick with a minor confidence penalty. If no depth exists and the team averages < 0.8 goals/game, you MUST downgrade to a safer Under/Conservative market.
 
-    5. **Scrutinize the `primary_pick` (The Banker)**: Is it truly the safest mathematical edge among all 17 markets? 
+    5. **The "Derby Caution Directive"**: If the primary agent upgraded a goal market purely because it is a "Derby", exercise extreme caution. Derbies are notoriously tight, card-heavy, defensive struggles. If the baseline data points to a low-scoring match, OVERRULE the agent's derby narrative and reinstate the mathematically sound Under/Conservative pick.
+
+    6. **Scrutinize the `primary_pick` (The Banker)**: Is it truly the safest mathematical edge among all 17 markets? 
        - **SCENARIO CHECK**: Read the `scenario_analysis` block provided by the primary agent. The primary pick might be 'Match Winner', 'Over 1.5', 'BTTS', etc. Whatever it is, if it completely fails in **Scenario B (Underdog Disruption)** OR **Scenario C (Red Card Disruption)**, it is NOT a safe banker. Downgrade it to a safer, more resilient market (e.g. pivoting from 'Match Winner' to 'Double Chance' or 'Draw No Bet').
        - **HONOR INJURY NEWS**: If the primary agent chose a goal-dependent market (Over 2.5, BTTS) but discovered injuries to top strikers, you MUST downgrade the pick. Do not ignore structural problems just because of a narrative.
        - **CRITICAL INSTRUCTION - CONFLICT RESOLUTION**: Before finalizing your analysis, cross-reference all statistics you are about to output. Your final narrative must be logically consistent. If you downgrade the tip to an "Under" market, ensure the text explicitly cites the data (e.g., missing players or low expected goals).
        - **CRITICAL**: If you downgrade the tip, you MUST choose the absolute safest option from the OTHER 11 MARKETS already analyzed in the `full_analysis` section that better survives both Scenarios.
         - **THE HEDGING MANDATE (Anti-0-0 Shield)**: If the primary agent's pick is a goal market (Over 2.5, BTTS: Yes, Team Over 1.5), you MUST explicitly calculate the probability of a 0-0 or 1-0 result using the defensive metrics, clean sheet percentages, and "Goals per game" stats from both teams. If the low-scoring probability (Under 1.5 goals) exceeds **15%**, you MUST downgrade to a safer floor: Over 2.5 -> Over 1.5, BTTS -> Team Over 0.5. Never recommend Over 2.5 as a "Banker" unless both teams average 1.5+ goals per game AND have fewer than 3 clean sheets each in their last 10.
         
-    6. **Early Season Sample Size Audit**: You MUST identify if the primary agent is over-correcting based on Matchday 1 or 2 results. If the agent justifies an 'Under 2.5' or 'No BTTS' pick solely because "Team X failed to score in their opener", you MUST challenge this as **Sample Size Bias**. If Team X had high possession/xG in that opener, they are likely to regress (breakout) in this match. Downgrade any Under 2.5 pick to Under 3.5 or Double Chance if the reasoning relies on a single-game "sterile" performance during the first 4 rounds of the season.
+    7. **Early Season Sample Size Audit**: You MUST identify if the primary agent is over-correcting based on Matchday 1 or 2 results. If the agent justifies an 'Under 2.5' or 'No BTTS' pick solely because "Team X failed to score in their opener", you MUST challenge this as **Sample Size Bias**. If Team X had high possession/xG in that opener, they are likely to regress (breakout) in this match. Downgrade any Under 2.5 pick to Under 3.5 or Double Chance if the reasoning relies on a single-game "sterile" performance during the first 4 rounds of the season.
        
-    7. **THE HALLUCINATION PENALTY (CRITICAL)**: If your Google Search reveals that your colleague (Agent 1) has hallucinated a player who is NOT in the squad or mentioned a stat that is provably false, you MUST automatically:
+    8. **THE HALLUCINATION PENALTY (CRITICAL)**: If your Google Search reveals that your colleague (Agent 1) has hallucinated a player who is NOT in the squad or mentioned a stat that is provably false, you MUST automatically:
        - Reduce the `confidence` of the primary pick by at least **20%**.
        - If the hallucinated player was used to justify a goal-scoring market (e.g., "Gu00fcndogan/Osimhen will score"), you MUST DOWNGRADE that market (e.g., BTTS -> Team Over 0.5 or No Bet).
        - A hallucination is a sign of a flawed tactical model; do not ignore it just because the "firepower" is still high.
 
-    8. **THE DERBY LOCKDOWN**: If the match is a high-intensity derby (e.g., Istanbul Derby, North London Derby, El Clasico):
+    9. **THE DERBY LOCKDOWN**: If the match is a high-intensity derby (e.g., Istanbul Derby, North London Derby, El Clasico):
        - Goal-scoring markets (BTTS: Yes, Over 2.5) should be judged with **Extreme Skepticism**.
        - Search for the last 3 H2H results. If at least TWO were low-scoring (Under 2.5), you MUST overrule any 'Over 2.5' or 'BTTS: Yes' recommendation to a more conservative market (Under 3.5, Over 1.5, or Team Under).
        - Derbies are about tactical shutdowns and cards, not always goals.
 
-       
-    9. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
+    10. **THE ANTI-BIAS PROTOCOL (MANDATORY)**:
+       - **ANTI-FIRST-LEG BIAS**: Do not downgrade goal markets purely because it is a "First Leg" and "both teams will be cautious." If the xG and defensive consolidation metrics for both teams exceed 2.5 combined goals, you MUST approve or recommend the Over. Data overrides the trope.
+       - **SYSTEM OVER INDIVUDAL**: If a top-tier team (Real Madrid, Bayern, etc.) is missing their main striker, but their midfield provides 80%+ pass accuracy and high shot volume, do NOT downgrade their goal markets. The system outlives the individual.
+
+    11. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
 
-    10. **Update the JSON**:
+    12. **Update the JSON**:
        - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
        - **STRICT HARMONIZATION**: The exact text inside `primary_pick["tip"]` and `alternative_pick["tip"]` MUST perfectly match the prediction part of one of the items inside your `full_analysis` grid.
        - **NO BRACKETS IN TIP**: The `tip` string MUST be short and punchy (e.g., "Hamburger SV Over 0.5 Goals" or "Draw No Bet: Home"). You are STRICTLY FORBIDDEN from including `[Reasoning...]` text or brackets inside the `tip` string itself. Put all reasoning in the `reasoning` array or `step_by_step_reasoning`.
@@ -560,6 +569,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         "status": "APPROVED | DOWNGRADED | REJECTED",
         "original_bet": "{user_selected_bet}",
         "ai_recommended_bet": "string (CRITICAL: EXACTLY ONE standard betting market. NEVER use the word 'or'. Example: 'Over 1.5 Goals' or 'Home Draw No Bet')",
+        "estimated_odds": 1.95,
         "risk_level": "Low | Medium | Extreme"
       }},
       "verdict_reasoning": "string (A 2-sentence explanation of why you approved or changed their bet citing the advanced stats)"
@@ -574,8 +584,13 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     - APPROVED: If the user's bet is mathematically sound and matches the likely Game Script.
     - DOWNGRADED: If the user has the right idea but is being too greedy. (e.g., User picks 'Over 2.5', but stats show a tight game -> Downgrade to 'Over 1.5').
     - REJECTED: If the user is walking into a statistical trap. **CRITICAL RESTRICTION**: You may ONLY reject a user's bet if it would fail in BOTH Scenario A (Expected Script) AND Scenario B (Underdog Disruption). If the user's bet wins in at least ONE scenario, you MUST downgrade it to a safer variant instead of rejecting it outright. The user's instinct has value - your job is to refine it, not override it.
-    - ELITE CLUB AWARENESS: If the user is betting on an elite club (3+ league titles in last 10 years) to win, do NOT reject the bet purely based on injury news. Elite clubs have world-class depth and winning mentality that routinely overcomes absences. Reduce confidence, but respect the user's read on institutional quality.
     - STRICT OUTPUT: The 'ai_recommended_bet' MUST be exactly ONE actionable bet. NEVER offer multiple choices or conversational text in this field.
+
+    - **RULE 5: THE ANTI-BIAS PROTOCOL (CRITICAL)**:
+      1. **THE "FIRST-LEG" FALLACY**: Do NOT automatically assume 1st Leg matches will be low-scoring or conservative. Base your verdict strictly on the teams' xG and defensive metrics.
+      2. **THE "SYSTEM VS. INDIVIDUAL" RULE**: If a superior team (e.g., an away favorite) is missing a star striker, do NOT automatically downgrade them to 'Under' or 'Draw' if their underlying team system creates high possession and high Big Chances. Trust the system to overcome the individual absence.
+      3. **ESTIMATED ODDS**: You MUST provide a realistic `estimated_odds` (Decimal format) for your recommended bet. Use Agent 1's odds or the Odds API payload as a reference. If no odds are available, estimate based on the implied probability of your own tactical analysis.
+      3. **STATISTICAL RELIABILITY (SAMPLE SIZE)**: If your colleagues rely on venue-specific trends from fewer than 5 matches, you MUST prioritize the broader season metrics. Do not approve a high-risk bet justified solely by a 3-game "venue streak" if the overall data is conflicting.
     """
     
     try:
@@ -680,22 +695,26 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "primary_safe_pick": {{
         "market": "string",
         "tip": "string",
-        "confidence": "integer (0-100)"
+        "confidence": "integer (0-100)",
+        "odds": 1.55
       }},
       "alternative_value_pick": {{
         "market": "string",
         "tip": "string",
         "confidence": "integer (0-100)",
+        "odds": 2.25,
         "value_reasoning": "string"
       }}
     }}
     
     *** RULES ***
     - NO_BET: If data is too chaotic/high variance.
-    - CONFIRMED: Agree with Agent 1.
-    - OVERTURNED: Agent 2 proved a trap; PIVOT to a safer market trigger.
-    - SCENARIO C RESILIENCE: You MUST NOT confirm a 'Primary' pick if it cannot survive a red card to the favorite (Scenario C). If the favorite dropping into a low block would ruin the bet, you MUST OVERTURN it to a more defensive market.
     - GOAL INTEGRITY: You MUST NOT confirm an 'Under' pick if Agent 1's pitch shows combined xG > 2.8. You MUST NOT confirm an 'Over' pick if combined xG < 1.8.
+
+    - **THE ANTI-BIAS MANDATE**:
+      1. **REJECT THE "FIRST-LEG" FALLACY**: Do not allow Agent 2 to overturn a goal market based on "first-leg caution" if the tactical metrics (possession, big chances) show two attacking systems colliding.
+      2. **DEFEND THE SYSTEM**: If a favorite is missing a striker but maintains elite offensive metrics (Agent 1's report), defend the "System" against Agent 2's individual-focused pessimism.
+      3. **ODDS MANDATE**: You MUST provide realistic `odds` (Decimal format) for both pick buckets. If real-time odds aren't available, derive them from the implied probability of Agent 1's Pitch.
     """
     
     try:
