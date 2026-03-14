@@ -642,10 +642,13 @@ def get_sofascore_match_stats(sofascore_match_id: int):
     
     # 1. Fetch Event Details to get IDs
     event_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/details"
-    event_res = requests.get(event_url, headers=headers, params={"match_id": sofascore_match_id})
-    
-    if event_res.status_code != 200:
-        print(f"Could not fetch match {sofascore_match_id} data. Status: {event_res.status_code}")
+    try:
+        event_res = requests.get(event_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        if event_res.status_code != 200:
+            print(f"Could not fetch match {sofascore_match_id} data. Status: {event_res.status_code}")
+            return None, None
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Network Error fetching match {sofascore_match_id}: {e}")
         return None, None
 
     # The RapidAPI response doesn't wrap it in an 'event' object; the payload IS the event
@@ -741,11 +744,15 @@ def get_sofascore_match_stats(sofascore_match_id: int):
     home_params = {"team_id": home_id, "unique_tournament_id": tournament_id, "season_id": season_id}
     away_params = {"team_id": away_id, "unique_tournament_id": tournament_id, "season_id": season_id}
     
-    home_stats_res = requests.get(stats_url, headers=headers, params=home_params)
-    away_stats_res = requests.get(stats_url, headers=headers, params=away_params)
-    
-    if home_stats_res.status_code != 200 or away_stats_res.status_code != 200:
-        print(f"Stats fetch failed. Home {home_stats_res.status_code}, Away {away_stats_res.status_code}")
+    try:
+        home_stats_res = requests.get(stats_url, headers=headers, params=home_params, timeout=15)
+        away_stats_res = requests.get(stats_url, headers=headers, params=away_params, timeout=15)
+        
+        if home_stats_res.status_code != 200 or away_stats_res.status_code != 200:
+            print(f"Stats fetch failed. Home {home_stats_res.status_code}, Away {away_stats_res.status_code}")
+            return None, None
+    except requests.exceptions.RequestException as e:
+        print(f"⚠️ Network Error fetching team stats: {e}")
         return None, None
 
     home_stats = _extract_stats(home_stats_res.json())

@@ -115,10 +115,18 @@ const PredictionCard = ({ prediction }) => {
 
     if (prediction.error) {
         return (
-            <div className="bg-card-dark rounded-xl p-6 shadow-lg border border-red-900/50 animate-fadeIn">
-                <div className="flex items-center gap-2 text-red-400">
-                    <Activity className="w-5 h-5" />
-                    <span>Error analyzing match {prediction.match_id}: {prediction.error}</span>
+            <div className="bg-red-950/20 border-2 border-red-500/50 rounded-2xl p-8 shadow-2xl animate-fadeIn text-center flex flex-col items-center gap-4">
+                <div className="bg-red-500/20 p-4 rounded-full border border-red-500/30">
+                    <ShieldAlert className="w-12 h-12 text-red-500" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Analysis Failed</h3>
+                    <p className="text-red-300/80 text-sm max-w-md mx-auto leading-relaxed">
+                        We encountered a problem fetching data for {prediction.match || "this match"}. {prediction.error}
+                    </p>
+                </div>
+                <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                    Infrastructure Error #SS-500
                 </div>
             </div>
         );

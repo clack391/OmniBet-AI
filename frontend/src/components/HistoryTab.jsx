@@ -402,6 +402,12 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                             <span className="text-base font-bold text-white truncate">{item.teams ? item.teams.split(' vs ')[1] : "Away"}</span>
                                             {item.away_logo && <img src={getLogoUrl(item.away_logo)} alt="A" className="w-8 h-8 shrink-0 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
                                         </div>
+                                        {(!item.primary_pick && !item.safe_bet_tip) && (
+                                            <div className="flex items-center gap-1 px-2 py-1 bg-red-500/10 border border-red-500/30 rounded text-red-400 animate-pulse">
+                                                <AlertTriangle className="w-3 h-3" />
+                                                <span className="text-[9px] font-black uppercase tracking-tighter">Data Error</span>
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="flex flex-col gap-2 mt-2">
                                         <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-emerald-500/20 w-fit">
