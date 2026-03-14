@@ -37,9 +37,12 @@ echo ">> Configuring Nginx..."
 # Grant Nginx permission to traverse the home directory
 sudo chmod 755 /home/ubuntu
 
-# Ensure backend data directories exist and are writable
+# Ensure backend data and asset directories exist and are writable
 mkdir -p data/logos
+mkdir -p assets/templates
+mkdir -p assets/temp_cards
 chmod -R 777 data
+chmod -R 777 assets
 
 sudo cp omnibet.nginx /etc/nginx/sites-available/omnibet
 sudo ln -sf /etc/nginx/sites-available/omnibet /etc/nginx/sites-enabled/

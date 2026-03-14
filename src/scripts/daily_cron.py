@@ -23,6 +23,7 @@ from src.services.sports_api import (
 from src.rag.pipeline import predict_match, risk_manager_review, supreme_court_judge
 from src.database.db import get_cached_prediction, save_prediction, get_app_setting
 from src.services.sports_api import get_sofascore_fixtures
+from src.utils.image_generator import cleanup_temp_cards
 
 def run_daily_cron():
     print("🚀 Starting OmniBet AI Daily Cron Job...")
@@ -208,6 +209,10 @@ def run_daily_cron():
             print(f"💤 Sleeping for 30 seconds to respect API rate limits...")
             time.sleep(30)
             
+    # 11. Storage Maintenance
+    print("\n🧹 Periodic Storage Guard: Cleaning up old prediction cards...")
+    cleanup_temp_cards(max_age_hours=24)
+    
     print("\n🎉 OmniBet AI Daily Cron Job Finished!")
 
 if __name__ == "__main__":

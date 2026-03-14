@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Scale, Gavel, AlertTriangle, ChevronDown, ChevronUp, Plus, Check } from 'lucide-react';
+import { Scale, Gavel, AlertTriangle, ChevronDown, ChevronUp, Plus, Check, ShieldAlert, Shield } from 'lucide-react';
 
 const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -29,9 +29,10 @@ const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
                 </div>
                 <div className={`text-[9px] font-black px-2 py-0.5 rounded border ${verdict_status === 'CONFIRMED' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
                     verdict_status === 'OVERTURNED' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
-                        'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                        verdict_status === 'NO_BET' ? 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30' :
+                            'bg-gray-500/20 text-gray-400 border-gray-500/30'
                     }`}>
-                    {verdict_status}
+                    {verdict_status === 'NO_BET' ? 'MATCH VETOED' : verdict_status}
                 </div>
             </div>
 
@@ -56,62 +57,81 @@ const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
                 </div>
 
                 {/* Picks Grid - Larger Text */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="bg-black/40 rounded-lg p-3 border border-indigo-500/15 group hover:border-indigo-500/30 transition-colors flex flex-col justify-between overflow-hidden">
-                        <div className="mb-4">
-                            <div className="text-[9px] text-indigo-400 font-bold uppercase mb-1 tracking-wider">Arbiter's Safe Pick</div>
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="text-base md:text-lg font-black text-white leading-tight break-words">{primary_safe_pick?.tip || 'N/A'}</div>
-                                {primary_safe_pick?.odds && (
-                                    <div className="text-xs font-black text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded shrink-0">
-                                        @{parseFloat(primary_safe_pick.odds).toFixed(2)}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="text-[10px] text-gray-500 uppercase tracking-tighter mt-0.5">{primary_safe_pick?.market}</div>
+                {verdict_status === 'NO_BET' ? (
+                    <div className="bg-zinc-950/60 rounded-xl p-6 border-2 border-zinc-500/20 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-b from-zinc-500/5 to-transparent pointer-events-none" />
+                        <div className="bg-zinc-500/10 p-4 rounded-full border border-zinc-500/20 group-hover:scale-110 transition-transform duration-500">
+                            <ShieldAlert className="w-8 h-8 text-zinc-400" />
                         </div>
-                        {primary_safe_pick?.tip && handleAdd && (
-                            <button
-                                onClick={() => handleAdd(primary_safe_pick, 'Primary')}
-                                disabled={isPickAdded(primary_safe_pick.tip)}
-                                className={`w-full py-1.5 rounded text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isPickAdded(primary_safe_pick.tip)
-                                    ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 cursor-default'
-                                    : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40'
-                                    }`}
-                            >
-                                {isPickAdded(primary_safe_pick.tip) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                                {isPickAdded(primary_safe_pick.tip) ? 'Added' : 'Add Arbiter'}
-                            </button>
-                        )}
-                    </div>
-                    <div className="bg-black/40 rounded-lg p-3 border border-purple-500/15 group hover:border-purple-500/30 transition-colors flex flex-col justify-between overflow-hidden">
-                        <div className="mb-4">
-                            <div className="text-[9px] text-purple-400 font-bold uppercase mb-1 tracking-wider">Expected Value (EV) Pick</div>
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="text-base md:text-lg font-black text-white leading-tight break-words">{alternative_value_pick?.tip || 'N/A'}</div>
-                                {alternative_value_pick?.odds && (
-                                    <div className="text-xs font-black text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded shrink-0">
-                                        @{parseFloat(alternative_value_pick.odds).toFixed(2)}
-                                    </div>
-                                )}
+                        <div>
+                            <div className="text-zinc-200 font-black text-lg uppercase tracking-wider mb-2">Capital Preservation Mode</div>
+                            <div className="text-zinc-400 text-xs font-medium max-w-xs mx-auto leading-relaxed">
+                                The Supreme Court has determined this fixture is too volatile for a safe mathematical edge. No bet is recommended.
                             </div>
-                            <div className="text-[10px] text-gray-500 uppercase tracking-tighter mt-0.5">{alternative_value_pick?.market}</div>
                         </div>
-                        {alternative_value_pick?.tip && handleAdd && (
-                            <button
-                                onClick={() => handleAdd(alternative_value_pick, 'Value')}
-                                disabled={isPickAdded(alternative_value_pick.tip)}
-                                className={`w-full py-1.5 rounded text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isPickAdded(alternative_value_pick.tip)
-                                    ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 cursor-default'
-                                    : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/40'
-                                    }`}
-                            >
-                                {isPickAdded(alternative_value_pick.tip) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                                {isPickAdded(alternative_value_pick.tip) ? 'Added' : 'Add EV Pick'}
-                            </button>
-                        )}
+                        <div className="flex items-center gap-2 px-3 py-1 bg-zinc-500/10 rounded-full border border-zinc-500/20">
+                            <Shield className="w-3 h-3 text-zinc-500" />
+                            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-tighter">Judicial Veto Active</span>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-black/40 rounded-lg p-3 border border-indigo-500/15 group hover:border-indigo-500/30 transition-colors flex flex-col justify-between overflow-hidden">
+                            <div className="mb-4">
+                                <div className="text-[9px] text-indigo-400 font-bold uppercase mb-1 tracking-wider">Arbiter's Safe Pick</div>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="text-base md:text-lg font-black text-white leading-tight break-words">{primary_safe_pick?.tip || 'N/A'}</div>
+                                    {primary_safe_pick?.odds && (
+                                        <div className="text-xs font-black text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded shrink-0">
+                                            @{parseFloat(primary_safe_pick.odds).toFixed(2)}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-[10px] text-gray-500 uppercase tracking-tighter mt-0.5">{primary_safe_pick?.market}</div>
+                            </div>
+                            {primary_safe_pick?.tip && handleAdd && (
+                                <button
+                                    onClick={() => handleAdd(primary_safe_pick, 'Primary')}
+                                    disabled={isPickAdded(primary_safe_pick.tip)}
+                                    className={`w-full py-1.5 rounded text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isPickAdded(primary_safe_pick.tip)
+                                        ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 cursor-default'
+                                        : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40'
+                                        }`}
+                                >
+                                    {isPickAdded(primary_safe_pick.tip) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                    {isPickAdded(primary_safe_pick.tip) ? 'Added' : 'Add Arbiter'}
+                                </button>
+                            )}
+                        </div>
+                        <div className="bg-black/40 rounded-lg p-3 border border-purple-500/15 group hover:border-purple-500/30 transition-colors flex flex-col justify-between overflow-hidden">
+                            <div className="mb-4">
+                                <div className="text-[9px] text-purple-400 font-bold uppercase mb-1 tracking-wider">Expected Value (EV) Pick</div>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="text-base md:text-lg font-black text-white leading-tight break-words">{alternative_value_pick?.tip || 'N/A'}</div>
+                                    {alternative_value_pick?.odds && (
+                                        <div className="text-xs font-black text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded shrink-0">
+                                            @{parseFloat(alternative_value_pick.odds).toFixed(2)}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-[10px] text-gray-500 uppercase tracking-tighter mt-0.5">{alternative_value_pick?.market}</div>
+                            </div>
+                            {alternative_value_pick?.tip && handleAdd && (
+                                <button
+                                    onClick={() => handleAdd(alternative_value_pick, 'Value')}
+                                    disabled={isPickAdded(alternative_value_pick.tip)}
+                                    className={`w-full py-1.5 rounded text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isPickAdded(alternative_value_pick.tip)
+                                        ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20 cursor-default'
+                                        : 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg shadow-purple-900/40'
+                                        }`}
+                                >
+                                    {isPickAdded(alternative_value_pick.tip) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                    {isPickAdded(alternative_value_pick.tip) ? 'Added' : 'Add EV Pick'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Variance Warning - Larger Text */}
                 {variance_warning && (

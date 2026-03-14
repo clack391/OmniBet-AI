@@ -133,7 +133,11 @@ const BetSlipSidebar = () => {
                                 {new Date(bet.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
                             </div>
                         )}
-                        <div className="text-blue-300 font-bold truncate">{bet.selection}</div>
+                        <div className="text-blue-300 font-bold truncate">
+                            {bet.market && !bet.selection.toUpperCase().includes(bet.market.toUpperCase())
+                                ? `${bet.market.toUpperCase()} ${bet.selection}`
+                                : bet.selection}
+                        </div>
                         <div className="text-xs text-green-400 mt-1 flex justify-between gap-2">
                             <span className="truncate">Safe Bet</span>
                             <span className="font-mono bg-gray-900 px-1 rounded shrink-0">@{bet.odds}</span>

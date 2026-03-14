@@ -44,6 +44,7 @@ const PredictionCard = ({ prediction }) => {
             match: prediction.match,
             match_date: prediction.match_date,
             selection: tipStr,
+            market: typeof pickObj === 'object' ? pickObj?.market : '',
             type: type, // 'Primary' or 'Value'
             odds: extractedOdds || aiFallbackOdds
         };
@@ -213,12 +214,28 @@ const PredictionCard = ({ prediction }) => {
                     <div className="flex justify-between items-start mb-4">
                         <span className="text-primary text-xs font-bold uppercase tracking-wider">AI Expert Picks</span>
                         <div className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                            <span className="text-[10px] text-red-400 font-bold uppercase">Live Analysis</span>
+                            {prediction.supreme_court?.verdict_status === 'NO_BET' ? (
+                                <span className="text-[10px] text-zinc-500 font-bold uppercase flex items-center gap-1">
+                                    <Shield className="w-3 h-3" /> Vetoed by court
+                                </span>
+                            ) : (
+                                <>
+                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                    <span className="text-[10px] text-red-400 font-bold uppercase">Live Analysis</span>
+                                </>
+                            )}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 relative ${prediction.supreme_court?.verdict_status === 'NO_BET' ? 'opacity-40 grayscale pointer-events-none' : ''}`}>
+                        {prediction.supreme_court?.verdict_status === 'NO_BET' && (
+                            <div className="absolute inset-0 z-20 flex items-center justify-center">
+                                <div className="bg-zinc-900/90 border border-zinc-500/30 px-4 py-2 rounded-full flex items-center gap-2 shadow-2xl backdrop-blur-sm">
+                                    <ShieldAlert className="w-4 h-4 text-zinc-400" />
+                                    <span className="text-xs font-bold text-zinc-300 uppercase tracking-widest">Judicial Veto: No Recommended Bet</span>
+                                </div>
+                            </div>
+                        )}
                         {/* Primary Safe Pick */}
                         <div className="bg-slate-900/60 border border-emerald-500/20 rounded-lg p-4 flex flex-col justify-between">
                             <div>
@@ -247,7 +264,7 @@ const PredictionCard = ({ prediction }) => {
 
                             <button
                                 onClick={() => handleAdd(prediction.primary_pick || prediction.safe_bet_tip, 'Primary')}
-                                disabled={isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)}
+                                disabled={isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip) || prediction.supreme_court?.verdict_status === 'NO_BET'}
                                 className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.primary_pick?.tip || prediction.safe_bet_tip)
                                     ? 'bg-emerald-500/10 text-emerald-500 cursor-default border border-emerald-500/20'
                                     : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20'
@@ -287,7 +304,7 @@ const PredictionCard = ({ prediction }) => {
 
                                 <button
                                     onClick={() => handleAdd(prediction.alternative_pick, 'Value')}
-                                    disabled={isPickAdded(prediction.alternative_pick.tip)}
+                                    disabled={isPickAdded(prediction.alternative_pick.tip) || prediction.supreme_court?.verdict_status === 'NO_BET'}
                                     className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${isPickAdded(prediction.alternative_pick.tip)
                                         ? 'bg-amber-500/10 text-amber-500 cursor-default border border-amber-500/20'
                                         : 'bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-900/20'

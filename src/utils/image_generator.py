@@ -1,215 +1,205 @@
 from PIL import Image, ImageDraw, ImageFont
 import os
 import uuid
+import time
 from datetime import datetime
 
-def format_match_date(date_val):
+def abbreviate_verdict(text):
     """
-    Formats various date inputs into a clean string.
+    Abbreviates common betting terms to save space in the grid.
     """
-    if not date_val:
-        return ""
-    if isinstance(date_val, str):
-        # Handle ISO strings or already formatted strings
-        try:
-            if 'T' in date_val:
-                dt = datetime.fromisoformat(date_val.replace('Z', '+00:00'))
-                return dt.strftime("%d %b | %I:%M %p")
-            return date_val # If already formatted
-        except:
-            return date_val
-    return ""
+    if not text: return ""
+    mappings = {
+        "SECOND HALF": "2H",
+        "FIRST HALF": "1H",
+        "BET BUILDER": "BB",
+        "OVER": ">",
+        "UNDER": "<",
+        "GOALS": "G",
+        "DOUBLE CHANCE": "DC",
+        "YES": "Y",
+        "NO": "N",
+        "DRAW NO BET": "DNB",
+        "HALF TIME": "HT",
+        "FULL TIME": "FT"
+    }
+    result = text.upper()
+    for long, short in mappings.items():
+        result = result.replace(long, short)
+    # Cleanup extra spaces if e.g. "OVER 0.5" becomes "> 0.5"
+    return " ".join(result.split())
 
-def generate_betting_card(match_data):
+def cleanup_temp_cards(max_age_hours=24):
     """
-    Generates a 1080x1080 betting card image for Telegram with per-match timestamp above team name.
+    Deletes temporary prediction cards older than max_age_hours to save storage.
     """
-    template_path = "assets/templates/template.png"
     temp_dir = "assets/temp_cards"
-    os.makedirs(temp_dir, exist_ok=True)
-    output_filename = os.path.join(temp_dir, f"prediction_{uuid.uuid4().hex[:8]}.png")
+    if not os.path.exists(temp_dir):
+        return
     
-    # 1. Open Template
+    now = time.time()
+    cutoff = now - (max_age_hours * 3600)
+    
+    cleaned_count = 0
     try:
-        if not os.path.exists(template_path):
-            img = Image.new('RGB', (1080, 1080), color=(10, 15, 28))
-            print(f"⚠️ {template_path} not found. Using a dark background fallback.")
-        else:
-            img = Image.open(template_path)
+        for filename in os.listdir(temp_dir):
+            file_path = os.path.join(temp_dir, filename)
+            # Skip the 'latest' convenience file if needed, or just let it stay
+            if filename == "latest_prediction.png":
+                continue
+                
+            if os.path.isfile(file_path):
+                file_age = os.path.getmtime(file_path)
+                if file_age < cutoff:
+                    os.remove(file_path)
+                    cleaned_count += 1
+        if cleaned_count > 0:
+            print(f"🧹 Storage Guard: Cleaned up {cleaned_count} old prediction cards.")
     except Exception as e:
-        print(f"❌ Error opening template: {e}")
-        img = Image.new('RGB', (1080, 1080), color=(10, 15, 28))
+        print(f"⚠️ Storage Guard Error: {e}")
 
-    draw = ImageDraw.Draw(img)
-    center_x = 540
 
-    # 2. Font Loading
-    font_path = "font.ttf"
-    try:
-        if not os.path.exists(font_path):
-            title_font = ImageFont.load_default()
-            pick_font = ImageFont.load_default()
-            date_font = ImageFont.load_default()
-            match_date_font = ImageFont.load_default()
-        else:
-            title_font = ImageFont.truetype(font_path, 55)
-            pick_font = ImageFont.truetype(font_path, 80)
-            date_font = ImageFont.truetype(font_path, 25)
-            match_date_font = ImageFont.truetype(font_path, 30)
-    except Exception as e:
-        print(f"⚠️ Error loading font {font_path}: {e}")
-        title_font = ImageFont.load_default()
-        pick_font = ImageFont.load_default()
-        date_font = ImageFont.load_default()
-        match_date_font = ImageFont.load_default()
-
-    # 3. Data Extraction
-    match_title = match_data.get("match", "Unknown Match")
-    match_date = format_match_date(match_data.get("match_date") or match_data.get("date"))
-    
-    sc = match_data.get("supreme_court", {})
-    av = match_data.get("audit_verdict", {})
-    
-    if sc and sc.get("primary_safe_pick"):
-        pick_tip = sc["primary_safe_pick"].get("tip", "N/A")
-        odds = sc["primary_safe_pick"].get("odds", "0.00")
-    elif av and av.get("ai_recommended_bet"):
-        pick_tip = av.get("ai_recommended_bet", "N/A")
-        odds = av.get("estimated_odds", "0.00")
-    else:
-        pick_tip = match_data.get("primary_pick", {}).get("tip", match_data.get("safe_bet_tip", "N/A"))
-        odds = match_data.get("primary_pick", {}).get("odds", match_data.get("confidence", "0.00"))
-
-    # 4. Drawing Content
-    current_time_str = datetime.now().strftime("%d %b %Y | %I:%M %p")
-    
-    # Global Header
-    draw.text((center_x, 80), "OMNIBET AI PREDICT", fill="#00FF00", font=title_font, anchor="mm", stroke_width=4, stroke_fill="black")
-    draw.text((center_x, 125), current_time_str, fill="#CCCCCC", font=date_font, anchor="mm", stroke_width=2, stroke_fill="black")
-
-    # Match Block (Date moved ABOVE Team Name)
-    draw.text((center_x, 230), "MATCH:", fill="white", font=title_font, anchor="mm", stroke_width=4, stroke_fill="black")
-    if match_date:
-        draw.text((center_x, 290), match_date.upper(), fill="#CCCCCC", font=match_date_font, anchor="mm", stroke_width=2, stroke_fill="black")
-        draw.text((center_x, 370), match_title.upper(), fill="white", font=pick_font, anchor="mm", stroke_width=4, stroke_fill="black")
-    else:
-        draw.text((center_x, 350), match_title.upper(), fill="white", font=pick_font, anchor="mm", stroke_width=4, stroke_fill="black")
-    
-    # Verdict Block
-    draw.text((center_x, 600), "SUPREME COURT VERDICT:", fill="white", font=title_font, anchor="mm", stroke_width=4, stroke_fill="black")
-    draw.text((center_x, 720), pick_tip.upper(), fill="#00FF00", font=pick_font, anchor="mm", stroke_width=4, stroke_fill="black")
-    draw.text((center_x, 850), f"ODDS: {odds}", fill="#00FF00", font=pick_font, anchor="mm", stroke_width=4, stroke_fill="black")
-
-    # 5. Save
-    save_path = os.path.abspath(output_filename)
-    img.save(save_path)
-    latest_path = os.path.abspath("latest_prediction.png")
-    img.save(latest_path)
-    return save_path
-
-def generate_accumulator_card(bets):
+def generate_accumulator_card(matches_list, output_filename=None):
     """
-    Generates a dynamic accumulator card with match dates positioned above team names.
+    Generates a high-resolution Cyber-Grid tabular card for betting slips.
     """
-    template_path = "assets/templates/template.png"
+    # Run a quick cleanup check
+    cleanup_temp_cards(max_age_hours=24)
+
+    # Ensure temp directory exists
     temp_dir = "assets/temp_cards"
-    os.makedirs(temp_dir, exist_ok=True)
-    output_filename = os.path.join(temp_dir, f"accumulator_{uuid.uuid4().hex[:8]}.png")
+    if not os.path.exists(temp_dir):
+        os.makedirs(temp_dir, exist_ok=True)
+
+    # Use unique filename to avoid collision on EC2
+    if output_filename is None:
+        unique_id = uuid.uuid4().hex[:8]
+        output_filename = os.path.join(temp_dir, f"prediction_{unique_id}.png")
     
-    required_height = 250 + (len(bets) * 220) + 150
+    template_path = "assets/templates/template.png"
+    
+    # 1. Canvas Height Strategy
+    # Dynamic algorithm: Extend if many matches, otherwise stick to min 1080
+    required_height = 250 + (len(matches_list) * 100) + 150
     canvas_height = max(1080, required_height)
+    canvas_width = 1080
     
-    background_color = "#0A0F1C"
-    img = Image.new('RGB', (1080, canvas_height), color=background_color)
+    img = Image.new('RGB', (canvas_width, canvas_height), color="#0A0F1C")
     
+    # Try to paste template for top background decoration
     try:
         if os.path.exists(template_path):
             template = Image.open(template_path)
-            template = template.crop((0, 0, 1080, min(1080, canvas_height)))
+            # Only crop if template is taller than canvas, otherwise paste at 0,0
+            if template.height > canvas_height:
+                template = template.crop((0, 0, 1080, canvas_height))
             img.paste(template, (0, 0))
-    except Exception as e:
+    except:
         pass
 
     draw = ImageDraw.Draw(img)
+    
+    # 2. Grid Coordinates (X-Coordinates)
+    match_x = 50   # Left-aligned
+    verdict_x = 520 # Shifted left to provide more space for verdicts
+    odds_x = 1030  # Right-aligned
     center_x = 540
     
+    # ... (Font loading logic remains same) ...
+    # 3. Font Loading
     font_path = "font.ttf"
     try:
         if not os.path.exists(font_path):
-            header_font = title_font = pick_font = date_font = match_date_font = ImageFont.load_default()
+            header_font = row_font = total_font = ImageFont.load_default()
         else:
-            header_font = ImageFont.truetype(font_path, 60)
-            title_font = ImageFont.truetype(font_path, 35)
-            pick_font = ImageFont.truetype(font_path, 45)
-            date_font = ImageFont.truetype(font_path, 25)
-            match_date_font = ImageFont.truetype(font_path, 22)
+            header_font = ImageFont.truetype(font_path, 35)
+            row_font = ImageFont.truetype(font_path, 25) # Reduced size to prevent bleed
+            total_font = ImageFont.truetype(font_path, 60)
     except:
-        header_font = title_font = pick_font = date_font = match_date_font = ImageFont.load_default()
+        header_font = row_font = total_font = ImageFont.load_default()
 
-    # Global Header
-    current_time_str = datetime.now().strftime("%d %b %Y | %I:%M %p")
-    draw.text((center_x, 80), "ELITE ACCUMULATOR", fill="#00FF00", font=header_font, anchor="mm", stroke_width=4, stroke_fill="black")
-    draw.text((center_x, 135), current_time_str, fill="#CCCCCC", font=date_font, anchor="mm", stroke_width=2, stroke_fill="black")
+    # 4. Header Row (Y=180)
+    draw.text((match_x, 180), "MATCH", fill="white", font=header_font, anchor="ls", stroke_width=3, stroke_fill="black")
+    draw.text((verdict_x + 60, 180), "VERDICT", fill="#00FF00", font=header_font, anchor="ms", stroke_width=3, stroke_fill="black")
+    draw.text((odds_x, 180), "ODDS", fill="#00FF00", font=header_font, anchor="rs", stroke_width=3, stroke_fill="black")
+
+    # Header Divider (Y=200)
+    draw.line([(50, 200), (1030, 200)], fill="white", width=3)
+
+    # 5. Row Loop (Start Y=280)
+    current_y = 280
+    total_val = 1.0
     
-    # Dynamic Loop Layout
-    current_y = 220
-    total_odds = 1.0
-    
-    for bet in bets:
-        match_title = bet.get("match", "Unknown Match")
-        if len(match_title) > 40: match_title = match_title[:37] + "..."
+    for match in matches_list:
+        m_name = match.get("match", "Unknown Match")
+        m_pick = match.get("pick", match.get("selection", "N/A"))
+        m_market = match.get("market", "")
         
-        match_date = format_match_date(bet.get("match_date") or bet.get("date"))
-        pick = bet.get("selection", "N/A")
+        # Merge market into pick for clarity (e.g. "BTS" + "Yes" -> "BTS Yes")
+        if m_market and m_market.upper() not in m_pick.upper():
+            m_pick = f"{m_market} {m_pick}".strip()
+            
         try:
-            val_odds = float(bet.get("odds", 1.0))
+            m_odds = float(match.get("odds", 1.0))
         except:
-            val_odds = 1.0
+            m_odds = 1.0
         
-        total_odds *= val_odds
+        total_val *= m_odds
         
-        # Match Date moved ABOVE Team Name
-        if match_date:
-            draw.text((center_x, current_y), match_date.upper(), fill="#888888", font=match_date_font, anchor="mm", stroke_width=2, stroke_fill="black")
-            draw.text((center_x, current_y + 40), match_title.upper(), fill="white", font=title_font, anchor="mm", stroke_width=3, stroke_fill="black")
-            off_y = 95
-        else:
-            draw.text((center_x, current_y + 20), match_title.upper(), fill="white", font=title_font, anchor="mm", stroke_width=3, stroke_fill="black")
-            off_y = 75
+        # A. Smart Abbreviation and Strategic Truncation
+        m_pick = abbreviate_verdict(m_pick)
         
-        # Tip @ Odds Line
-        pick_line = f"{pick.upper()} @ {val_odds:.2f}"
-        draw.text((center_x, current_y + off_y), pick_line, fill="#00FF00", font=pick_font, anchor="mm", stroke_width=3, stroke_fill="black")
+        if len(m_name) > 28: m_name = m_name[:25] + "..."
+        if len(m_pick) > 28: m_pick = m_pick[:25] + "..."
         
-        # Divider
-        draw.line((250, current_y + off_y + 60, 830, current_y + off_y + 60), fill="#333333", width=2)
+        # B. Draw Columns
+        draw.text((match_x, current_y), m_name.upper(), fill="white", font=row_font, anchor="ls", stroke_width=3, stroke_fill="black")
+        draw.text((verdict_x, current_y), m_pick.upper(), fill="#00FF00", font=row_font, anchor="ls", stroke_width=3, stroke_fill="black")
+        draw.text((odds_x, current_y), f"{m_odds:.2f}", fill="white", font=row_font, anchor="rs", stroke_width=3, stroke_fill="black")
         
-        current_y += 220
+        # C. Sub-line divider (Y+45)
+        draw.line([(50, current_y + 45), (1030, current_y + 45)], fill="#555555", width=1)
+        
+        # D. Move to next row
+        current_y += 100
 
-    # Footer
-    footer_y = current_y - 120
-    footer_text = f"TOTAL ACCUMULATOR ODDS: {total_odds:.2f}"
-    draw.text((center_x, footer_y + 100), footer_text, fill="#00FF00", font=pick_font, anchor="mm", stroke_width=4, stroke_fill="black")
+    # 6. Footer: Total Odds (Centered, pinned to bottom)
+    is_single = len(matches_list) == 1
+    
+    # Use a cleaner, smaller size for the total odds to avoid dominating the card
+    try:
+        footer_font = ImageFont.truetype(font_path, 35)
+    except:
+        footer_font = ImageFont.load_default()
+        
+    # Pin to absolute bottom to avoid background clashing and middle overlap
+    total_y = canvas_height - 120
+        
+    # Ensure footer doesn't run off
+    if total_y > canvas_height - 60:
+        total_y = canvas_height - 60
+        
+    label = "ODDS:" if is_single else "TOTAL ACCUMULATOR ODDS:"
+    total_text = f"{label} {total_val:.2f}"
+    draw.text((center_x, total_y), total_text, fill="#00FF00", font=footer_font, anchor="mm", stroke_width=4, stroke_fill="black")
 
+    # 7. Save
     save_path = os.path.abspath(output_filename)
     img.save(save_path)
-    latest_path = os.path.abspath("latest_prediction.png")
-    img.save(latest_path)
-    print(f"✅ Card with match dates repositioned: {save_path}")
     return save_path
 
 if __name__ == "__main__":
-    # Test single
-    test_single = {
-        "match": "Arsenal vs Chelsea",
-        "match_date": "2026-03-14T15:00:00Z",
-        "primary_pick": {"tip": "Home Win", "odds": 1.75}
-    }
-    generate_betting_card(test_single)
-    
-    # Test accumulator
-    test_bets = [
-        {"match": "USM KHENCHELA VS JS KABYLIE", "selection": "X2", "odds": 1.44, "match_date": "2026-03-13T19:00:00Z"},
-        {"match": "Arsenal vs Chelsea", "selection": "Home Win", "odds": 1.85, "match_date": "14 Mar 2026 | 03:00 PM"}
+    test_accumulator = [
+        {"match": "KOCAELISPOR VS KONYASPOR", "pick": "YES", "market": "BTS", "odds": 1.95},
+        {"match": "ADANA DEMIRSPOR VS SERIKSPOR A.S", "pick": "AWAY", "market": "DOUBLE CHANCE", "odds": 1.25},
+        {"match": "Arsenal vs Chelsea", "pick": "Home Win", "odds": 1.85}
     ]
-    generate_accumulator_card(test_bets)
+    generate_accumulator_card(test_accumulator, output_filename="/tmp/acc_test.png")
+    print("✅ Cyber-Grid accumulator card generated (/tmp/acc_test.png)!")
+    
+    # Test single game with long market (e.g. SECOND HALF OVER 0.5)
+    test_single = [{"match": "Real Madrid vs Barcelona", "pick": "OVER 0.5", "market": "SECOND HALF", "odds": 1.95}]
+    generate_accumulator_card(test_single, output_filename="/tmp/single_test.png")
+    print("✅ Single-game grid card generated (/tmp/single_test.png)!")
+
+

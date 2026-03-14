@@ -514,6 +514,13 @@ def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(ge
     for bet in request.bets:
         match_str = bet.get("match", "Unknown Match")
         selection = bet.get("selection", "Unknown Selection")
+        market = bet.get("market", "")
+        
+        # Merge market into selection for clarity if not already there (e.g. "BTS" + "Yes" -> "BTS Yes")
+        if market and market.upper() not in selection.upper():
+            selection = f"{market} {selection}".strip()
+            bet["selection"] = selection # Update in place for deliver_accumulator
+            
         match_date_str = bet.get("match_date", None)
         odds = bet.get("odds")
         
@@ -555,7 +562,8 @@ def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(ge
             "match": bet.get("match", "Unknown"),
             "primary_pick": {
                 "tip": bet.get("selection", "N/A"),
-                "odds": bet.get("odds", "0.00")
+                "odds": bet.get("odds", "0.00"),
+                "market": bet.get("market", "")
             }
         }
         success = deliver_prediction(chat_id, match_data)

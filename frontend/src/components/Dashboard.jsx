@@ -86,6 +86,7 @@ const Dashboard = () => {
             match: `${pred.home_team || 'Home'} vs ${pred.away_team || 'Away'}`,
             match_date: pred.match_date,
             selection: tipStr,
+            market: customPick?.market || pred.audit_verdict?.market || '',
             type: type, // 'Primary' or 'Value'
             odds: extractedOdds || aiFallbackOdds
         };
@@ -343,6 +344,7 @@ const Dashboard = () => {
                         match: result.match,
                         match_date: result.match_date,
                         selection: tipToAdd,
+                        market: primaryPick?.market || result.market || '',
                         type: 'Primary',
                         odds: oddsToAdd
                     };
