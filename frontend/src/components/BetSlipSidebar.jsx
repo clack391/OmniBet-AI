@@ -134,9 +134,9 @@ const BetSlipSidebar = () => {
                             </div>
                         )}
                         <div className="text-blue-300 font-bold truncate">
-                            {bet.market && !bet.selection.toUpperCase().includes(bet.market.toUpperCase())
+                            {bet.market && bet.selection && !bet.selection.toUpperCase().includes(bet.market.toUpperCase())
                                 ? `${bet.market.toUpperCase()} ${bet.selection}`
-                                : bet.selection}
+                                : (bet.selection || 'N/A')}
                         </div>
                         <div className="text-xs text-green-400 mt-1 flex justify-between gap-2">
                             <span className="truncate">Safe Bet</span>
