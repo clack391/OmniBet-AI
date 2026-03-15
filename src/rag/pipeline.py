@@ -12,7 +12,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a standard stable model compatible with the free tier/broad availability
 # We use gemini-3.1-pro-preview for deeper analytical reasoning and Google Search Grounding support 
-MODEL_NAME = "gemini-3-pro-preview" 
+MODEL_NAME = "gemini-3.1-pro-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
@@ -122,6 +122,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             1. **THE "FIRST-LEG" FALLACY**: Do NOT automatically assume 1st Leg matches will be low-scoring or conservative. Base your Match Goals and 1X2 predictions strictly on the teams' xG and defensive metrics, not on tournament tropes.
             2. **THE "SYSTEM VS. INDIVIDUAL" RULE**: If a superior team (e.g., an away favorite) is missing a star striker, do NOT automatically downgrade them to 'Under' or 'Draw'. If their underlying team system creates high possession and high Big Chances, trust the system to overcome the injury. Do not let Agent 2 panic you into downgrading a fundamentally superior team just because a name is missing from the lineup.
         - **Rule 18 - THE SMALL SAMPLE WEIGHTING DIRECTIVE**: If your analysis relies on a venue-specific metric (like a "home win streak") derived from fewer than 5 matches, you MUST explicitly state in your reasoning: "Venue data is based on a small sample size ($N < 5$); results have been blended with overall season metrics for reliability." Failing to do so is a statistical error.
+        - **Rule 19 - THE EXPECTED GOALS (xG) REALITY CHECK**: You MUST prioritize Expected Goals (xG) over raw goals scored to detect "luck". FIRST, check the 'Advanced Tactical Metrics' JSON block provided above for 'Expected goals (xG) per game'. If the API provided it, use it immediately. If a team's actual goals are much higher than their xG, they are lucky and due for regression. If the xG data is MISSING from the JSON payload (e.g., obscure leagues), you may fallback to your Google Search tool to find recent xG data. If search also fails, default to 'Big chances created' to evaluate their true offensive threat.
         - **THE DATA PURITY MANDATE**: When conducting Live Searches for rosters, injuries, or stats, you MUST ONLY pull data from official, verified sports databases (e.g., Transfermarkt, Soccerway, Flashscore, Sofascore, or official club websites). You are strictly forbidden from citing data from gaming wikis (SOFIFA, Football Manager), Reddit career mode threads, or fan-concept sites.
     
     3. **GAME STATE SIMULATION**:
@@ -506,7 +507,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -730,6 +731,19 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       4. **GRID HARMONY**: Ensure your `grid_corrections` (if OVERTURNED) fix the most blatant contradictions in the Market Insights grid. If you disagree with a 'low-scoring' audit, fix the `Correct_Score` and `Match_Goals` fields.
       5. **THE VETO POWER (NO BET PROTOCOL)**: You are a strict capital preservation engine. You are NOT required to force a bet if the match conditions are toxic. If a match features massive contradictions (e.g., elite attack vs elite defense but missing key players), extreme variance warnings from Agent 2, or no safe mathematical edge in ANY of the 16 markets, you MUST exercise your Veto Power. In your Final Ruling, explicitly state "MATCH REJECTED - NO BET" and explain that capital preservation is the mathematically correct choice for this fixture. Do not invent a 'safe' pick if one does not exist.
       6. **THE ODDS AGNOSTIC RULE**: You must prioritize Win Probability over Odds Value for the 'Arbiter's Safe Pick'. Do not force a higher-risk market (like Team Goals Over 1.5) simply because the Double Chance or Draw No Bet odds are low. If 1X or DNB is the only mathematically secure path that survives the Risk Manager's Scenario Checks, you MUST accept the low odds. Your primary mandate for the Safe Pick is capital preservation, not yield generation. Save the higher-risk, higher-yield plays strictly for the 'Expected Value (EV) Pick'.
+      7. **THE JUDICIAL WISDOM MANDATE**: You are the ultimate contextual synthesizer, not just a rigid rule enforcer. You must resolve conflicts between Agent 1's pure math and Agent 2's risk anxiety using this hierarchy of truth:
+         1. THE FATIGUE & PSYCHOLOGY WEIGHT: Unquantifiable variables like severe European mid-week fatigue, recent humiliating losses, or relegation desperation carry MORE weight than historical goal averages. If Agent 2 flags a 'European Hangover' or a 'Relegation Dogfight', you must heavily suppress Agent 1's offensive projections. Do not blindly force high-scoring or Match Winner markets in these conditions.
+         2. THE ELITE CLUB EXCEPTION: Contextualize injuries based on club size. If Agent 2 flags missing defenders for an Elite, Champions League-tier club playing at home against a domestic minnow, you must weigh the elite club's squad depth and home fortress advantage. Do not blindly trigger the 'Defensive Collapse Override' if the talent gap between the two clubs is massive.
+         3. THE TRAP SENSE: If a match looks like a "mathematical lock" (e.g., a top team vs. a bottom team) but Agent 2 warns of a massive Head-to-Head anomaly, a new manager bounce, or a psychological block, you MUST respect the trap. Strip the greed away. Revert to the absolute safest floor (e.g., Double Chance 1X) or exercise your Veto Power.
+       8. **THE TIE-BREAKER MANDATE (HIERARCHY OF RESOLUTION)**: If two mandates directly conflict, you must apply the following hierarchy:
+          1. **xG OVERRIDES FATIGUE**: If the 'Goal Integrity Mandate' (combined xG > 2.8) conflicts with the 'Fatigue Tax' (mid-week hangover), the Goal Integrity Mandate WINS. High fatigue combined with high xG results in late defensive breakdowns, heavily favoring the 'Over'.
+          2. **GRID HARMONIZATION**: Whenever a Tie-Breaker is invoked, you MUST ensure that your final 'verdict_status', your textual reasoning, AND your final JSON data grid completely align with the winning mandate. Do not output textual reasoning for an 'Over' while leaving an 'Under' in the data grid.
+       9. **THE FINAL RULING DOMINANCE**: You are a court of law. Once you deliver your textual 'Supreme Court Final Ruling', that verdict becomes the absolute source of truth for all other output fields.
+          - **ANTI-LEAKAGE**: If you explicitly reject/overturn an Agent 2 audit in your narrative (e.g., "I reject the Under 2.5 shift"), you MUST NOT allow that rejected market to appear in your final `expert_picks` (Primary/Alternative) or your `grid_corrections` JSON.
+          - **VERDICT SYNCHRONIZATION**: Your `expert_picks` and `grid_corrections` must strictly follow the directive set in your narrative ruling. If you rule for "Win/Draw", your primary pick MUST be 1X/X2. If you rule for "Over 2.5", the `grid_corrections` MUST ensure Match Goals is set to Over 2.5. No leakage of rejected audits is permitted.
+       10. **STRICT JSON SANITIZATION**: You are a court of law. Once you deliver your textual 'Supreme Court Final Ruling', that verdict becomes the absolute source of truth for all other output fields.
+          - **PURGE MANDATORY**: Any data in your final JSON payload (expert_picks, grid_corrections) that contradicts your textual ruling MUST be purged/overwritten. Do not allow legacy audits that you have overruled to remain in the final picks.
+          - **REFLECTIVE RECONSTRUCTION**: The final JSON block must be a perfect technical mirror of the textual verdict. If your narrative rejects a market, it MUST be removed from your final technical selection.
     """
     
     try:
@@ -772,7 +786,8 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     except Exception as e:
         print(f"Supreme Court Error: {e}")
         return {
-            "supreme_court_reasoning": "The supreme court failed due to an technical error.",
+            "match": f"{team_a} vs {team_b}",
+            "supreme_court_reasoning": f"The supreme court failed due to an technical error: {str(e)}",
             "variance_warning": "Technical variance is too high.",
             "verdict_status": "NO_BET",
             "primary_safe_pick": {"market": "N/A", "tip": "N/A", "confidence": 0},

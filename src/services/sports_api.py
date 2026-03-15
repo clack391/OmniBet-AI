@@ -21,7 +21,7 @@ BASE_URL = "https://api.football-data.org/v4"
 # Use GEMINI_API_KEY or GOOGLE_API_KEY interchangeably
 gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=gemini_key)
-model = genai.GenerativeModel("gemini-3-pro-preview")
+model = genai.GenerativeModel("gemini-3.1-pro-preview")
 
 # Cache for league standings with TTL 
 # Structure: { competition_id: {"data": [...], "fetched_at": datetime} }
@@ -46,7 +46,7 @@ def get_fixtures_by_date(start_date: str, end_date: str):
     
     try:
         print(f"🌐 Fetching fixtures for {start_date} from football-data.org...")
-        response = requests.get(url, headers=headers, params=params, timeout=15)
+        response = requests.get(url, headers=headers, params=params, timeout=20)
         response.raise_for_status()
         data = response.json()
         
@@ -99,7 +99,7 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
             rapid_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/list"
             try:
                 res = requests.get(rapid_url, headers={"x-rapidapi-host": RAPID_API_HOST, "x-rapidapi-key": RAPID_API_KEY}, 
-                                  params={"sport_slug": "football", "date": target_date}, timeout=15)
+                                  params={"sport_slug": "football", "date": target_date}, timeout=20)
                 if res.status_code == 200:
                     events = res.json()
                     if isinstance(events, list):
@@ -116,7 +116,7 @@ def get_sofascore_fixtures(start_date: str, end_date: str):
         url = f"https://www.sofascore.com/api/v1/sport/football/scheduled-events/{target_date}"
         
         try:
-            res = cffi_requests.get(url, impersonate="chrome120", timeout=15)
+            res = cffi_requests.get(url, impersonate="chrome120", timeout=20)
             
             # CRITICAL: Detect if EC2 IP is blocked (403 Forbidden)
             if res.status_code in [403, 401]:
@@ -224,7 +224,7 @@ def get_match_stats(match_id: int):
     headers = {"X-Auth-Token": API_KEY}
     
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, timeout=8)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -303,7 +303,7 @@ def fetch_match_h2h(match_id: int):
     try:
         # Limit to last 5 matches
         params = {"limit": 5}
-        response = requests.get(url, headers=headers, params=params, timeout=15)
+        response = requests.get(url, headers=headers, params=params, timeout=20)
         response.raise_for_status()
         data = response.json()
         return data
@@ -329,7 +329,7 @@ def fetch_team_form(team_id: int, team_name: str = "Unknown Team", venue: str = 
         params["venue"] = venue
     
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=15)
+        response = requests.get(url, headers=headers, params=params, timeout=20)
         response.raise_for_status()
         data = response.json()
         
@@ -463,7 +463,7 @@ def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
         
         try:
             print(f"🌐 Fetching fresh table for Comp {competition_id} from API...")
-            response = requests.get(url, headers=headers, timeout=15)
+            response = requests.get(url, headers=headers, timeout=20)
             response.raise_for_status()
             data = response.json()
             
@@ -570,7 +570,7 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
             rapid_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/list"
             res = requests.get(rapid_url, 
                              headers={"x-rapidapi-host": RAPID_API_HOST, "x-rapidapi-key": RAPID_API_KEY},
-                             params={"sport_slug": "football", "date": match_date}, timeout=15)
+                             params={"sport_slug": "football", "date": match_date}, timeout=20)
             if res.status_code == 200:
                 events = res.json()
                 if isinstance(events, list):
@@ -643,7 +643,7 @@ def get_sofascore_match_stats(sofascore_match_id: int):
     # 1. Fetch Event Details to get IDs
     event_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/details"
     try:
-        event_res = requests.get(event_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        event_res = requests.get(event_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=20)
         if event_res.status_code != 200:
             print(f"Could not fetch match {sofascore_match_id} data. Status: {event_res.status_code}")
             return None, None
@@ -700,6 +700,7 @@ def get_sofascore_match_stats(sofascore_match_id: int):
         ("Goals conceded", "goalsConceded", False),
         ("Assists", "assists", False),
         ("Goals per game", "goalsScored", True),
+        ("Expected goals (xG) per game", "expectedGoals", True),
         ("Shots on target per game", "shotsOnTarget", True),
         ("Big chances created", "bigChancesCreated", False),
         ("Big chances missed", "bigChancesMissed", False),
@@ -745,8 +746,8 @@ def get_sofascore_match_stats(sofascore_match_id: int):
     away_params = {"team_id": away_id, "unique_tournament_id": tournament_id, "season_id": season_id}
     
     try:
-        home_stats_res = requests.get(stats_url, headers=headers, params=home_params, timeout=15)
-        away_stats_res = requests.get(stats_url, headers=headers, params=away_params, timeout=15)
+        home_stats_res = requests.get(stats_url, headers=headers, params=home_params, timeout=20)
+        away_stats_res = requests.get(stats_url, headers=headers, params=away_params, timeout=20)
         
         if home_stats_res.status_code != 200 or away_stats_res.status_code != 200:
             print(f"Stats fetch failed. Home {home_stats_res.status_code}, Away {away_stats_res.status_code}")
@@ -847,7 +848,7 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
     try:
         # 1. Fetch Details (Score, Status, Period Scores)
         detail_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/details"
-        res = requests.get(detail_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        res = requests.get(detail_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=20)
         if res.status_code == 200:
             data = res.json()
             if isinstance(data, list) and len(data) > 0: data = data[0]
@@ -877,7 +878,7 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
 
         # 2. Fetch Statistics (Corners, Cards, etc.)
         stats_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/statistics"
-        res = requests.get(stats_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        res = requests.get(stats_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=20)
         if res.status_code == 200:
             data = res.json()
             if isinstance(data, list) and len(data) > 0:
@@ -887,7 +888,7 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
 
         # 3. Fetch Incidents (Goals, Red Cards, Penalty minute markers)
         inc_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/incidents"
-        res = requests.get(inc_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        res = requests.get(inc_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=20)
         if res.status_code == 200:
             data = res.json()
             if isinstance(data, list) and len(data) > 0:
@@ -897,7 +898,7 @@ def get_sofascore_match_grade_data(sofascore_match_id: int):
 
         # 4. Fetch Player Statistics (For Player Props)
         player_stats_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/player-statistics"
-        res = requests.get(player_stats_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=15)
+        res = requests.get(player_stats_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=20)
         if res.status_code == 200:
             data = res.json()
             # This usually returns arrays for both teams

@@ -11,7 +11,7 @@ const PredictionCard = ({ prediction }) => {
     const [showLogic, setShowLogic] = useState(false); // Toggle for AI step-by-step logic
 
     // Parse teams safely
-    const [homeTeam, awayTeam] = prediction.match.split(' vs ');
+    const [homeTeam, awayTeam] = (prediction.match || "Unknown vs Unknown").split(' vs ');
 
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -122,11 +122,18 @@ const PredictionCard = ({ prediction }) => {
                 <div>
                     <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-2">Analysis Failed</h3>
                     <p className="text-red-300/80 text-sm max-w-md mx-auto leading-relaxed">
-                        We encountered a problem fetching data for {prediction.match || "this match"}. {prediction.error}
+                        We encountered a problem fetching data for {prediction.match || "this match"}.
+                        <span className="block mt-2 font-bold text-red-400">
+                            {prediction.error.includes("Timeout")
+                                ? "The provider is currently congested. Please wait 10 seconds and try again."
+                                : prediction.error}
+                        </span>
                     </p>
                 </div>
-                <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
-                    Infrastructure Error #SS-500
+                <div className="flex items-center gap-2">
+                    <div className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+                        Infrastructure Error #SS-500
+                    </div>
                 </div>
             </div>
         );

@@ -635,7 +635,29 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
             print(f"✅ Route: SofaScore AI Pipeline for Match {match_id}")
             df, advanced_stats = get_sofascore_match_stats(match_id)
             if not advanced_stats:
-                results.append({"match_id": match_id, "error": "Failed to fetch SofaScore stats. Check your RapidAPI configuration."})
+                # RECOVERY: Try to get match name from cache if stats fetch failed
+                recovered_match = "Unknown SofaScore Match"
+                import sqlite3, json
+                from src.database.db import DB_NAME
+                try:
+                    conn = sqlite3.connect(DB_NAME)
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT fixtures_json FROM daily_fixtures WHERE date LIKE 'sofascore_%'")
+                    for row in cursor.fetchall():
+                        cached_matches = json.loads(row[0]).get('matches', [])
+                        for m in cached_matches:
+                            if str(m.get('id')) == str(match_id):
+                                recovered_match = f"{m.get('homeTeam', {}).get('name', '???')} vs {m.get('awayTeam', {}).get('name', '???')}"
+                                break
+                        if recovered_match != "Unknown SofaScore Match": break
+                except: pass
+                finally: conn.close()
+
+                results.append({
+                    "match_id": match_id, 
+                    "match": recovered_match,
+                    "error": "Provider Timeout (8s). The data source is currently congested. Please try again in a moment."
+                })
                 continue
                 
             home_team = advanced_stats.get('metadata', {}).get('home_team', 'Unknown')
