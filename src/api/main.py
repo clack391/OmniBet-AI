@@ -560,6 +560,7 @@ def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(ge
         bet = request.bets[0]
         match_data = {
             "match": bet.get("match", "Unknown"),
+            "match_date": bet.get("match_date"),
             "primary_pick": {
                 "tip": bet.get("selection", "N/A"),
                 "odds": bet.get("odds", "0.00"),

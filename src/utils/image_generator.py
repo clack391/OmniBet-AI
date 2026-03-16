@@ -110,13 +110,14 @@ def generate_accumulator_card(matches_list, output_filename=None):
     font_path = "font.ttf"
     try:
         if not os.path.exists(font_path):
-            header_font = row_font = total_font = ImageFont.load_default()
+            header_font = row_font = date_font = total_font = ImageFont.load_default()
         else:
             header_font = ImageFont.truetype(font_path, 35)
             row_font = ImageFont.truetype(font_path, 25) # Reduced size to prevent bleed
+            date_font = ImageFont.truetype(font_path, 18) # Smaller font for the date
             total_font = ImageFont.truetype(font_path, 60)
     except:
-        header_font = row_font = total_font = ImageFont.load_default()
+        header_font = row_font = date_font = total_font = ImageFont.load_default()
 
     # 4. Header Row (Y=180)
     draw.text((match_x, 180), "MATCH", fill="white", font=header_font, anchor="ls", stroke_width=3, stroke_fill="black")
@@ -134,7 +135,18 @@ def generate_accumulator_card(matches_list, output_filename=None):
         m_name = match.get("match", "Unknown Match")
         m_pick = match.get("pick", match.get("selection", "N/A"))
         m_market = match.get("market", "")
+        m_date = match.get("match_date", "")
         
+        # Format date for image if it looks like ISO
+        formatted_time = ""
+        if m_date and 'T' in m_date:
+            try:
+                # Basic parse to get HH:MM and DD/MM
+                dt = datetime.fromisoformat(m_date.replace('Z', '+00:00'))
+                # We'll stick to a simple clean format for the small space
+                formatted_time = dt.strftime("%d/%m %H:%M")
+            except: formatted_time = ""
+
         # Merge market into pick for clarity (e.g. "BTS" + "Yes" -> "BTS Yes")
         if m_market and m_market.upper() not in m_pick.upper():
             m_pick = f"{m_market} {m_pick}".strip()
@@ -153,12 +165,17 @@ def generate_accumulator_card(matches_list, output_filename=None):
         if len(m_pick) > 28: m_pick = m_pick[:25] + "..."
         
         # B. Draw Columns
+        # Match Name
         draw.text((match_x, current_y), m_name.upper(), fill="white", font=row_font, anchor="ls", stroke_width=3, stroke_fill="black")
+        # Match Date (directly under name if exists)
+        if formatted_time:
+            draw.text((match_x, current_y + 25), formatted_time, fill="#AAAAAA", font=date_font, anchor="ls", stroke_width=1, stroke_fill="black")
+
         draw.text((verdict_x, current_y), m_pick.upper(), fill="#00FF00", font=row_font, anchor="ls", stroke_width=3, stroke_fill="black")
         draw.text((odds_x, current_y), f"{m_odds:.2f}", fill="white", font=row_font, anchor="rs", stroke_width=3, stroke_fill="black")
         
-        # C. Sub-line divider (Y+45)
-        draw.line([(50, current_y + 45), (1030, current_y + 45)], fill="#555555", width=1)
+        # C. Sub-line divider (Y+55 instead of +45 to make room for date)
+        draw.line([(50, current_y + 55), (1030, current_y + 55)], fill="#555555", width=1)
         
         # D. Move to next row
         current_y += 100

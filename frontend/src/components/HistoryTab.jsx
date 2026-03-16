@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap, FolderPlus } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap, FolderPlus, PlusCircle } from 'lucide-react';
+import { useBetSlip } from '../context/BetSlipContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -132,6 +133,22 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
         } catch (err) {
             alert(err.response?.data?.detail || "Failed to create group.");
         }
+    };
+
+    const { addToSlip } = useBetSlip();
+
+    const handleAddAllToSlip = (picks) => {
+        picks.forEach(pick => {
+            addToSlip({
+                match_id: pick.match_id,
+                match: pick.teams,
+                match_date: pick.match_date,
+                market: pick.market || 'Match Pick',
+                selection: pick.chosen_tip || pick.safe_bet_tip,
+                odds: pick.odds || 1.50
+            });
+        });
+        alert(`${picks.length} picks added to your Bet Slip!`);
     };
 
     const handleClearBestPicks = async () => {
@@ -284,13 +301,21 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 {bestPicks.master_reasoning}
                             </p>
                         </div>
-                        <button
-                            onClick={handleClearBestPicks}
-                            className="p-2 text-amber-500/50 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
-                            title="Clear Best Picks"
-                        >
-                            <XCircle className="w-5 h-5" />
-                        </button>
+                        <div className="flex gap-2 relative z-20">
+                            <button
+                                onClick={() => handleAddAllToSlip(bestPicks.picks)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black rounded-xl transition-all shadow-lg active:scale-95 text-xs uppercase tracking-tight border-b-4 border-amber-700 hover:border-amber-600 relative z-30"
+                            >
+                                <PlusCircle className="w-4 h-4" /> Add all to slip
+                            </button>
+                            <button
+                                onClick={handleClearBestPicks}
+                                className="p-2 text-amber-500/50 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-colors"
+                                title="Clear Best Picks"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 relative z-10">

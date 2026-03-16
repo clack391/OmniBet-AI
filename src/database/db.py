@@ -498,7 +498,7 @@ def get_matches_by_group(group_id: int):
     try:
         cursor.execute('''
             SELECT p.* FROM predictions p
-            JOIN group_matches gm ON p.match_id = gm.match_id
+            JOIN group_matches gm ON p.id = gm.prediction_id
             WHERE gm.group_id = ?
             ORDER BY gm.added_at DESC
         ''', (group_id,))
