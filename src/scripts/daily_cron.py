@@ -33,12 +33,13 @@ def run_daily_cron():
         print("🛑 AI Automation is currently DISABLED in settings. Exiting.")
         return
     
-    # 1. Get dates for the custom 2:00 AM to 1:59 AM window
+    # 1. Get dates for the 24-hour rollover (00:00 UTC) with overlap buffer
     today_dt = datetime.now(timezone.utc)
     
-    # Establish the exact 24-hour window starting at 2:00 AM
-    start_time = today_dt.replace(hour=2, minute=0, second=0, microsecond=0)
-    end_time = start_time + timedelta(hours=23, minutes=59, seconds=59)
+    # Establish the standard window starting at 00:00 UTC
+    # We use a 26-hour end_time to ensure early morning games are always captured by both runs
+    start_time = today_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_time = start_time + timedelta(hours=26)
     
     # We must fetch both today and tomorrow from the API to cover the gap
     start_date_str = start_time.strftime("%Y-%m-%d")
