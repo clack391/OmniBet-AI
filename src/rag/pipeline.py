@@ -5,6 +5,7 @@ import requests
 import google.generativeai as genai
 from dotenv import load_dotenv
 from datetime import datetime, timezone
+from src.utils.time_utils import get_now_wat, get_today_wat_str, to_wat
 
 load_dotenv()
 
@@ -49,7 +50,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     - Treat this as a PREDICTION based on pre-match form and stats, NOT a live commentary.
     """
 
-    current_date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    current_date_str = get_today_wat_str()
 
     prompt = f"""
     Act as an expert quantitative sports analyst for OmniBet AI.
@@ -233,7 +234,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             payload["tools"] = [{"google_search": {}}]
         
         print(f"🧠 [Agent 1] Generating analysis for {team_a} vs {team_b} (Searching web if future match)...")
-        request_start = datetime.now()
+        request_start = get_now_wat()
         
         max_retries = 3
         for attempt in range(max_retries):
@@ -250,7 +251,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
                 else:
                     raise
                     
-        request_end = datetime.now()
+        request_end = get_now_wat()
         print(f"✅ [Agent 1] Analysis finished in {(request_end - request_start).total_seconds():.2f}s")
         
         # When using search grounding, the response might have multiple parts
@@ -398,7 +399,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
         print(f"⏳ [Agent 2] Pausing 5 seconds to clear Gemini API Rate Limits...")
         time.sleep(5)
         print(f"🔎 [Agent 2] Risk Manager is now reviewing {initial_prediction_json.get('match')}...")
-        rm_start = datetime.now()
+        rm_start = get_now_wat()
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("API Key is missing")
@@ -442,7 +443,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
                 else:
                     raise
         
-        rm_end = datetime.now()
+        rm_end = get_now_wat()
         print(f"✅ [Agent 2] Risk review completed in {(rm_end - rm_start).total_seconds():.2f}s")
         
         response_json = response.json()
@@ -502,7 +503,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     
     try:
         print(f"🏆 [Risk Officer] Building the safest master accumulator. Please wait...")
-        master_start = datetime.now()
+        master_start = get_now_wat()
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("API Key is missing")
@@ -529,7 +530,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
                     time.sleep(5)
                 else:
                     raise
-        master_end = datetime.now()
+        master_end = get_now_wat()
         print(f"✅ [Risk Officer] Master parlay crafted in {(master_end - master_start).total_seconds():.2f}s")
         
         response_json = response.json()

@@ -4,6 +4,7 @@ import os
 import json
 import google.generativeai as genai
 from datetime import datetime, timedelta, timezone
+from src.utils.time_utils import get_now_wat, to_wat
 from dotenv import load_dotenv
 import pandas as pd
 from src.utils.rate_limiter import rate_limit
@@ -445,7 +446,7 @@ def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
     # 1. Check TTL Cache
     if competition_id in standings_cache:
         cache_entry = standings_cache[competition_id]
-        time_since_fetch = datetime.now() - cache_entry["fetched_at"]
+        time_since_fetch = get_now_wat() - cache_entry["fetched_at"]
         
         if time_since_fetch < timedelta(hours=12):
             print(f"✅ Loading standings for Comp {competition_id} from 12-Hour Cache (Age: {time_since_fetch})")
@@ -474,7 +475,7 @@ def get_team_standings(team_id: int, competition_id: int = 2021) -> dict:
                 # Update Cache with Data and Timestamp
                 standings_cache[competition_id] = {
                     "data": standings_data,
-                    "fetched_at": datetime.now()
+                    "fetched_at": get_now_wat()
                 }
             else:
                 return {} # Invalid data format

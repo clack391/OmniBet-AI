@@ -44,6 +44,7 @@ from src.utils.delivery_router import deliver_prediction, deliver_accumulator
 from src.bot.pref_manager import get_user_preference, set_user_preference
 from src.services.grader import fetch_result_with_ai
 from src.utils.auth import get_password_hash, verify_password, create_access_token, get_admin_user
+from src.utils.time_utils import get_now_wat, get_today_wat_str, to_wat
 from fastapi.responses import Response
 
 app = FastAPI()
@@ -240,7 +241,7 @@ def parse_sportybet_code(request: BookingCodeRequest):
                  except: pass
         
         if not target_dates:
-            today = datetime.now()
+            today = get_now_wat()
             for i in range(8):
                 target_dates.add((today + timedelta(days=i)).strftime("%Y-%m-%d"))
         
@@ -532,8 +533,7 @@ def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(ge
         if match_date_str:
             try:
                 dt = datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
-                from zoneinfo import ZoneInfo
-                dt_wat = dt.astimezone(ZoneInfo("Africa/Lagos"))
+                dt_wat = to_wat(dt)
                 formatted_date = dt_wat.strftime("%Y-%m-%d %H:%M WAT")
             except: formatted_date = str(match_date_str)
         

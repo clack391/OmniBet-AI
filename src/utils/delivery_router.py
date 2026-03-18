@@ -2,10 +2,7 @@ import telebot
 import os
 import time
 from datetime import datetime
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo # For older python
+from src.utils.time_utils import to_wat
 from src.bot.pref_manager import get_user_preference
 from src.utils.image_generator import generate_accumulator_card
 
@@ -66,7 +63,7 @@ def deliver_prediction(chat_id, match_data, retries=2):
     if match_date:
         try:
             dt = datetime.fromisoformat(match_date.replace('Z', '+00:00'))
-            dt_wat = dt.astimezone(ZoneInfo("Africa/Lagos"))
+            dt_wat = to_wat(dt)
             formatted_date = dt_wat.strftime("%Y-%m-%d %H:%M WAT")
         except: formatted_date = str(match_date)
 
@@ -159,7 +156,7 @@ def deliver_accumulator(chat_id, bets, total_odds, retries=2):
                 if m_date:
                     try:
                         dt = datetime.fromisoformat(m_date.replace('Z', '+00:00'))
-                        dt_wat = dt.astimezone(ZoneInfo("Africa/Lagos"))
+                        dt_wat = to_wat(dt)
                         f_date = dt_wat.strftime("%d/%m %H:%M WAT")
                     except: pass
 

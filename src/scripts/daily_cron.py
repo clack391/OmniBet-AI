@@ -1,8 +1,6 @@
-import os
-import sys
-import time
 import json
 from datetime import datetime, timedelta, timezone
+from src.utils.time_utils import get_now_wat, WAT
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,18 +32,18 @@ def run_daily_cron():
         return
     
     # 1. Get dates for the 24-hour rollover (00:00 UTC) with overlap buffer
-    today_dt = datetime.now(timezone.utc)
+    # 1. Get dates for the 24-hour rollover (00:00 WAT)
+    today_dt = get_now_wat()
     
-    # Establish the standard window starting at 00:00 UTC
-    # We use a 26-hour end_time to ensure early morning games are always captured by both runs
+    # Establish the standard window starting at 00:00 WAT
     start_time = today_dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_time = start_time + timedelta(hours=26)
+    end_time = start_time + timedelta(hours=26) # 26-hour buffer
     
     # We must fetch both today and tomorrow from the API to cover the gap
     start_date_str = start_time.strftime("%Y-%m-%d")
     end_date_str = end_time.strftime("%Y-%m-%d")
     
-    print(f"📅 Fetching fixtures between {start_time.strftime('%Y-%m-%d %H:%M')} and {end_time.strftime('%Y-%m-%d %H:%M')} UTC...")
+    print(f"📅 Fetching fixtures between {start_time.strftime('%Y-%m-%d %H:%M')} and {end_time.strftime('%Y-%m-%d %H:%M')} WAT...")
     
     provider = get_app_setting("primary_provider", "football-data")
     print(f"⚙️ Active Data Provider: {provider}")
@@ -68,9 +66,10 @@ def run_daily_cron():
         if not utc_str:
             continue
         try:
-            # Parse '2026-02-27T15:00:00Z' into datetime
-            match_dt = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
-            if start_time <= match_dt <= end_time:
+            # Parse '2026-02-27T15:00:00Z' into datetime and convert to WAT for comparison
+            match_dt_utc = datetime.fromisoformat(utc_str.replace('Z', '+00:00'))
+            match_dt_wat = match_dt_utc.astimezone(WAT)
+            if start_time <= match_dt_wat <= end_time:
                 target_matches.append(m)
         except ValueError:
             pass
