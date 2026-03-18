@@ -112,7 +112,7 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
         
     # 2. Fetch Grade Data (Consolidated RapidAPI calls)
     print(f"📡 [Grader] Fetching RapidAPI data for match_id: {match_id}")
-    grade_data = get_sofascore_match_grade_data(match_id)
+    grade_data = get_sofascore_match_grade_data(match_id, match_date)
     
     if not grade_data or grade_data.get("score_summary") == "Unknown":
         print(f"⚠️ Failed to fetch RapidAPI grade data for {match_id}. Falling back to Search.")
