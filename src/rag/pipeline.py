@@ -470,7 +470,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     ### Task
     Review the following JSON list of analyzed matches. Each match now contains a `primary_pick`, an `alternative_pick`, a `scenario_analysis`, and often a `supreme_court` ruling.
     Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip that balances supreme safety with reasonable accumulator odds.
-    - **JUDICIAL OVERRIDE**: If a match contains a `supreme_court` object, you MUST prioritize its verdict. If the court overturned the original pick, you MUST NOT use the overturned pick. Use the `primary_safe_pick` from the supreme court ruling instead.
+    - **JUDICIAL OVERRIDE**: If a match contains a `supreme_court` object, you MUST prioritize its verdict. If the court overturned the original pick, you MUST NOT use the overturned pick. Use the `Arbiter_Safe_Pick` from the supreme court ruling instead.
     - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive Scenarios A, B, AND C, you must throw the match out. A safe parlay choice MUST be resilient to an early red card or an underdog goal.
     {target_instruction}
     Return ONLY the absolute safest, highest-confidence matches for the master parlay.
