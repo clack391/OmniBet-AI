@@ -638,6 +638,7 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
             if not advanced_stats:
                 # RECOVERY: Try to get match name from cache if stats fetch failed
                 recovered_match = "Unknown SofaScore Match"
+                match_date = None
                 import sqlite3, json
                 from src.database.db import DB_NAME
                 try:
@@ -649,15 +650,37 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
                         for m in cached_matches:
                             if str(m.get('id')) == str(match_id):
                                 recovered_match = f"{m.get('homeTeam', {}).get('name', '???')} vs {m.get('awayTeam', {}).get('name', '???')}"
+                                match_date = m.get('utcDate')
                                 break
                         if recovered_match != "Unknown SofaScore Match": break
                 except: pass
                 finally: conn.close()
 
+                if recovered_match != "Unknown SofaScore Match" and " vs " in recovered_match:
+                    print(f"🔄 Resilient Fallback: Predicting {recovered_match} without advanced stats...")
+                    hp, ap = recovered_match.split(" vs ")
+                    
+                    try:
+                        odds = fetch_latest_odds(hp, ap)
+                        initial_prediction = predict_match(
+                            hp, ap, match_stats={}, odds_data=odds, 
+                            match_date=match_date if match_date and "1970" not in match_date else None
+                        )
+                        final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+                        final_prediction['match_id'] = match_id
+                        final_prediction['match_date'] = match_date
+                        final_prediction['match'] = recovered_match
+                        
+                        save_prediction(final_prediction)
+                        results.append(final_prediction)
+                        continue
+                    except Exception as pred_e:
+                        print(f"Fallback Prediction Failed: {pred_e}")
+
                 results.append({
                     "match_id": match_id, 
                     "match": recovered_match,
-                    "error": "Provider Timeout (8s). The data source is currently congested. Please try again in a moment."
+                    "error": "Advanced Stats Missing. The provider returned no data for this specific match ID."
                 })
                 continue
                 
