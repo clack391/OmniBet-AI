@@ -8,11 +8,17 @@ const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
 
     const {
         verdict_status,
+        Supreme_Court_Final_Ruling,
         supreme_court_reasoning,
+        Arbiter_Safe_Pick,
         primary_safe_pick,
-        alternative_value_pick,
+        Crucible_Simulation_Warning,
         variance_warning
     } = supreme_court;
+
+    const final_ruling = Supreme_Court_Final_Ruling || supreme_court_reasoning;
+    const safe_pick = Arbiter_Safe_Pick || primary_safe_pick;
+    const variance = Crucible_Simulation_Warning || variance_warning;
 
     return (
         <div className="bg-gradient-to-br from-indigo-950 via-gray-900 to-slate-950 rounded-xl border-2 border-indigo-500/30 overflow-hidden shadow-2xl relative transition-all duration-500">
@@ -40,9 +46,9 @@ const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
                 {/* Reasoning with Expand/Collapse */}
                 <div className="relative">
                     <p className={`text-base text-indigo-50 leading-relaxed font-medium italic transition-all duration-300 ${isExpanded ? '' : 'line-clamp-3'}`}>
-                        "{supreme_court_reasoning}"
+                        "{final_ruling}"
                     </p>
-                    {supreme_court_reasoning && supreme_court_reasoning.length > 150 && (
+                    {final_ruling && final_ruling.length > 150 && (
                         <button
                             onClick={() => setIsExpanded(!isExpanded)}
                             className="mt-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest flex items-center gap-1 transition-colors"
@@ -80,26 +86,26 @@ const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
                             <div className="mb-4">
                                 <div className="text-[9px] text-indigo-400 font-bold uppercase mb-1 tracking-wider">Arbiter's Safe Pick</div>
                                 <div className="flex items-center justify-between gap-2">
-                                    <div className="text-base md:text-lg font-black text-white leading-tight break-words">{primary_safe_pick?.tip || 'N/A'}</div>
-                                    {primary_safe_pick?.odds && (
+                                    <div className="text-base md:text-lg font-black text-white leading-tight break-words">{safe_pick?.tip || 'N/A'}</div>
+                                    {safe_pick?.odds && (
                                         <div className="text-xs font-black text-indigo-400 bg-indigo-500/10 px-1.5 py-0.5 rounded shrink-0">
-                                            @{parseFloat(primary_safe_pick.odds).toFixed(2)}
+                                            @{parseFloat(safe_pick.odds).toFixed(2)}
                                         </div>
                                     )}
                                 </div>
-                                <div className="text-[10px] text-gray-500 uppercase tracking-tighter mt-0.5">{primary_safe_pick?.market}</div>
+                                <div className="text-[10px] text-gray-500 uppercase tracking-tighter mt-0.5">{safe_pick?.market}</div>
                             </div>
-                            {primary_safe_pick?.tip && handleAdd && (
+                            {safe_pick?.tip && handleAdd && (
                                 <button
-                                    onClick={() => handleAdd(primary_safe_pick, 'Primary')}
-                                    disabled={isPickAdded(primary_safe_pick.tip)}
-                                    className={`w-full py-1.5 rounded text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isPickAdded(primary_safe_pick.tip)
+                                    onClick={() => handleAdd(safe_pick, 'Primary')}
+                                    disabled={isPickAdded(safe_pick.tip)}
+                                    className={`w-full py-1.5 rounded text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${isPickAdded(safe_pick.tip)
                                         ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 cursor-default'
                                         : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40'
                                         }`}
                                 >
-                                    {isPickAdded(primary_safe_pick.tip) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                                    {isPickAdded(primary_safe_pick.tip) ? 'Added' : 'Add Arbiter'}
+                                    {isPickAdded(safe_pick.tip) ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                                    {isPickAdded(safe_pick.tip) ? 'Added' : 'Add Arbiter'}
                                 </button>
                             )}
                         </div>
@@ -134,12 +140,12 @@ const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
                 )}
 
                 {/* Variance Warning - Larger Text */}
-                {variance_warning && (
+                {variance && (
                     <div className="bg-red-500/5 border border-red-500/20 rounded-lg p-3 flex gap-3 items-start">
                         <AlertTriangle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
                         <div className="text-sm text-red-200/90 italic">
-                            <span className="font-black uppercase text-[10px] block mb-1 text-red-400 tracking-[0.1em]">Variance Warning:</span>
-                            {variance_warning}
+                            <span className="font-black uppercase text-[10px] block mb-1 text-red-400 tracking-[0.1em]">Crucible Simulation Warning:</span>
+                            {variance}
                         </div>
                     </div>
                 )}

@@ -41,10 +41,11 @@ def deliver_prediction(chat_id, match_data, retries=2):
     odds = "0.00"
     market = ""
     
-    if sc and sc.get("primary_safe_pick"):
-        pick_tip = sc["primary_safe_pick"].get("tip", "N/A")
-        odds = sc["primary_safe_pick"].get("odds", "0.00")
-        market = sc["primary_safe_pick"].get("market", "")
+    if sc and (sc.get("Arbiter_Safe_Pick") or sc.get("primary_safe_pick")):
+        asp = sc.get("Arbiter_Safe_Pick") or sc.get("primary_safe_pick")
+        pick_tip = asp.get("tip", "N/A")
+        odds = asp.get("odds", "0.00")
+        market = asp.get("market", "")
     elif av and av.get("ai_recommended_bet"):
         pick_tip = av.get("ai_recommended_bet", "N/A")
         odds = av.get("estimated_odds", "0.00")

@@ -4,6 +4,7 @@ import re
 import requests
 import google.generativeai as genai
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 
 load_dotenv()
 
@@ -15,7 +16,6 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL_NAME = "gemini-3-pro-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
-from datetime import datetime, timezone
 
 def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, advanced_stats: dict = None, match_date: str = None):
 
@@ -489,7 +489,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
                 "match_id": 12345,
                 "teams": "Home vs Away",
                 "match_date": "YYYY-MM-DDTHH:MM:SSZ",
-                "chosen_tip": "The singular tip you selected from either the primary or alternative options",
+                "chosen_tip": "The singular tip you selected from either the primary or alternative options (Priority: Arbiter_Safe_Pick if present)",
                 "odds": 1.45,
                 "confidence": 95,
                 "home_logo": "url_if_exists",
@@ -695,19 +695,20 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - BUCKET 6 (Stalemate): 10 Minute Draw, Correct Score.
     - BUCKET 7 (Micro-Target): Player Props.
 
+    *** MANDATORY OUTPUT SEQUENCE (LLM CHRONOLOGY) ***
+    You MUST generate the JSON fields in this exact order to ensure your reasoning precedes your selection:
+    1. Crucible_Simulation_Warning: Identify the exact nightmare trap/variance first.
+    2. Supreme_Court_Final_Ruling: Explain how you are dodging that trap.
+    3. Arbiter_Safe_Pick: The indestructible selection after downgrading.
+
     Return your ruling STRICTLY in JSON:
     {{
-      "supreme_court_reasoning": "string (A detailed, multi-paragraph judicial opinion. Provide a cold, deep analytical breakdown of 5-8 heavy sentences that connects tactical data, internal agent debate, and mathematical EV logic into one authoritative verdict.)",
-      "variance_warning": "string (Explain how this bet could lose...)",
+      "Crucible_Simulation_Warning": "string (Identify the worst-case scenario where the tentative bet dies. Be brutal. If you find a trap, you MUST explain how it kills the original pick.)",
+      "Supreme_Court_Final_Ruling": "string (A detailed, multi-paragraph judicial opinion. Connect tactical data and internal agent debate. Explain EXACTLY how you are downgrading the market to survive the trap identified above.)",
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
-      "grid_corrections": {{
-        "Match_Goals": "string (e.g., 'Over 2.5 Goals. [Reason...]')",
-        "BTTS": "string (e.g., 'Yes. [Reason...]')",
-        "Correct_Score": "string (e.g., '2-1. [Reason...]')"
-      }},
-      "primary_safe_pick": {{
+      "Arbiter_Safe_Pick": {{
         "market": "string",
-        "tip": "string",
+        "tip": "string (Or exactly: 'NO BET: Market too volatile for Accumulator survival.')",
         "confidence": "integer (0-100)",
         "odds": 1.55
       }},
@@ -717,6 +718,11 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         "confidence": "integer (0-100)",
         "odds": 2.25,
         "value_reasoning": "string"
+      }},
+      "grid_corrections": {{
+        "Match_Goals": "string (e.g., 'Over 2.5 Goals. [Reason...]')",
+        "BTTS": "string (e.g., 'Yes. [Reason...]')",
+        "Correct_Score": "string (e.g., '2-1. [Reason...]')"
       }}
     }}
     
@@ -802,11 +808,15 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         
     except Exception as e:
         print(f"Supreme Court Error: {e}")
+        
+        # Safely extract the match string from the first agent's pitch to avoid NameError
+        match_name = agent_1_pitch.get('match', 'Unknown Match') if isinstance(agent_1_pitch, dict) else 'Unknown Match'
+        
         return {
-            "match": f"{team_a} vs {team_b}",
-            "supreme_court_reasoning": f"The supreme court failed due to an technical error: {str(e)}",
-            "variance_warning": "Technical variance is too high.",
+            "match": match_name,
+            "Supreme_Court_Final_Ruling": f"The supreme court failed due to an technical error: {str(e)}",
+            "Crucible_Simulation_Warning": "Technical variance is too high.",
             "verdict_status": "NO_BET",
-            "primary_safe_pick": {"market": "N/A", "tip": "N/A", "confidence": 0},
+            "Arbiter_Safe_Pick": {"market": "N/A", "tip": "N/A", "confidence": 0},
             "alternative_value_pick": {"market": "N/A", "tip": "N/A", "confidence": 0, "value_reasoning": "Error occurred."}
         }

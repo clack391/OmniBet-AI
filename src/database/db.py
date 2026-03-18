@@ -172,8 +172,14 @@ def save_prediction(data: dict):
             data.get('match_date'),
             data.get('match'),
             json.dumps(data),
-            data.get('primary_pick', {}).get('tip', data.get('safe_bet_tip', 'Analysis Failed')),
-            data.get('primary_pick', {}).get('confidence', data.get('confidence', 0)),
+            data.get('supreme_court', {}).get('Arbiter_Safe_Pick', {}).get('tip') or 
+            data.get('supreme_court', {}).get('primary_safe_pick', {}).get('tip') or 
+            data.get('primary_pick', {}).get('tip') or 
+            data.get('safe_bet_tip', 'Analysis Failed'),
+            data.get('supreme_court', {}).get('Arbiter_Safe_Pick', {}).get('confidence') or 
+            data.get('supreme_court', {}).get('primary_safe_pick', {}).get('confidence') or 
+            data.get('primary_pick', {}).get('confidence') or 
+            data.get('confidence', 0),
             data.get('home_logo'),
             data.get('away_logo')
         ))
