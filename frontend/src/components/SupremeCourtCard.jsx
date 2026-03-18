@@ -13,7 +13,8 @@ const SupremeCourtCard = ({ supreme_court, handleAdd, isPickAdded }) => {
         Arbiter_Safe_Pick,
         primary_safe_pick,
         Crucible_Simulation_Warning,
-        variance_warning
+        variance_warning,
+        alternative_value_pick
     } = supreme_court;
 
     const final_ruling = Supreme_Court_Final_Ruling || supreme_court_reasoning;
