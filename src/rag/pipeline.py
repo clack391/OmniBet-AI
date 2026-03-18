@@ -12,7 +12,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a standard stable model compatible with the free tier/broad availability
 # We use gemini-3.1-pro-preview for deeper analytical reasoning and Google Search Grounding support 
-MODEL_NAME = "gemini-3.1-pro-preview" 
+MODEL_NAME = "gemini-3-pro-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
 from datetime import datetime, timezone
@@ -166,7 +166,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
        - **RESTRICTION**: You are STRICTLY FORBIDDEN from inventing or using outside betting markets (e.g., "Win to Nil", "Team to Score in Both Halves", "Player to Score 2+"). Both your Primary and Alternative picks MUST be selected directly from the 17 core markets you analyzed above.
        - **Primary Pick (The Banker)**: Must be the absolute SAFEST mathematical bet from the 17 core markets. You MUST select the single market that has the highest mathematical probability of winning. If the data screams 'Over 1.5 Goals' or 'BTTS: Yes' as the safest possible outcome over 'Double Chance', you must choose that. Act as a pure quantitative expert finding the most undeniable edge.
        - **Alternative Pick**: Must be a VALUE bet from the 17 core markets. Find a market that offers a significantly higher ROI (higher odds) but is still heavily supported by the statistics and scenario analysis. NO "Win to Nil".
-       - **ODDS EXTRACTION**: You MUST provide the realistic Decimal Odds for both picks. If you have the Odds API payload, use those exact numbers. If the payload is empty, use your Google Search to find the real market odds. If you cannot find them, estimate the exact decimal odds based on implied probability.
+        - **ODDS EXTRACTION**: You MUST provide the realistic Decimal Odds for both picks. If you have the Odds API payload, use those exact numbers. If the payload is empty, you MUST use your Google Search to find the real market odds for ALL 17 categories below. If search also fails, estimate the exact decimal odds based on implied probability.
     
     ### Output Format
     CRITICAL: Ensure your JSON structure is perfectly valid and contains ZERO trailing commas at the end of objects or lists.
@@ -180,23 +180,23 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         }},
         "match": "{team_a} vs {team_b}",
         "full_analysis": {{
-            "1X2": "Prediction: [Home/Draw/Away]. [Reasoning...]",
-            "Match_Goals": "Prediction: [Over/Under]. [Reasoning...]",
-            "BTTS": "Prediction: [Yes/No]. [Reasoning...]",
-            "Team_Goals": "Prediction: [Team + O/U]. [Reasoning...]",
-            "Double_Chance": "Prediction: [1X/X2/12]. [Reasoning...]",
-            "DNB": "Prediction: [Home/Away]. [Reasoning...]",
-            "Asian_Handicap": "Prediction: [Pick]. [Reasoning...]",
-            "First_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
-            "Second_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
-            "HT_FT": "Prediction: [Pick]. [Reasoning...]",
-            "Correct_Score": "Prediction: [Score]. [Reasoning...]",
-            "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]",
-            "Total_Corners": "Prediction: [O/U]. [Reasoning...]",
-            "Total_Cards": "Prediction: [O/U Booking Points]. [Reasoning...]",
-            "Highest_Scoring_Half": "Prediction: [1st Half / 2nd Half / Tie]. [Reasoning...]",
-            "10_Minute_Draw": "Prediction: [Yes/No]. [Reasoning...]",
-            "Player_Props": "Prediction: [Player Bet]. [Reasoning...]"
+            "1X2": {{"prediction": "[Home/Draw/Away]", "odds": 1.95, "reasoning": "..."}},
+            "Match_Goals": {{"prediction": "[Over/Under 2.5]", "odds": 1.80, "reasoning": "..."}},
+            "BTTS": {{"prediction": "[Yes/No]", "odds": 1.70, "reasoning": "..."}},
+            "Team_Goals": {{"prediction": "[Team + O/U]", "odds": 1.65, "reasoning": "..."}},
+            "Double_Chance": {{"prediction": "[1X/X2/12]", "odds": 1.35, "reasoning": "..."}},
+            "DNB": {{"prediction": "[Home/Away]", "odds": 1.55, "reasoning": "..."}},
+            "Asian_Handicap": {{"prediction": "[Pick]", "odds": 1.90, "reasoning": "..."}},
+            "First_Half_Goals": {{"prediction": "[O/U]", "odds": 1.45, "reasoning": "..."}},
+            "Second_Half_Goals": {{"prediction": "[O/U]", "odds": 1.25, "reasoning": "..."}},
+            "HT_FT": {{"prediction": "[Pick]", "odds": 4.50, "reasoning": "..."}},
+            "Correct_Score": {{"prediction": "[Score]", "odds": 12.0, "reasoning": "..."}},
+            "Team_Exact_Goals": {{"prediction": "[Team + Exact]", "odds": 3.20, "reasoning": "..."}},
+            "Total_Corners": {{"prediction": "[O/U]", "odds": 1.85, "reasoning": "..."}},
+            "Total_Cards": {{"prediction": "[O/U]", "odds": 1.85, "reasoning": "..."}},
+            "Highest_Scoring_Half": {{"prediction": "[1H/2H/Tie]", "odds": 2.10, "reasoning": "..."}},
+            "10_Minute_Draw": {{"prediction": "[Yes/No]", "odds": 1.20, "reasoning": "..."}},
+            "Player_Props": {{"prediction": "[Player Bet]", "odds": 2.50, "reasoning": "..."}}
         }},
         "primary_pick": {{
             "tip": "The Safest Banker Prediction",
@@ -359,23 +359,23 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
         "scenario_analysis": {json.dumps(initial_prediction_json.get('scenario_analysis', {}))},
         "match": "{initial_prediction_json.get('match')}",
         "full_analysis": {{
-            "1X2": "Prediction: [Home/Draw/Away]. [Reasoning...]",
-            "Match_Goals": "Prediction: [Over/Under]. [Reasoning...]",
-            "BTTS": "Prediction: [Yes/No]. [Reasoning...]",
-            "Team_Goals": "Prediction: [Team + O/U]. [Reasoning...]",
-            "Double_Chance": "Prediction: [1X/X2/12]. [Reasoning...]",
-            "DNB": "Prediction: [Home/Away]. [Reasoning...]",
-            "Asian_Handicap": "Prediction: [Pick]. [Reasoning...]",
-            "First_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
-            "Second_Half_Goals": "Prediction: [O/U]. [Reasoning...]",
-            "HT_FT": "Prediction: [Pick]. [Reasoning...]",
-            "Correct_Score": "Prediction: [Score]. [Reasoning...]",
-            "Team_Exact_Goals": "Prediction: [Team + Exact Goals]. [Reasoning...]",
-            "Total_Corners": "Prediction: [O/U]. [Reasoning...]",
-            "Total_Cards": "Prediction: [O/U Booking Points]. [Reasoning...]",
-            "Highest_Scoring_Half": "Prediction: [1st Half / 2nd Half / Tie]. [Reasoning...]",
-            "10_Minute_Draw": "Prediction: [Yes/No]. [Reasoning...]",
-            "Player_Props": "Prediction: [Player Bet]. [Reasoning...]"
+            "1X2": {{"prediction": "[Home/Draw/Away]", "odds": 1.95, "reasoning": "..."}},
+            "Match_Goals": {{"prediction": "[Over/Under 2.5]", "odds": 1.80, "reasoning": "..."}},
+            "BTTS": {{"prediction": "[Yes/No]", "odds": 1.70, "reasoning": "..."}},
+            "Team_Goals": {{"prediction": "[Team + O/U]", "odds": 1.65, "reasoning": "..."}},
+            "Double_Chance": {{"prediction": "[1X/X2/12]", "odds": 1.35, "reasoning": "..."}},
+            "DNB": {{"prediction": "[Home/Away]", "odds": 1.55, "reasoning": "..."}},
+            "Asian_Handicap": {{"prediction": "[Pick]", "odds": 1.90, "reasoning": "..."}},
+            "First_Half_Goals": {{"prediction": "[O/U]", "odds": 1.45, "reasoning": "..."}},
+            "Second_Half_Goals": {{"prediction": "[O/U]", "odds": 1.25, "reasoning": "..."}},
+            "HT_FT": {{"prediction": "[Pick]", "odds": 4.50, "reasoning": "..."}},
+            "Correct_Score": {{"prediction": "[Score]", "odds": 12.0, "reasoning": "..."}},
+            "Team_Exact_Goals": {{"prediction": "[Team + Exact]", "odds": 3.20, "reasoning": "..."}},
+            "Total_Corners": {{"prediction": "[O/U]", "odds": 1.85, "reasoning": "..."}},
+            "Total_Cards": {{"prediction": "[O/U]", "odds": 1.85, "reasoning": "..."}},
+            "Highest_Scoring_Half": {{"prediction": "[1H/2H/Tie]", "odds": 2.10, "reasoning": "..."}},
+            "10_Minute_Draw": {{"prediction": "[Yes/No]", "odds": 1.20, "reasoning": "..."}},
+            "Player_Props": {{"prediction": "[Player Bet]", "odds": 2.50, "reasoning": "..."}}
         }},
         "primary_pick": {{
             "tip": "The Final Safe Bet (e.g., 'Home Win' - NO BRACKETS/REASONING)",
@@ -507,7 +507,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -590,7 +590,8 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     - REJECTED: If the user is walking into a statistical trap. **CRITICAL RESTRICTION**: You may ONLY reject a user's bet if it would fail in BOTH Scenario A (Expected Script) AND Scenario B (Underdog Disruption). If the user's bet wins in at least ONE scenario, you MUST downgrade it to a safer variant instead of rejecting it outright. The user's instinct has value - your job is to refine it, not override it.
     - STRICT OUTPUT: The 'ai_recommended_bet' MUST be exactly ONE actionable bet. NEVER offer multiple choices or conversational text in this field.
 
-      - **RULE 5: THE ANTI-BIAS PROTOCOL (CRITICAL)**:
+      - **RULE 5: THE ODDS VERIFICATION MANDATE**: You MUST verify the realism of the `odds` provided in Agent 1's 17-market grid. If Agent 1 used Google Search to find odds, cross-reference them against its tactical xG/metrics. If the odds look too high for the predicted safety (e.g., 2.50 for a "safe" Over 1.5 Goals), you MUST mention this discrepancy in your internal_debate and downgrade the bet accordingly.
+      - **RULE 6: THE ANTI-BIAS PROTOCOL (CRITICAL)**:
         1. **THE "FIRST-LEG" FALLACY**: Do NOT automatically assume 1st Leg matches will be low-scoring or conservative. Base your verdict strictly on the teams' xG and defensive metrics.
         2. **THE "SYSTEM VS. INDIVIDUAL" RULE**: If a superior team (e.g., an away favorite) is missing a star striker, do NOT automatically downgrade them to 'Under' or 'Draw' if their underlying team system creates high possession and high Big Chances. Trust the system to overcome the individual absence.
         3. **THE DEFENSIVE COLLAPSE OVERRIDE**: The 'System vs. Individual' rule applies strictly to offensive injuries. If a team is missing 2 or more starting defenders or their starting Goalkeeper, you MUST heavily penalize their defensive integrity. A broken defensive line destroys a tactical system. You must not blindly trust a team's offensive system to outscore opponents if their defensive foundation is verified as collapsed.
@@ -722,12 +723,19 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     *** RULES ***
     - NO_BET: If data is too chaotic/high variance.
     - GOAL INTEGRITY: You MUST NOT confirm an 'Under' pick if Agent 1's pitch shows combined xG > 2.8. You MUST NOT confirm an 'Over' pick if combined xG < 1.8.
+    - **MANDATE 0: THE CRUCIBLE SIMULATION & THE ULTIMATE VETO (SURVIVAL OVER VALUE)**
+      The Supreme Court is the ultimate intelligence layer, acting as the Supreme Judge for a zero-tolerance Accumulator. You must be smarter than Agent 1 and Agent 2 by actively trying to destroy your own tentative bet before publishing it. You must pass these 4 steps:
+      1. Odds Agnosticism: The 'Arbiter's Safe Pick' must be the absolute safest mathematical floor, completely regardless of how low the odds are (e.g., 1.05, 1.10). Decouple 'Value' from the Safe Pick entirely.
+      2. The Final Stress Test: Take your tentative Safe Banker and forcefully run a final internal simulation. Push the bet through your own 'Variance Warning' and worst-case Game State Scenarios.
+      3. The Relentless Downgrade: If the tentative bet dies in your Variance Warning scenario, you are strictly FORBIDDEN from publishing it. You must systematically downgrade the market across the 17 available buckets (e.g., dropping 'BTTS' to 'Over 1.5 Goals', or 'Away Win' to 'Away +2.5 Handicap') until you find a market that mathematically survives the exact nightmare scenario you just predicted. Never step into the trap you just identified.
+      4. The Ultimate Veto (No Bet): If, after downgrading, you determine that absolutely NONE of the 17 markets can safely survive the game's variance without risking the accumulator, you must strike the match from the record. In the Safe Pick field, output exactly: 'NO BET: Market too volatile for Accumulator survival.' Protect the capital at all costs.
+
 
     - **THE ANTI-BIAS MANDATE**:
       1. **REJECT THE "FIRST-LEG" FALLACY**: Do not allow Agent 2 to overturn a goal market based on "first-leg caution" if the tactical metrics (possession, big chances) show two attacking systems colliding.
       2. **DEFEND THE SYSTEM**: If a favorite is missing a striker but maintains elite offensive metrics (Agent 1's report), defend the "System" against Agent 2's individual-focused pessimism.
       3. **THE DEFENSIVE COLLAPSE OVERRIDE**: The 'System vs. Individual' rule applies strictly to offensive injuries. If a team is missing 2 or more starting defenders or their starting Goalkeeper, you MUST heavily penalize their defensive integrity. A broken defensive line destroys a tactical system. You must not blindly trust a team's offensive system to outscore opponents if their defensive foundation is verified as collapsed.
-      4. **ODDS MANDATE**: You MUST provide realistic `odds` (Decimal format) for both pick buckets. If real-time odds aren't available, derive them from the implied probability of Agent 1's Pitch.
+      4. **ODDS VERIFICATION & MANDATE**: You MUST provide realistic `odds` (Decimal format) for both pick buckets. If Agent 1 used Google Search for its 17-market grid, you MUST verify those prices are not "fake" or "outdated" by cross-referencing them against the current tactical script (xG, home/away form). If no reliable real-time odds are found by any agent, you MUST derive them yourself based on the absolute implied probability of the Match Script.
       4. **GRID HARMONY**: Ensure your `grid_corrections` (if OVERTURNED) fix the most blatant contradictions in the Market Insights grid. If you disagree with a 'low-scoring' audit, fix the `Correct_Score` and `Match_Goals` fields.
       5. **THE VETO POWER (NO BET PROTOCOL)**: You are a strict capital preservation engine. You are NOT required to force a bet if the match conditions are toxic. If a match features massive contradictions (e.g., elite attack vs elite defense but missing key players), extreme variance warnings from Agent 2, or no safe mathematical edge in ANY of the 16 markets, you MUST exercise your Veto Power. In your Final Ruling, explicitly state "MATCH REJECTED - NO BET" and explain that capital preservation is the mathematically correct choice for this fixture. Do not invent a 'safe' pick if one does not exist.
       6. **THE ODDS AGNOSTIC RULE**: You must prioritize Win Probability over Odds Value for the 'Arbiter's Safe Pick'. Do not force a higher-risk market (like Team Goals Over 1.5) simply because the Double Chance or Draw No Bet odds are low. If 1X or DNB is the only mathematically secure path that survives the Risk Manager's Scenario Checks, you MUST accept the low odds. Your primary mandate for the Safe Pick is capital preservation, not yield generation. Save the higher-risk, higher-yield plays strictly for the 'Expected Value (EV) Pick'.

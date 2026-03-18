@@ -453,9 +453,14 @@ const PredictionCard = ({ prediction }) => {
 
 // Simplified Card Component (Triggers Modal)
 const InsightCard = ({ market, analysis, index, isCorrection, getIcon, onClick }) => {
-    // Basic Parsing for Preview
-    const parts = analysis.split('. ');
-    const predictionText = parts[0]?.replace('Prediction: ', '').replace('Prediction:', '') || 'N/A';
+    // Basic Parsing for Preview - Handle both string and object formats
+    let predictionText = 'N/A';
+    if (typeof analysis === 'object') {
+        predictionText = analysis.prediction || 'N/A';
+    } else if (typeof analysis === 'string') {
+        const parts = analysis.split('. ');
+        predictionText = parts[0]?.replace('Prediction: ', '').replace('Prediction:', '') || 'N/A';
+    }
 
     return (
         <div
@@ -492,12 +497,26 @@ const InsightCard = ({ market, analysis, index, isCorrection, getIcon, onClick }
 // Pop-out Modal Component
 const InsightModal = ({ market, analysis, onClose, getIcon }) => {
     const isCorrection = analysis.isCorrection; // Check if passed via activeInsight object
-    const finalAnalysis = typeof analysis === 'object' ? analysis.analysis : analysis;
 
-    // Detailed Parsing
-    const parts = finalAnalysis.split('. ');
-    const predictionText = parts[0]?.replace('Prediction: ', '').replace('Prediction:', '') || 'N/A';
-    const reasoningText = parts.slice(1).join('. ') || 'No detailed reasoning provided.';
+    // Unified Parsing for both string and object (Agent 1 vs Risk Manager vs Supreme Court formats)
+    let predictionText = 'N/A';
+    let reasoningText = 'No detailed reasoning provided.';
+    let oddsValue = null;
+
+    if (typeof analysis === 'object' && analysis.prediction) {
+        // New Schema Format
+        predictionText = analysis.prediction;
+        reasoningText = analysis.reasoning || reasoningText;
+        oddsValue = analysis.odds;
+    } else {
+        // Legacy String Format or Supreme Court Override string
+        const finalAnalysis = typeof analysis === 'object' ? (analysis.analysis || analysis.prediction) : analysis;
+        if (typeof finalAnalysis === 'string') {
+            const parts = finalAnalysis.split('. ');
+            predictionText = parts[0]?.replace('Prediction: ', '').replace('Prediction:', '') || 'N/A';
+            reasoningText = parts.slice(1).join('. ') || reasoningText;
+        }
+    }
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -524,8 +543,13 @@ const InsightModal = ({ market, analysis, onClose, getIcon }) => {
                                     <span className="text-[8px] font-black bg-indigo-500 text-white px-2 py-0.5 rounded uppercase">Judicial Override</span>
                                 )}
                             </div>
-                            <h3 className="text-xl font-black text-white">
+                            <h3 className="text-xl font-black text-white flex items-center gap-3">
                                 {predictionText}
+                                {oddsValue && (
+                                    <span className="text-sm bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/30">
+                                        @{oddsValue}
+                                    </span>
+                                )}
                             </h3>
                         </div>
                     </div>
