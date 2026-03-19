@@ -151,7 +151,19 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                 <div className="flex-1 w-full min-w-0">
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="text-[10px] md:text-xs text-gray-400 font-mono">
-                                            {new Date(item.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
+                                            {(() => {
+                                                try {
+                                                    if (!item.match_date) return "Date Pending";
+                                                    return new Date(item.match_date).toLocaleString('en-GB', {
+                                                        timeZone: 'Africa/Lagos',
+                                                        dateStyle: 'medium',
+                                                        timeStyle: 'short'
+                                                    });
+                                                } catch (e) {
+                                                    console.error("Date formatting error:", e);
+                                                    return item.match_date || "Unknown Date";
+                                                }
+                                            })()}
                                         </div>
                                         <div className="flex gap-2">
                                             <button

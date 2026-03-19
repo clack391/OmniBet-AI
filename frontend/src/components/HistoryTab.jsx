@@ -324,7 +324,18 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="text-xs text-amber-500/70 font-mono">
-                                            {new Date(pick.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' })}
+                                            {(() => {
+                                                try {
+                                                    if (!pick.match_date) return "Date Pending";
+                                                    return new Date(pick.match_date).toLocaleString('en-GB', {
+                                                        timeZone: 'Africa/Lagos',
+                                                        dateStyle: 'short',
+                                                        timeStyle: 'short'
+                                                    });
+                                                } catch (e) {
+                                                    return pick.match_date || "Unknown Date";
+                                                }
+                                            })()}
                                         </div>
                                     </div>
                                     <div className="flex justify-between items-center mb-3 bg-gray-950/50 p-2 rounded-lg border border-gray-800/50 min-w-0">
@@ -393,7 +404,18 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="text-xs text-gray-400 font-mono">
-                                            {new Date(item.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
+                                            {(() => {
+                                                try {
+                                                    if (!item.match_date) return "Date Pending";
+                                                    return new Date(item.match_date).toLocaleString('en-GB', {
+                                                        timeZone: 'Africa/Lagos',
+                                                        dateStyle: 'medium',
+                                                        timeStyle: 'short'
+                                                    });
+                                                } catch (e) {
+                                                    return item.match_date || "Unknown Date";
+                                                }
+                                            })()}
                                             {item.booking_code && <span className="ml-2 text-purple-400 font-bold border-l border-gray-700 pl-2">Slip: {item.booking_code}</span>}
                                         </div>
                                         <div className="flex gap-2">
@@ -546,7 +568,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
 
                         <div className="mt-4 pt-5 border-t border-gray-700">
                             <label className="block text-sm font-medium text-gray-400 mb-2">Create New Folder</label>
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                     type="text"
                                     value={newGroupName}
@@ -557,7 +579,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                 <button
                                     onClick={handleCreateGroupAndAdd}
                                     disabled={!newGroupName.trim()}
-                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded text-white font-semibold flex items-center gap-2 shadow-lg disabled:opacity-50 transition-colors text-sm"
+                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded text-white font-semibold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-colors text-sm w-full sm:w-auto"
                                 >
                                     Create
                                 </button>

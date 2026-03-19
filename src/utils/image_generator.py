@@ -3,6 +3,7 @@ import os
 import uuid
 import time
 from datetime import datetime
+from src.utils.time_utils import to_wat
 
 def abbreviate_verdict(text):
     """
@@ -143,8 +144,10 @@ def generate_accumulator_card(matches_list, output_filename=None):
             try:
                 # Basic parse to get HH:MM and DD/MM
                 dt = datetime.fromisoformat(m_date.replace('Z', '+00:00'))
+                # Convert to WAT for Nigerian users
+                dt_wat = to_wat(dt)
                 # We'll stick to a simple clean format for the small space
-                formatted_time = dt.strftime("%d/%m %H:%M")
+                formatted_time = dt_wat.strftime("%d/%m %H:%M")
             except: formatted_time = ""
 
         # Merge market into pick for clarity (e.g. "BTS" + "Yes" -> "BTS Yes")
