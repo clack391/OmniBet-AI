@@ -128,11 +128,16 @@ const BetSlipSidebar = () => {
                             <X className="w-4 h-4" />
                         </button>
                         <div className="text-xs text-gray-400 mb-1 font-semibold truncate pr-4">{bet.match}</div>
-                        {bet.match_date && (
-                            <div className="text-[10px] text-gray-500 mb-2 font-mono truncate">
-                                {new Date(bet.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
-                            </div>
-                        )}
+                        {(() => {
+                            try {
+                                if (!bet.match_date) return null;
+                                return (
+                                    <div className="text-[10px] text-gray-500 mb-2 font-mono truncate">
+                                        {new Date(bet.match_date).toLocaleString('en-GB', { timeZone: 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' })}
+                                    </div>
+                                );
+                            } catch (e) { return null; }
+                        })()}
                         <div className="text-blue-300 font-bold truncate">
                             {bet.market && bet.selection && !bet.selection.toUpperCase().includes(bet.market.toUpperCase())
                                 ? `${bet.market.toUpperCase()} ${bet.selection}`

@@ -147,7 +147,7 @@ def generate_accumulator_card(matches_list, output_filename=None):
                 # Convert to WAT for Nigerian users
                 dt_wat = to_wat(dt)
                 # We'll stick to a simple clean format for the small space
-                formatted_time = dt_wat.strftime("%d/%m %H:%M")
+                formatted_time = dt_wat.strftime("%d/%m %H:%M WAT")
             except: formatted_time = ""
 
         # Merge market into pick for clarity (e.g. "BTS" + "Yes" -> "BTS Yes")
@@ -210,9 +210,9 @@ def generate_accumulator_card(matches_list, output_filename=None):
 
 if __name__ == "__main__":
     test_accumulator = [
-        {"match": "KOCAELISPOR VS KONYASPOR", "pick": "YES", "market": "BTS", "odds": 1.95},
-        {"match": "ADANA DEMIRSPOR VS SERIKSPOR A.S", "pick": "AWAY", "market": "DOUBLE CHANCE", "odds": 1.25},
-        {"match": "Arsenal vs Chelsea", "pick": "Home Win", "odds": 1.85}
+        {"match": "KOCAELISPOR VS KONYASPOR", "pick": "YES", "market": "BTS", "odds": 1.95, "match_date": "2024-03-20T18:00:00Z"},
+        {"match": "ADANA DEMIRSPOR VS SERIKSPOR A.S", "pick": "AWAY", "market": "DOUBLE CHANCE", "odds": 1.25, "match_date": "2024-03-20T19:00:00Z"},
+        {"match": "Arsenal vs Chelsea", "pick": "Home Win", "odds": 1.85, "match_date": "2024-03-20T20:00:00Z"}
     ]
     generate_accumulator_card(test_accumulator, output_filename="/tmp/acc_test.png")
     print("✅ Cyber-Grid accumulator card generated (/tmp/acc_test.png)!")

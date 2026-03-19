@@ -187,9 +187,9 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                     <div className="flex items-center gap-3 mb-2 min-w-0">
                                         <div className="flex items-center gap-2 bg-gray-950/30 px-3 py-1.5 rounded-lg border border-gray-800/50 min-w-0">
                                             {item.home_logo && <img src={getLogoUrl(item.home_logo)} alt="H" className="w-8 h-8 shrink-0 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
-                                            <span className="text-base font-bold text-white truncate">{item.teams ? item.teams.split(' vs ')[0] : "Home"}</span>
+                                            <span className="text-base font-bold text-white truncate">{item.teams?.includes(' vs ') ? item.teams.split(' vs ')[0] : "Home"}</span>
                                             <span className="text-gray-500 text-xs font-black px-1 shrink-0">VS</span>
-                                            <span className="text-base font-bold text-white truncate">{item.teams ? item.teams.split(' vs ')[1] : "Away"}</span>
+                                            <span className="text-base font-bold text-white truncate">{item.teams?.includes(' vs ') ? item.teams.split(' vs ')[1] : "Away"}</span>
                                             {item.away_logo && <img src={getLogoUrl(item.away_logo)} alt="A" className="w-8 h-8 shrink-0 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
                                         </div>
                                     </div>

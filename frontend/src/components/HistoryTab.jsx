@@ -172,7 +172,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
             setHistory(prevHistory =>
                 prevHistory.map(item =>
                     item.match_id === match_id
-                        ? { ...item, actual_result: gradedResult.actual_score, is_correct: gradedResult.is_correct }
+                        ? { ...item, actual_result: gradedResult?.actual_score || 'N/A', is_correct: gradedResult?.is_correct ?? null }
                         : item
                 )
             );
@@ -444,7 +444,7 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
                                     <div className="flex items-center gap-3 mb-2 min-w-0">
                                         <div className="flex items-center gap-2 bg-gray-950/30 px-3 py-1.5 rounded-lg border border-gray-800/50 min-w-0">
                                             {item.home_logo && <img src={getLogoUrl(item.home_logo)} alt="H" className="w-8 h-8 shrink-0 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
-                                            <span className="text-base font-bold text-white truncate">{item.teams ? item.teams.split(' vs ')[0] : "Home"}</span>
+                                            <span className="text-base font-bold text-white truncate">{item.teams?.includes(' vs ') ? item.teams.split(' vs ')[0] : "Home"}</span>
                                             <span className="text-gray-500 text-xs font-black px-1 shrink-0">VS</span>
                                             <span className="text-base font-bold text-white truncate">{item.teams ? item.teams.split(' vs ')[1] : "Away"}</span>
                                             {item.away_logo && <img src={getLogoUrl(item.away_logo)} alt="A" className="w-8 h-8 shrink-0 object-contain rounded-full bg-white p-0.5 border border-gray-700" />}
@@ -568,20 +568,20 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
 
                         <div className="mt-4 pt-5 border-t border-gray-700">
                             <label className="block text-sm font-medium text-gray-400 mb-2">Create New Folder</label>
-                            <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="flex flex-col gap-3">
                                 <input
                                     type="text"
                                     value={newGroupName}
                                     onChange={e => setNewGroupName(e.target.value)}
                                     placeholder="e.g. Monday's Matches"
-                                    className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm"
+                                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 text-sm"
                                 />
                                 <button
                                     onClick={handleCreateGroupAndAdd}
                                     disabled={!newGroupName.trim()}
-                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded text-white font-semibold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-colors text-sm w-full sm:w-auto"
+                                    className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg text-white font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 transition-all text-sm"
                                 >
-                                    Create
+                                    Create & Add Match
                                 </button>
                             </div>
                         </div>
