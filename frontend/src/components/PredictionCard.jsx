@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target, Flag, AlertTriangle, User, Scale, Gavel, Share2, MapPin, Loader2, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target, Flag, AlertTriangle, User, Scale, Gavel, Share2, MapPin, Loader2, Info, CheckCircle2, XCircle, Shield } from 'lucide-react';
 import SupremeCourtCard from './SupremeCourtCard';
 import { useBetSlip } from '../context/BetSlipContext';
 
@@ -72,7 +72,7 @@ const PredictionCard = ({ prediction }) => {
 
         // Smart Matching
         for (const outcome of allOutcomes) {
-            const name = outcome.name.toLowerCase();
+            const name = outcome.name?.toLowerCase() || '';
 
             // 1. Exact Name Match (e.g. "Real Madrid")
             if (normalizedTip.includes(name.replace(/\s/g, ''))) return outcome.price;
@@ -455,7 +455,7 @@ const PredictionCard = ({ prediction }) => {
 const InsightCard = ({ market, analysis, index, isCorrection, getIcon, onClick }) => {
     // Basic Parsing for Preview - Handle both string and object formats
     let predictionText = 'N/A';
-    if (typeof analysis === 'object') {
+    if (typeof analysis === 'object' && analysis !== null) {
         predictionText = analysis.prediction || 'N/A';
     } else if (typeof analysis === 'string') {
         const parts = analysis.split('. ');
@@ -503,14 +503,14 @@ const InsightModal = ({ market, analysis, onClose, getIcon }) => {
     let reasoningText = 'No detailed reasoning provided.';
     let oddsValue = null;
 
-    if (typeof analysis === 'object' && analysis.prediction) {
+    if (typeof analysis === 'object' && analysis !== null && analysis.prediction) {
         // New Schema Format
         predictionText = analysis.prediction;
         reasoningText = analysis.reasoning || reasoningText;
         oddsValue = analysis.odds;
     } else {
         // Legacy String Format or Supreme Court Override string
-        const finalAnalysis = typeof analysis === 'object' ? (analysis.analysis || analysis.prediction) : analysis;
+        const finalAnalysis = typeof analysis === 'object' && analysis !== null ? (analysis.analysis || analysis.prediction) : analysis;
         if (typeof finalAnalysis === 'string') {
             const parts = finalAnalysis.split('. ');
             predictionText = parts[0]?.replace('Prediction: ', '').replace('Prediction:', '') || 'N/A';

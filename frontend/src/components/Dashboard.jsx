@@ -52,7 +52,7 @@ const Dashboard = () => {
         });
 
         for (const outcome of allOutcomes) {
-            const name = outcome.name.toLowerCase();
+            const name = outcome.name?.toLowerCase() || '';
             if (normalizedTip.includes(name.replace(/\s/g, ''))) return outcome.price;
             if (outcome.point) {
                 if (normalizedTip.includes('over') && name.includes('over') && normalizedTip.includes(outcome.point.toString())) return outcome.price;
@@ -765,8 +765,9 @@ const Dashboard = () => {
                             </div>
                         )}
 
-                        {predictions.map((pred, i) => (
-                            pred.audit_verdict ? (
+                        {predictions.map((pred, i) => {
+                            try { void pred.match; } catch { return null; } // Guard against null pred
+                            return pred.audit_verdict ? (
                                 <div key={i} className="mb-10 space-y-4 border border-blue-900/50 rounded-2xl p-4 bg-blue-900/10">
                                     <div className="flex items-center justify-between mb-2 px-2">
                                         <div className="flex items-center gap-2 text-blue-400">
@@ -884,7 +885,7 @@ const Dashboard = () => {
                             ) : (
                                 <PredictionCard key={i} prediction={pred} />
                             )
-                        ))}
+                        })}
                     </div>
                 </main>
             )

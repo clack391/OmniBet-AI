@@ -201,12 +201,12 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                                 {item.primary_pick?.confidence || item.confidence}%
                                             </span>
                                         </div>
-                                        {item.alternative_pick && (
+                                        {item.alternative_pick?.tip && (
                                             <div className="inline-flex items-center px-3 py-1 rounded-full bg-slate-800 border border-amber-500/20 w-fit">
                                                 <span className="text-[10px] md:text-xs text-amber-500 mr-2 font-bold">VALUE:</span>
                                                 <span className="text-xs md:text-sm font-semibold text-amber-400">{item.alternative_pick.tip}</span>
                                                 <span className="ml-2 px-2 py-0.5 rounded-full bg-black/50 text-[10px] text-amber-200 font-mono">
-                                                    {item.alternative_pick.confidence}%
+                                                    {item.alternative_pick.confidence ?? 'N/A'}%
                                                 </span>
                                             </div>
                                         )}
@@ -263,7 +263,7 @@ const GroupsTab = ({ onSelectHistoryItem }) => {
                                 <span className="bg-gray-800/80 px-2.5 py-1 rounded-full font-medium border border-gray-700 shadow-inner">
                                     {g.match_count} matches
                                 </span>
-                                <span>{new Date(g.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
+                                <span>{g.created_at ? new Date(g.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'N/A'}</span>
                             </div>
                         </div>
                     ))}
