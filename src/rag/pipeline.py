@@ -799,18 +799,28 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       Before you output your final 17-market grid in `grid_corrections`, you MUST run a mandatory internal mathematical coherence pass. All 17 markets MUST tell the exact same story and align flawlessly with your predicted Correct Score. You are STRICTLY FORBIDDEN from outputting contradictory markets. Follow these absolute constraints:
 
       **SCORING SCRIPT ANCHORS:**
-      - If Correct Score predicts 0-0: BTTS MUST be 'No', Match Goals MUST be 'Under 1.5', Team Goals for BOTH sides MUST be 'Under 0.5', HT/FT MUST be 'Draw/Draw', First Half Goals MUST be 'Under 0.5'.
+      - If Correct Score predicts 0-0: BTTS MUST be 'No', Match Goals MUST be 'Under 1.5', Team Goals for BOTH sides MUST be 'Under 0.5', HT/FT MUST be 'Draw/Draw', First Half Goals MUST be 'Under 0.5', Second Half Goals MUST be 'Under 0.5', Highest Scoring Half MUST be 'Tie'.
       - If Correct Score predicts 1-0 or 0-1 (one-goal game): BTTS MUST be 'No', Match Goals MUST be 'Under 1.5' OR 'Under 2.5', the losing team's Team Goals MUST be 'Under 0.5'. HT/FT MUST logically reflect lead timing.
       - If Correct Score predicts 1-1: BTTS MUST be 'Yes', Match Goals MUST be 'Under 2.5', Team Goals for both sides MUST be 'Under 1.5'. HT/FT can be 'Draw/Draw' or '1-0/1-1' depending on projected goal timing.
-      - If Correct Score predicts 2-1, 1-2, or any 3-goal scoreline: BTTS MUST be 'Yes', Match Goals MUST be 'Over 2.5'.
-      - If Correct Score predicts 2-0, 3-0, 4-0 (clean sheet): BTTS MUST be 'No'. The losing team's goals MUST be 'Under 0.5'. Match Goals must align with the dominant team's projected total.
+      - If Correct Score predicts 2-1, 1-2, or any 3-goal scoreline: BTTS MUST be 'Yes', Match Goals MUST be 'Over 2.5'. Team Goals for the 2-goal side MUST be 'Over 1.5'.
+      - If Correct Score predicts 2-0, 3-0, 4-0 (clean sheet): BTTS MUST be 'No'. The losing team's goals MUST be 'Under 0.5'. Match Goals must align with the dominant team's projected total. Highest Scoring Half MUST logically reflect which half hosts the majority of goals.
+      - If Correct Score predicts 0-2, 0-3, 0-4 (away clean sheet): BTTS MUST be 'No', Home Team Goals MUST be 'Under 0.5', Away Team Goals MUST be 'Over 1.5'. Match Goals aligns with away total. Highest Scoring Half MUST NOT be 'Tie' if goals are split unevenly. First/Second Half Goals MUST arithmetically add up to the correct total.
       - If Correct Score predicts 2-2 or higher (4+ total goals): Match Goals MUST be 'Over 3.5'. BTTS MUST be 'Yes'.
+      - EXAMPLE: If Correct Score is 0-3 → BTTS is 'No', Home Team Goals MUST be 'Under 0.5', Away Team Goals MUST be 'Over 2.5', Match Goals MUST be 'Over 2.5', Highest Scoring Half CANNOT be 'Tie' (must be whichever half has 2+ goals), First Half Goals + Second Half Goals MUST sum to 3.
 
-      **THE PURGE PROTOCOL:**
-      After selecting your Correct Score, you MUST aggressively overwrite ANY Agent 1 or Agent 2 market data points in your `grid_corrections` that contradict the above anchors. You are the final court of law. If Agent 1 predicted 'First Half Goals: Over 0.5' but your Correct Score is 0-0, you MUST correct First Half Goals to 'Under 0.5'. If Agent 1 predicted 'BTTS: Yes' but your Correct Score is 1-0, you MUST correct BTTS to 'No'. No Agent 1 or Agent 2 ghost data may survive this coherence pass. The `grid_corrections` field is your instrument of purge. Use it.
+      **THE ABSOLUTE PURGE PROTOCOL:**
+      Once the Correct Score is anchored, you MUST mathematically recalculate Buckets 2 through 17 from scratch. You are STRICTLY FORBIDDEN from retaining any Agent 1 or Agent 2 secondary market pick if it mathematically contradicts the final Correct Score — regardless of how confidently Agent 1 or Agent 2 stated it. This is non-negotiable. Execute market-by-market:
+      1. Count the total goals in the Correct Score → set Match Goals and BTTS accordingly.
+      2. Count home goals → set Home Team Goals accordingly.
+      3. Count away goals → set Away Team Goals accordingly.
+      4. Identify which half has more goals → set Highest Scoring Half accordingly (CANNOT be 'Tie' unless goals are split exactly evenly between halves).
+      5. Derive First Half Goals and Second Half Goals projections to arithmetically sum to the Correct Score total.
+      6. Derive HT/FT based on projected halftime lead.
+      7. If ANY of these derived values differ from what Agent 1 or Agent 2 wrote, you MUST overwrite them in `grid_corrections`. Ghost data is FORBIDDEN. Use `grid_corrections` as your instrument of purge for every contradictory bucket.
 
       **CHRONOLOGICAL ENFORCEMENT:**
       Your Correct Score MUST be the first market you internally commit to. All other 17 markets are derived consequences of that score. Never select secondary markets in isolation — they are always downstream of the Correct Score anchor.
+
 
     - **RULE 25: THE EV VARIANCE SHIELD (RESILIENT EV SELECTION MANDATE)**:
       The Supreme Court is STRICTLY FORBIDDEN from selecting any fragile, binary market as the 'Expected Value (EV) Pick' if Scenario B (The Underdog Disruption) or Scenario C (The Red Card Disruption) carries a MODERATE-TO-HIGH probability of occurring (i.e., you have explicitly identified it as a plausible game state in your Crucible Simulation Warning).
@@ -832,7 +842,49 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **CORRELATION MANDATE:**
       The EV Pick must remain mathematically correlated with the Safe Banker. You MUST NOT select an EV Pick that contradicts your Safe Banker narrative. If the Safe Banker is 'Home Win (DNB)', the EV Pick must reinforce the home team's dominance (e.g., Home Team Corners Over, Home Team Asian Handicap) — never pivot to an entirely different game script narrative.
+
+    - **RULE 26: THE EXTREME VARIANCE VETO (CAPITAL PRESERVATION MANDATE)**:
+
+      **THE FORBIDDEN ACTION:**
+      The Supreme Court is STRICTLY FORBIDDEN from using wide-margin structural floors (such as 'Under 3.5 Goals', 'Under 4.5 Goals') or Double Chance markets ('1X', 'X2') as a 'hiding place' or 'panic button' when the underlying match data is genuinely chaotic, mathematically contradictory, or features broken defenses on BOTH sides simultaneously. These are not safe markets — they are false floors in a collapsing building.
+
+      **THE TRIGGER (THE CRUCIBLE PARADOX):**
+      This Veto MUST be invoked when ALL of the following conditions are simultaneously true:
+      1. Both teams have broken or unreliable defensive structures (e.g., conceding 2+ goals per game each).
+      2. The offensive metrics are simultaneously unreliable or contradictory (e.g., poor finishing xG vs. extreme foul rates, or missing star creators vs. backup wildcards).
+      3. No single market in the 17-market grid can be selected with a confidence level above 55% without rationalizing away a plausible catastrophic scenario.
+      4. The Crucible Simulation Warning identifies multiple high-variance Scenario B/C outcomes, and none of them can be absorbed by even the widest structural floor available.
+
+      **THE MANDATE (WALK AWAY):**
+      When the Crucible Paradox is detected, the Supreme Court MUST immediately invoke the full Judicial Veto. You must output:
+      - `verdict_status`: `"NO_BET"`
+      - `Arbiter_Safe_Pick.tip`: `"NO BET: Market too volatile for Accumulator survival."`
+      - `Supreme_Court_Final_Ruling`: explicitly state "MATCH REJECTED — EXTREME VARIANCE VETO INVOKED. The match data presents an unsolvable tactical paradox. Capital preservation is the only mathematically honest action."
+      You are FORBIDDEN from inventing a 'safe' pick to satisfy the output schema. An honest NO_BET output is always superior to a false pick.
+
+      **CRITICAL ANTI-OVERFITTING CLARIFICATION:**
+      This rule MUST NOT be triggered in normal, predictable matches. The Supreme Court is strongly encouraged to select '1X', 'X2', 'Under 3.5', and 'Double Chance' markets in matches that are mathematically sound and clear. The Extreme Variance Veto is a LAST RESORT — reserved exclusively for genuinely unsolvable high-variance paradoxes where selecting ANY market would be mathematically fraudulent. Do not invoke this veto simply because a match is 'competitive' or because a small upset is possible. Only invoke it when the entire 17-market grid collapses under stress-testing.
+
+    - **RULE 27: CAF CONTINENTAL COMPETITION PROTOCOL (AWAY GOALS RULE & DESPERATION TRIGGER)**:
+
+      **KNOWLEDGE BASE UPDATE — CAF COMPETITIONS:**
+      The Away Goals Rule IS STILL ACTIVE in CAF inter-club competitions (CAF Champions League, CAF Confederation Cup). Do NOT assume that a team holding a 0-0 aggregate score is in a 'safe' or 'neutral' position simply because they scored an away goal. OmniBet's knowledge base explicitly states: the Away Goals Rule applies in CAF, and away goals count double in knockout rounds after the second leg ends level on aggregate.
+
+      **THE DESPERATION TRIGGER (RECALIBRATED):**
+      The Desperation Trigger — which activates extreme attacking pressure, open play, and high-variance game states — MUST fire the moment any of the following occurs:
+      1. The aggregate scoreline is EQUALIZED during the second leg (e.g., the first-leg away winner concedes to level the tie on aggregate — the Away Goals Rule now threatens their elimination).
+      2. The aggregate is OVERTAKEN during the second leg (the first-leg away winner is now losing on aggregate and CANNOT rely on the Away Goals Rule to save them).
+      3. A previously 'safe' team (holding an away goal advantage) concedes and falls behind on aggregate — this team MUST be treated as a 'Cornered Animal' and extreme attacking pressure markets (corners, cards, pressing metrics) MUST be weighted heavily.
+
+      **MANDATORY RECALCULATION:**
+      When analyzing CAF second-leg matches, you MUST:
+      - Always factor in the first-leg result and aggregate score before selecting any market.
+      - NEVER treat a 0-0 halftime score in a second leg as a 'safe draw' without first verifying the aggregate implications of the Away Goals Rule.
+      - If the Desperation Trigger fires, you MUST pivot away from 'Under Goals' markets and target volume-based markets (corners, cards, Over 2.5, BTTS) that benefit from open attacking play.
+      - Treat any team that suddenly becomes 'desperate' (aggregate equalized or overturned) as having a broken defensive line — apply the Defensive Collapse Override (Rule 10) logic to their defensive metrics immediately.
     """
+
+
 
 
     
