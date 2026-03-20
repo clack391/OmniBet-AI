@@ -7,6 +7,10 @@ import sqlite3
 import json
 import os
 import requests
+import logging
+from contextlib import asynccontextmanager
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 from src.services.sports_api import (
     get_fixtures_by_date,
     get_match_stats,
@@ -47,7 +51,45 @@ from src.utils.auth import get_password_hash, verify_password, create_access_tok
 from src.utils.time_utils import get_now_wat, get_today_wat_str, to_wat
 from fastapi.responses import Response
 
-app = FastAPI()
+logger = logging.getLogger("omnibet.scheduler")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Scheduled Cron Job — runs at 02:00 WAT (01:00 UTC) every day
+# ─────────────────────────────────────────────────────────────────────────────
+def scheduled_daily_cron():
+    """Called by APScheduler every day at 02:00 WAT. Checks the DB toggle before running."""
+    enabled = get_app_setting("cron_enabled", "true") == "true"
+    if not enabled:
+        logger.info("🛑 Daily cron skipped — AI Automation is DISABLED in settings.")
+        return
+    logger.info("⏰ APScheduler triggered: starting daily cron job...")
+    try:
+        from src.scripts.daily_cron import run_daily_cron
+        run_daily_cron()
+    except Exception as e:
+        logger.error(f"❌ Daily cron job failed: {e}", exc_info=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FastAPI Lifespan — starts/stops the scheduler alongside the server
+# ─────────────────────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = BackgroundScheduler(timezone="Africa/Lagos")
+    # Fire at 02:00 WAT every day (WAT = UTC+1, so cron hour=2 in Africa/Lagos tz)
+    scheduler.add_job(
+        scheduled_daily_cron,
+        CronTrigger(hour=2, minute=0, timezone="Africa/Lagos"),
+        id="daily_cron",
+        replace_existing=True,
+        max_instances=1
+    )
+    scheduler.start()
+    logger.info("✅ APScheduler started — daily cron scheduled at 02:00 WAT.")
+    yield
+    scheduler.shutdown(wait=False)
+    logger.info("🛑 APScheduler shut down.")
+
+app = FastAPI(lifespan=lifespan)
 
 # --- Team Logo Proxy (bypasses SofaScore Cloudflare 403) ---
 @app.get("/api/team-logo/{team_id}")

@@ -117,3 +117,4 @@ curl_cffi==0.14.0
 playwright
 pyTelegramBotAPI
 Pillow
+apscheduler>=3.10.0
