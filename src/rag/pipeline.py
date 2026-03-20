@@ -243,7 +243,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         for attempt in range(max_retries):
             try:
                 # Add timeout and retry logic to gracefully handle RemoteDisconnected drops
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -441,7 +441,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -529,7 +529,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -646,7 +646,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -917,7 +917,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         if not is_historical:
             payload["tools"] = [{"google_search": {}}]
 
-        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=120)
+        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
         response.raise_for_status()
         
         response_json = response.json()
