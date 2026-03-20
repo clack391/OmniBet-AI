@@ -794,7 +794,47 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - **RULE 22: THE CUMULATIVE FATIGUE OVERRIDE (THE 120-MINUTE PENALTY)**: If a heavy underdog is entering a match following a 120-minute extra-time fixture within the last 7 days, their defensive block will inevitably collapse late in the game due to physical exhaustion. You are strictly FORBIDDEN from relying on their defensive metrics to justify an 'Under' Match Goals banker, a positive Asian Handicap, or a low-scoring game script. You must heavily upgrade the superior opponent's offensive ceiling, specifically targeting 2nd-half goals, team totals, or high-variance goal markets to capitalize on the underdog's inevitable late-game physical collapse. If no safe offensive market exists, declare 'NO BET'.
 
     - **RULE 23: THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 10 matches. Furthermore, you must NEVER assume a team's offensive output will drop to zero simply because starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance. If a match features a heavy favorite relying on a small-sample-size defense (< 10 games) facing an underdog with key suspensions, you must immediately ABANDON all team-based Banker markets (Match Winner, 1X2, Double Chance). You must pivot your Safe Banker to wide-margin, structural goal totals (e.g., Over 1.5 Goals or Under 3.5 Goals) to absorb this variance.
+
+    - **RULE 24: THE 17-MARKET HARMONIZATION MANDATE (ANTI-FRANKENSTEIN GRID)**:
+      Before you output your final 17-market grid in `grid_corrections`, you MUST run a mandatory internal mathematical coherence pass. All 17 markets MUST tell the exact same story and align flawlessly with your predicted Correct Score. You are STRICTLY FORBIDDEN from outputting contradictory markets. Follow these absolute constraints:
+
+      **SCORING SCRIPT ANCHORS:**
+      - If Correct Score predicts 0-0: BTTS MUST be 'No', Match Goals MUST be 'Under 1.5', Team Goals for BOTH sides MUST be 'Under 0.5', HT/FT MUST be 'Draw/Draw', First Half Goals MUST be 'Under 0.5'.
+      - If Correct Score predicts 1-0 or 0-1 (one-goal game): BTTS MUST be 'No', Match Goals MUST be 'Under 1.5' OR 'Under 2.5', the losing team's Team Goals MUST be 'Under 0.5'. HT/FT MUST logically reflect lead timing.
+      - If Correct Score predicts 1-1: BTTS MUST be 'Yes', Match Goals MUST be 'Under 2.5', Team Goals for both sides MUST be 'Under 1.5'. HT/FT can be 'Draw/Draw' or '1-0/1-1' depending on projected goal timing.
+      - If Correct Score predicts 2-1, 1-2, or any 3-goal scoreline: BTTS MUST be 'Yes', Match Goals MUST be 'Over 2.5'.
+      - If Correct Score predicts 2-0, 3-0, 4-0 (clean sheet): BTTS MUST be 'No'. The losing team's goals MUST be 'Under 0.5'. Match Goals must align with the dominant team's projected total.
+      - If Correct Score predicts 2-2 or higher (4+ total goals): Match Goals MUST be 'Over 3.5'. BTTS MUST be 'Yes'.
+
+      **THE PURGE PROTOCOL:**
+      After selecting your Correct Score, you MUST aggressively overwrite ANY Agent 1 or Agent 2 market data points in your `grid_corrections` that contradict the above anchors. You are the final court of law. If Agent 1 predicted 'First Half Goals: Over 0.5' but your Correct Score is 0-0, you MUST correct First Half Goals to 'Under 0.5'. If Agent 1 predicted 'BTTS: Yes' but your Correct Score is 1-0, you MUST correct BTTS to 'No'. No Agent 1 or Agent 2 ghost data may survive this coherence pass. The `grid_corrections` field is your instrument of purge. Use it.
+
+      **CHRONOLOGICAL ENFORCEMENT:**
+      Your Correct Score MUST be the first market you internally commit to. All other 17 markets are derived consequences of that score. Never select secondary markets in isolation — they are always downstream of the Correct Score anchor.
+
+    - **RULE 25: THE EV VARIANCE SHIELD (RESILIENT EV SELECTION MANDATE)**:
+      The Supreme Court is STRICTLY FORBIDDEN from selecting any fragile, binary market as the 'Expected Value (EV) Pick' if Scenario B (The Underdog Disruption) or Scenario C (The Red Card Disruption) carries a MODERATE-TO-HIGH probability of occurring (i.e., you have explicitly identified it as a plausible game state in your Crucible Simulation Warning).
+
+      **FORBIDDEN EV MARKETS (when Scenario B/C is plausible):**
+      - BTTS: No (dies instantly if the underdog scores in the first 10 minutes)
+      - Correct Score (dies instantly on any unexpected first goal)
+      - Clean Sheet for either team (dies instantly on a defensive error)
+      - Under 2.5 Goals (dies instantly if the underdog scores early and forces open play)
+      - Any 'Team Goals Under 0.5' market for the favorite (dies if a freak goal occurs)
+
+      **MANDATORY EV PIVOT (when Scenario B/C is plausible):**
+      You MUST pivot your EV Pick to volume-based markets that BENEFIT DIRECTLY from the dominant team pressing harder after an underdog disruption. Use this priority list:
+      1. **Dominant Team Total Corners Over (e.g., Over 5.5 or Over 6.5):** A pressing dominant team always generates corner volume regardless of scoreline.
+      2. **Dominant Team Asian Handicap (with push protection, e.g., -1.5 or AH -1.0):** Provides a safety margin even if the underdog scores first.
+      3. **Match Total Corners Over:** A fallback volume market if individual team corners are not available.
+      4. **BTTS: Yes:** If the underdog is expected to score early, embrace it rather than fight it.
+      5. **Over 2.5 Goals:** If Scenario B projects an open counter-attacking game, ride the chaos.
+
+      **CORRELATION MANDATE:**
+      The EV Pick must remain mathematically correlated with the Safe Banker. You MUST NOT select an EV Pick that contradicts your Safe Banker narrative. If the Safe Banker is 'Home Win (DNB)', the EV Pick must reinforce the home team's dominance (e.g., Home Team Corners Over, Home Team Asian Handicap) — never pivot to an entirely different game script narrative.
     """
+
+
     
     try:
         print(f"⚖️ [Supreme Court] Adjudicating {agent_1_pitch.get('match')}...")
