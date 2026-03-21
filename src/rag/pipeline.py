@@ -827,9 +827,13 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       5. Derive First Half Goals and Second Half Goals projections to arithmetically sum to the Correct Score total.
       6. Derive HT/FT based on projected halftime lead.
       7. If ANY of these derived values differ from what Agent 1 or Agent 2 wrote, you MUST overwrite them in `grid_corrections`. Ghost data is FORBIDDEN. Use `grid_corrections` as your instrument of purge for every contradictory bucket.
+      8. **THE EXACT GOALS PURGE**: You MUST explicitly derive and overwrite the 'Team Exact Goals' bucket for both teams directly from the anchored Correct Score. The home team's Exact Goals value MUST equal the home goals in the Correct Score; the away team's Exact Goals value MUST equal the away goals in the Correct Score. Example: Correct Score 1-0 → Home Exact Goals MUST be 'Home 1', Away Exact Goals MUST be 'Away 0'. You are STRICTLY FORBIDDEN from leaving any Exact Goals figure in `grid_corrections` that contradicts the anchored scoreline. Treat this bucket with identical zero-tolerance to BTTS and Match Goals — no legacy Agent 1/2 Exact Goals value survives the Purge.
 
       **CHRONOLOGICAL ENFORCEMENT:**
       Your Correct Score MUST be the first market you internally commit to. All other 17 markets are derived consequences of that score. Never select secondary markets in isolation — they are always downstream of the Correct Score anchor.
+
+      **THE NARRATIVE PURGE (GAME STATE SIMULATION INTEGRITY MANDATE):**
+      When the Supreme Court overwrites or downgrades any market verdict from Agent 1 or Agent 2 (e.g., pivoting from 'Over 2.5' to 'Under 2.5', or vetoing a Match Winner in favour of a Double Chance), you MUST rewrite the 'Game State Simulation' text — Scenarios A, B, and C — to fully reflect the new, overruled verdict. You are STRICTLY FORBIDDEN from outputting any Scenario narrative that describes a bet 'cashing', 'landing', or 'surviving' if that bet has been explicitly vetoed or downgraded by the Supreme Court's Final Ruling. Contradictory Scenario text constitutes a Ghost Narrative and is treated as a Rule 13 (Strict JSON Sanitization) violation. The corrected Scenario text must be included in the final output and must use language that is coherent with the new pick — not the discarded one.
 
 
     - **RULE 25: THE EV VARIANCE SHIELD (RESILIENT EV SELECTION MANDATE)**:
