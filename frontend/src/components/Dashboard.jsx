@@ -209,17 +209,22 @@ const Dashboard = () => {
                 }
             });
 
-            // Filter matches to only include those strictly on the selected 'date'
-            // We convert the UTC ISO string to the user's local browser timezone first!
+            // Filter matches to only include those on the selected date IN WAT (Africa/Lagos, UTC+1).
+            // IMPORTANT: We must NOT use the raw UTC date string — a match at 23:30 UTC on March 20
+            // is actually 00:30 WAT on March 21. We must convert to WAT first.
             const allMatches = response.data.matches || [];
             const filteredMatches = allMatches.filter(match => {
-                // Ensure we compare UTC date strings to the calendar's YYYY-MM-DD input
-                // match.utcDate is something like "2024-03-07T12:00:00Z"
-                const utcDateStr = match.utcDate.split('T')[0];
-                return utcDateStr === date;
+                if (!match.utcDate) return false;
+                // Convert the UTC ISO timestamp to WAT date string (YYYY-MM-DD)
+                const matchDate = new Date(match.utcDate);
+                const watDateStr = matchDate.toLocaleDateString('en-CA', {
+                    timeZone: 'Africa/Lagos' // WAT = UTC+1
+                }); // returns 'YYYY-MM-DD' format
+                return watDateStr === date;
             });
 
             setFixtures(filteredMatches);
+
         } catch (err) {
             console.error(err);
             setError("Failed to fetch fixtures. Check backend or API key.");
@@ -626,7 +631,7 @@ const Dashboard = () => {
                                                     <span className="font-semibold text-gray-200 truncate text-right">{match.awayTeam.name}</span>
                                                 </div>
                                                 <div className="text-xs text-gray-400 mt-1 truncate">
-                                                    {new Date(match.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {match.competition.name}
+                                                    {new Date(match.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })} • {match.competition.name}
                                                 </div>
                                             </div>
                                         </div>
