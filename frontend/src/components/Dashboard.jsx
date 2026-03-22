@@ -263,15 +263,89 @@ const Dashboard = () => {
         }
     };
 
+    // Team abbreviation mappings for smart search
+    const getTeamAbbreviations = (teamName) => {
+        const name = teamName.toLowerCase();
+        const abbreviations = [name]; // Always include the full name
+
+        // Common abbreviation patterns
+        const abbrevMap = {
+            'manchester city': ['man city', 'man c', 'mcfc', 'city'],
+            'manchester united': ['man united', 'man u', 'man utd', 'mufc', 'united'],
+            'tottenham hotspur': ['spurs', 'tottenham', 'thfc'],
+            'arsenal': ['arsenal fc', 'afc', 'gunners'],
+            'chelsea': ['chelsea fc', 'cfc', 'blues'],
+            'liverpool': ['liverpool fc', 'lfc', 'reds'],
+            'real madrid': ['real', 'madrid', 'rmcf', 'rm'],
+            'fc barcelona': ['barcelona', 'barca', 'barça', 'fcb', 'barca'],
+            'barcelona': ['barca', 'barça', 'fcb', 'fc barcelona'],
+            'atletico madrid': ['atletico', 'atleti', 'atm'],
+            'atlético madrid': ['atletico', 'atleti', 'atm'],
+            'paris saint-germain': ['psg', 'paris', 'paris sg'],
+            'bayern munich': ['bayern', 'fcb', 'fcbayern'],
+            'borussia dortmund': ['dortmund', 'bvb', 'bvb 09'],
+            'inter milan': ['inter', 'internazionale', 'fc inter'],
+            'ac milan': ['milan', 'acm', 'ac'],
+            'juventus': ['juve', 'juventus fc', 'jfc'],
+            'newcastle united': ['newcastle', 'nufc', 'toon', 'magpies'],
+            'west ham united': ['west ham', 'whu', 'hammers'],
+            'aston villa': ['villa', 'avfc'],
+            'brighton': ['brighton & hove albion', 'bhafc', 'seagulls'],
+            'nottingham forest': ['notts forest', 'forest', 'nffc'],
+            'leicester city': ['leicester', 'lcfc', 'foxes'],
+            'crystal palace': ['palace', 'cpfc', 'eagles'],
+            'olympique lyonnais': ['lyon', 'ol', 'olympique lyon'],
+            'olympique de marseille': ['marseille', 'om', 'olympique marseille'],
+            'as monaco': ['monaco', 'asm'],
+            'ajax': ['ajax amsterdam', 'afc ajax'],
+            'psv eindhoven': ['psv', 'psv eindhoven'],
+            'fc porto': ['porto', 'fcp'],
+            'sporting cp': ['sporting', 'sporting lisbon', 'scp'],
+            'benfica': ['sl benfica', 'slb'],
+        };
+
+        // Check if team name matches any key in abbreviations map
+        for (const [fullName, abbrevs] of Object.entries(abbrevMap)) {
+            if (name.includes(fullName) || fullName.includes(name)) {
+                abbreviations.push(...abbrevs);
+                break;
+            }
+        }
+
+        // Add generic abbreviations for any team name
+        // e.g., "FC Barcelona" -> "barcelona", "fc"
+        const words = name.split(/\s+/);
+        if (words.length > 1) {
+            // Add each individual word
+            abbreviations.push(...words.filter(w => w.length > 2));
+
+            // Add first letters of each word (e.g., "Real Madrid" -> "rm")
+            const initials = words.map(w => w[0]).join('');
+            if (initials.length >= 2) {
+                abbreviations.push(initials);
+            }
+        }
+
+        return [...new Set(abbreviations)]; // Remove duplicates
+    };
+
     // Filter matches based on search query using useMemo for performance
     const filteredFixtures = useMemo(() => {
         if (!searchQuery.trim()) return fixtures;
 
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.toLowerCase().trim();
+
         return fixtures.filter(match => {
             const homeTeamName = match.homeTeam?.name?.toLowerCase() || '';
             const awayTeamName = match.awayTeam?.name?.toLowerCase() || '';
-            return homeTeamName.includes(query) || awayTeamName.includes(query);
+
+            // Get all possible abbreviations for both teams
+            const homeAbbrevs = getTeamAbbreviations(homeTeamName);
+            const awayAbbrevs = getTeamAbbreviations(awayTeamName);
+
+            // Check if query matches any abbreviation or full name
+            return homeAbbrevs.some(abbrev => abbrev.includes(query) || query.includes(abbrev)) ||
+                   awayAbbrevs.some(abbrev => abbrev.includes(query) || query.includes(abbrev));
         });
     }, [fixtures, searchQuery]);
 
