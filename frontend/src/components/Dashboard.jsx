@@ -335,7 +335,8 @@ const Dashboard = () => {
 
         const query = searchQuery.toLowerCase().trim();
 
-        return fixtures.filter(match => {
+        // Filter and score matches
+        const matchesWithScore = fixtures.map(match => {
             const homeTeamName = match.homeTeam?.name?.toLowerCase() || '';
             const awayTeamName = match.awayTeam?.name?.toLowerCase() || '';
 
@@ -343,10 +344,45 @@ const Dashboard = () => {
             const homeAbbrevs = getTeamAbbreviations(homeTeamName);
             const awayAbbrevs = getTeamAbbreviations(awayTeamName);
 
-            // Check if query matches any abbreviation or full name
-            return homeAbbrevs.some(abbrev => abbrev.includes(query) || query.includes(abbrev)) ||
-                   awayAbbrevs.some(abbrev => abbrev.includes(query) || query.includes(abbrev));
-        });
+            let score = 0;
+            let matches = false;
+
+            // Check home team
+            if (homeTeamName === query) {
+                score = 1000; // Exact match gets highest priority
+                matches = true;
+            } else if (homeTeamName.startsWith(query)) {
+                score = 100; // Starts with query
+                matches = true;
+            } else if (homeAbbrevs.some(abbrev => abbrev === query)) {
+                score = 90; // Exact abbreviation match
+                matches = true;
+            } else if (homeAbbrevs.some(abbrev => abbrev.includes(query) || query.includes(abbrev))) {
+                score = 50; // Partial match
+                matches = true;
+            }
+
+            // Check away team (same scoring)
+            if (awayTeamName === query) {
+                score = Math.max(score, 1000);
+                matches = true;
+            } else if (awayTeamName.startsWith(query)) {
+                score = Math.max(score, 100);
+                matches = true;
+            } else if (awayAbbrevs.some(abbrev => abbrev === query)) {
+                score = Math.max(score, 90);
+                matches = true;
+            } else if (awayAbbrevs.some(abbrev => abbrev.includes(query) || query.includes(abbrev))) {
+                score = Math.max(score, 50);
+                matches = true;
+            }
+
+            return { match, score, matches };
+        })
+        .filter(item => item.matches) // Only keep matches
+        .sort((a, b) => b.score - a.score); // Sort by score (highest first)
+
+        return matchesWithScore.map(item => item.match);
     }, [fixtures, searchQuery]);
 
     const toggleMatchSelection = (match) => {
