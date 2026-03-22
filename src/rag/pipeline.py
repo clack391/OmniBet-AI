@@ -370,6 +370,8 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
 
     - **RULE 15: THE STERILE POSSESSION PROTOCOL (THE 1-0 CHOKEHOLD)**: If Agent 1's tactical script describes a game state where a heavily favored possession team (60%+ average possession) is facing a severely fatigued OR offensively sterile underdog (< 1.0 goals per game), you MUST audit any 'Over Goals' markets (Over 2.5, BTTS: Yes) with EXTREME SKEPTICISM. Elite possession teams use the ball as a defensive weapon. If they score early, the game devolves into a 'Sterile Possession Exercise' with zero urgency. You are STRICTLY FORBIDDEN from approving Over 2.5 Goals or BTTS: Yes as the primary banker in this scenario. You MUST downgrade to Match Control markets (1X, Home Win) if the favorite has a reliable defense (< 1.0 goals conceded per game), OR pivot to wide-margin Under ceilings (Under 3.5 / Under 4.5 Goals) to absorb the slow, clock-killing game script. If Agent 1's reasoning explicitly mentions "possession dominance," "low pressing from underdog," "control without urgency," or if the H2H history shows consecutive 1-0 or 0-0 results, this rule MUST be activated.
 
+    - **RULE 16: THE ASYMMETRIC FATIGUE PROTOCOL (THE EARLY KILL TRAP)**: If Agent 1 flags the HOME FAVORITE for 'Fatigue' (midweek European match, 120-minute match in last 7 days, congested fixture schedule) but the opponent is a vastly inferior underdog (bottom 25% of table, concedes >= 1.5 goals per game, OR recent defeats by 2+ goal margins), you MUST audit any Match Goals 'Under' markets (Under 2.5, Under 3.5) with EXTREME SKEPTICISM. Superior teams dealing with fatigue do NOT play slow football against bad teams—they execute an 'Early Kill Strategy,' scoring 2-3 goals in the first 40 minutes to secure the game early, then coasting in the second half. You are STRICTLY FORBIDDEN from approving Under 2.5 or Under 3.5 Match Goals as the primary banker when there is a massive class disparity. Instead, you MUST pivot to: (1) Away Team Under 0.5/1.5 Goals (isolate the underdog's ineptitude), (2) Home Win, (3) Home Team Over 1.5 Goals, or (4) Asian Handicap -1.5/-2.0. Do NOT cap the favorite's goal ceiling—target the underdog's weakness. This rule OVERRIDES Rule 13 (Cumulative Fatigue Override) when the FAVORITE is fatigued but facing relegation fodder. The goals will come early, not late.
+
     11. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
 
@@ -961,6 +963,48 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **FINAL WARNING:**
       This rule is a universal mandate. DO NOT override it for perceived "value" in Over Goals markets. A possession-dominant team playing conservatively after an early goal is mathematically safer to back in Match Control markets or wide-margin Under ceilings than to trust them to aggressively chase a second or third goal.
+
+    - **RULE 29: THE ASYMMETRIC FATIGUE PROTOCOL (THE EARLY KILL TRAP)**:
+
+      **THE TRIGGER:**
+      This rule is triggered when a superior team (Top Half/Heavy Favorite) is flagged for 'Fatigue' (e.g., post-European competition, 120-minute extra time within last 7 days, congested fixture schedule) but is playing at home against a vastly inferior, relegation-threatened, OR defensively broken underdog.
+
+      **THE TACTICAL REALITY:**
+      Superior teams dealing with fatigue do NOT play 90 minutes of slow, energy-conserving football against bad teams. Instead, they execute an **'Early Kill' Strategy**—expending high energy in the first 30-40 minutes to secure a 2-0 or 3-0 lead, which allows them to coast through the second half at low intensity. The fatigue does not suppress goals; it shifts the goal distribution timeline forward into the first half.
+
+      **THE CLASS DISPARITY REQUIREMENT:**
+      This rule ONLY applies when there is a clear class gap. You MUST verify:
+      - The underdog is in the bottom 25% of the league table (relegation zone or near it), OR
+      - The underdog concedes an average of >= 1.5 goals per game, OR
+      - The underdog has suffered at least two recent defeats by 2+ goal margins.
+
+      **THE FORBIDDEN ACTION:**
+      In this specific game state, the Supreme Court is **STRICTLY FORBIDDEN** from using Match Goals 'Under' markets (Under 2.5, Under 3.5) to absorb the fatigue variance. You CANNOT cap a superior team's goal ceiling when they are facing a weak, porous defense. The 'Under' market is a trap—it falsely assumes the favorite will play conservatively for 90 minutes, when in reality they will aggressively attack early and score multiple goals before coasting.
+
+      **THE MANDATORY PIVOT:**
+      Instead of capping Match Goals, the AI MUST target the underdog's ineptitude directly. You MUST pivot the Banker to:
+      1. **Underdog Team Goals Under 0.5 / Under 1.5**: Isolate the risk to the weak team's inability to score.
+      2. **Home Win / Match Winner**: If the favorite has a reliable track record at home.
+      3. **Home Team Over 1.5 Goals**: Target the favorite's offensive output directly, ignoring what the underdog does.
+      4. **Asian Handicap -1.5 / -2.0**: If the class gap is extreme and the favorite consistently wins by multi-goal margins.
+
+      **PRIORITY HIERARCHY:**
+      - If the underdog averages < 0.8 goals per game, prioritize 'Away Team Under 0.5 Goals' or 'Home Win'.
+      - If the underdog has conceded 2+ goals in 3+ of their last 5 matches, prioritize 'Home Team Over 1.5 Goals' or Asian Handicap.
+      - You are FORBIDDEN from selecting Under 2.5 or Under 3.5 Match Goals in this scenario.
+
+      **CRITICAL OVERRIDE HIERARCHY:**
+      Rule 29 **OVERRIDES** Rule 22 (Cumulative Fatigue Override) when there is a massive class disparity. Rule 22 assumes the fatigued underdog will collapse defensively, allowing the superior team to score freely. Rule 29 flips the script: when the FAVORITE is fatigued but facing a weak underdog, they will score early and aggressively (not slowly). Do NOT apply Rule 22's "late-game collapse" logic to favor 2nd-half markets—the goals will come in the first half.
+
+      **RECOGNITION TRIGGERS:**
+      You MUST activate Rule 29 if ALL of the following conditions are met:
+      - The favorite is flagged for fatigue (midweek European match, 120-minute match in last 7 days, or 3+ matches in 8 days).
+      - The favorite is playing at home.
+      - The underdog is in the bottom 25% of the table OR concedes >= 1.5 goals per game.
+      - Agent 1 or Agent 2 mentions "fatigue" or "rotation risk" but the opponent is clearly inferior.
+
+      **FINAL WARNING:**
+      Do NOT confuse "fatigue" with "inability to score." A fatigued top-tier team facing relegation fodder will still score 3+ goals—they will just do it in 40 minutes instead of 90. Match Goals 'Under' markets are a trap. Target the underdog's weakness, not the favorite's stamina.
     """
 
 
