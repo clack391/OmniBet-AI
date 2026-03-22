@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import pandas as pd
 from src.utils.rate_limiter import rate_limit
 from src.database.db import get_cached_fixtures, save_fixtures_cache
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
 
 load_dotenv()
 
@@ -630,6 +631,12 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
         print(f"curl_cffi ID Resolution Error: {e}")
         return None
 
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((requests.exceptions.RequestException, requests.exceptions.Timeout)),
+    reraise=True
+)
 @rate_limit(calls_per_minute=16)
 def get_sofascore_match_stats(sofascore_match_id: int):
     """
@@ -648,13 +655,13 @@ def get_sofascore_match_stats(sofascore_match_id: int):
     # 1. Fetch Event Details to get IDs
     event_url = f"https://{RAPID_API_HOST}/api/sofascore/v1/match/details"
     try:
-        event_res = requests.get(event_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=20)
+        event_res = requests.get(event_url, headers=headers, params={"match_id": sofascore_match_id}, timeout=30)
         if event_res.status_code != 200:
             print(f"Could not fetch match {sofascore_match_id} data. Status: {event_res.status_code}")
             return None, None
     except requests.exceptions.RequestException as e:
-        print(f"⚠️ Network Error fetching match {sofascore_match_id}: {e}")
-        return None, None
+        print(f"⚠️ Network error (Attempting retry): {e}")
+        raise e
 
     # The RapidAPI response doesn't wrap it in an 'event' object; the payload IS the event
     event_data = event_res.json()
@@ -758,8 +765,8 @@ def get_sofascore_match_stats(sofascore_match_id: int):
             print(f"Stats fetch failed. Home {home_stats_res.status_code}, Away {away_stats_res.status_code}")
             return None, None
     except requests.exceptions.RequestException as e:
-        print(f"⚠️ Network Error fetching team stats: {e}")
-        return None, None
+        print(f"⚠️ Network error fetching team stats (Attempting retry): {e}")
+        raise e
 
     home_stats = _extract_stats(home_stats_res.json())
     away_stats = _extract_stats(away_stats_res.json())
@@ -820,6 +827,12 @@ def get_sofascore_match_stats(sofascore_match_id: int):
 
 
 
+@retry(
+    stop=stop_after_attempt(3), 
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type((requests.exceptions.RequestException, requests.exceptions.Timeout)),
+    reraise=True
+)
 @rate_limit(calls_per_minute=16)
 def get_sofascore_match_grade_data(sofascore_match_id: int, match_date: str = None) -> dict:
     """

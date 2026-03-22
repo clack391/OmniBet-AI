@@ -98,7 +98,12 @@ def run_daily_cron():
         try:
             if provider == "sofascore":
                 print(f"✅ Route: SofaScore AI Pipeline for Match {match_id}")
-                df, advanced_stats = get_sofascore_match_stats(match_id)
+                try:
+                    df, advanced_stats = get_sofascore_match_stats(match_id)
+                except Exception as e:
+                    print(f"❌ SofaScore API failed after retries: {e}")
+                    df, advanced_stats = None, None
+                    
                 if not advanced_stats:
                     print(f"⚠️ Failed to fetch SofaScore stats for match {match_id}")
                     continue
@@ -173,7 +178,12 @@ def run_daily_cron():
             
             if sofascore_id:
                 print(f"✅ Found SofaScore ID: {sofascore_id}. Fetching deep stats from RapidAPI...")
-                df, advanced_stats = get_sofascore_match_stats(sofascore_id)
+                try:
+                    df, advanced_stats = get_sofascore_match_stats(sofascore_id)
+                except Exception as e:
+                    print(f"❌ SofaScore API failed after retries for ID {sofascore_id}: {e}")
+                    df, advanced_stats = None, None
+                    
                 if advanced_stats:
                     print(f"🔬 Successfully extracted deep tactical metrics for {home_team} vs {away_team}!")
                 else:

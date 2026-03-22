@@ -676,7 +676,12 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
         
         if provider == "sofascore":
             print(f"✅ Route: SofaScore AI Pipeline for Match {match_id}")
-            df, advanced_stats = get_sofascore_match_stats(match_id)
+            try:
+                df, advanced_stats = get_sofascore_match_stats(match_id)
+            except Exception as e:
+                print(f"❌ SofaScore API failed after retries: {e}")
+                df, advanced_stats = None, None
+                
             if not advanced_stats:
                 # RECOVERY: Try to get match name from cache if stats fetch failed
                 recovered_match = "Unknown SofaScore Match"
