@@ -730,10 +730,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         "value_reasoning": "string"
       }},
       "grid_corrections": {{
-        "Match_Goals": "string (e.g., 'Over 2.5 Goals. [Reason...]')",
-        "BTTS": "string (e.g., 'Yes. [Reason...]')",
-        "Correct_Score": "string (e.g., '2-1. [Reason...]')"
-      }}
+        "Correct_Score": "string (e.g., '2-0. [Reason...]')",
+        "Match_Goals": "string (e.g., 'Under 2.5 Goals. [Reason...]', Mandatory purge if contradicted)",
+        "BTTS": "string (e.g., 'No. [Reason...]', Mandatory purge if contradicted)",
+        "First_Half_Goals": "string (Mandatory purge if contradicted)",
+        "Team_Goals": "string (Mandatory purge if contradicted)",
+        "Highest_Scoring_Half": "string (Mandatory purge if contradicted)",
+        "[Any other of the 17 Markets...]": "string (MANDATORY: You MUST inject a key-value pair for EVERY single market from Agent 1/2's grid that contradicts your Correct Score anchor, executing the Absolute Purge Protocol.)"
+      }},
+      "Overall_Strategy_Override": "string (MANDATORY if OVERTURNED: Completely rewrite Agent 2's reasoning/strategy paragraph to defend your new Final Safe Pick. Leave empty if CONFIRMED.)",
+      "Internal_Logic_Override": "string (MANDATORY if OVERTURNED: Completely rewrite Agent 1's step-by-step logic to justify your final verdict. Leave empty if CONFIRMED.)"
     }}
     - **OMNIBET 17-MARKET CORRELATION RULES**
     - **RULE 1: NO_BET**: If data is too chaotic/high variance.
@@ -834,6 +840,9 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **THE NARRATIVE PURGE (GAME STATE SIMULATION INTEGRITY MANDATE):**
       When the Supreme Court overwrites or downgrades any market verdict from Agent 1 or Agent 2 (e.g., pivoting from 'Over 2.5' to 'Under 2.5', or vetoing a Match Winner in favour of a Double Chance), you MUST rewrite the 'Game State Simulation' text — Scenarios A, B, and C — to fully reflect the new, overruled verdict. You are STRICTLY FORBIDDEN from outputting any Scenario narrative that describes a bet 'cashing', 'landing', or 'surviving' if that bet has been explicitly vetoed or downgraded by the Supreme Court's Final Ruling. Contradictory Scenario text constitutes a Ghost Narrative and is treated as a Rule 13 (Strict JSON Sanitization) violation. The corrected Scenario text must be included in the final output and must use language that is coherent with the new pick — not the discarded one.
+
+      **THE FULL DOCUMENT PURGE:**
+      When the Supreme Court downgrades or vetoes a lower agent's pick, it MUST completely rewrite the Overall_Strategy and Internal_Logic text blocks using the `Overall_Strategy_Override` and `Internal_Logic_Override` JSON keys to match the final verdict. You are strictly FORBIDDEN from outputting an Override paragraph that defends, justifies, or 'approves' a market pick that the Supreme Court has vetoed. Every single text block in the final JSON must sing the exact same song as the Final Supreme Court Ruling.
 
 
     - **RULE 25: THE EV VARIANCE SHIELD (RESILIENT EV SELECTION MANDATE)**:

@@ -366,14 +366,21 @@ const PredictionCard = ({ prediction }) => {
                     <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
                         <Brain className="w-4 h-4 text-primary" />
                         Overall Strategy
+                        {prediction.supreme_court?.Overall_Strategy_Override && (
+                            <span className="ml-2 px-2 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] uppercase font-bold rounded border border-accent-purple/30">
+                                SUPREME COURT OVERRIDE
+                            </span>
+                        )}
                     </h4>
                     <ul className="space-y-3">
-                        {(Array.isArray(prediction.reasoning) ? prediction.reasoning : [prediction.reasoning]).map((r, idx) => (
-                            <li key={idx} className="flex gap-3 text-sm text-slate-300 leading-relaxed">
-                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
-                                <span>{r}</span>
-                            </li>
-                        ))}
+                        {(prediction.supreme_court?.Overall_Strategy_Override
+                            ? [prediction.supreme_court.Overall_Strategy_Override]
+                            : (Array.isArray(prediction.reasoning) ? prediction.reasoning : [prediction.reasoning])).map((r, idx) => (
+                                <li key={idx} className="flex gap-3 text-sm text-slate-300 leading-relaxed">
+                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
+                                    <span>{r}</span>
+                                </li>
+                            ))}
                     </ul>
                 </div>
 
@@ -406,7 +413,7 @@ const PredictionCard = ({ prediction }) => {
                 )}
 
                 {/* AI Logic Dropdown (CoT) */}
-                {prediction.step_by_step_reasoning && (
+                {(prediction.supreme_court?.Internal_Logic_Override || prediction.step_by_step_reasoning) && (
                     <div className="mt-4 bg-slate-800/20 rounded-xl border border-slate-700/50 overflow-hidden transition-all duration-300">
                         <button
                             onClick={() => setShowLogic(!showLogic)}
@@ -415,6 +422,11 @@ const PredictionCard = ({ prediction }) => {
                             <div className="flex items-center gap-2">
                                 <Bolt className="w-4 h-4 text-slate-400" />
                                 <span className="text-sm font-semibold text-slate-300">View AI Internal Logic</span>
+                                {prediction.supreme_court?.Internal_Logic_Override && (
+                                    <span className="ml-2 px-2 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] uppercase font-bold rounded border border-accent-purple/30">
+                                        SUPREME COURT OVERRIDE
+                                    </span>
+                                )}
                             </div>
                             {showLogic ? (
                                 <ChevronUp className="w-4 h-4 text-slate-400" />
@@ -427,7 +439,7 @@ const PredictionCard = ({ prediction }) => {
                         <div className={`transition-all duration-300 ease-in-out ${showLogic ? 'max-h-[600px] overflow-y-auto opacity-100 p-5 pt-0' : 'max-h-0 opacity-0 overflow-hidden'}`}>
                             <div className="pt-4 border-t border-slate-700/50">
                                 <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-mono bg-black/20 p-4 rounded-lg">
-                                    {prediction.step_by_step_reasoning}
+                                    {prediction.supreme_court?.Internal_Logic_Override || prediction.step_by_step_reasoning}
                                 </p>
                             </div>
                         </div>
