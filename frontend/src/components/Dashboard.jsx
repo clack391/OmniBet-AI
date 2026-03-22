@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send, Plus, Check, X, Scale, Gavel } from 'lucide-react';
 import PredictionCard from './PredictionCard';
@@ -140,6 +140,7 @@ const Dashboard = () => {
     const [bookingCode, setBookingCode] = useState('');
     const [activeBookingCode, setActiveBookingCode] = useState(null);
     const [isParsingCode, setIsParsingCode] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Admin Auth State
     const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
@@ -261,6 +262,18 @@ const Dashboard = () => {
             setLoadingFixtures(false);
         }
     };
+
+    // Filter matches based on search query using useMemo for performance
+    const filteredFixtures = useMemo(() => {
+        if (!searchQuery.trim()) return fixtures;
+
+        const query = searchQuery.toLowerCase();
+        return fixtures.filter(match => {
+            const homeTeamName = match.homeTeam?.name?.toLowerCase() || '';
+            const awayTeamName = match.awayTeam?.name?.toLowerCase() || '';
+            return homeTeamName.includes(query) || awayTeamName.includes(query);
+        });
+    }, [fixtures, searchQuery]);
 
     const toggleMatchSelection = (match) => {
         setSelectedMatches(prev => {
@@ -638,10 +651,34 @@ const Dashboard = () => {
                             <input
                                 type="date"
                                 value={date}
-                                onChange={(e) => setDate(e.target.value)}
+                                onChange={(e) => { setDate(e.target.value); setSearchQuery(''); }}
                                 className="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />
                         </div>
+
+                        {/* Search Input */}
+                        {date && fixtures.length > 0 && (
+                            <div className="mb-4 relative">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Search matches by team name..."
+                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-10 pr-10 py-2.5 text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => setSearchQuery('')}
+                                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Booking Code Importer */}
                         <div className="mb-6 bg-gray-700/30 rounded-lg p-3 md:p-4 border border-gray-700 flex flex-col md:flex-row gap-3 items-center">
@@ -684,36 +721,54 @@ const Dashboard = () => {
                             <div className="text-center py-12 text-gray-500">
                                 {date ? "No matches found for this date." : "Please select a date to view matches."}
                             </div>
+                        ) : filteredFixtures.length === 0 ? (
+                            <div className="text-center py-12 text-gray-400">
+                                <Search className="w-8 h-8 mx-auto mb-3 text-gray-600" />
+                                <p className="text-sm">No matches found for "{searchQuery}"</p>
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    className="mt-3 text-xs text-purple-400 hover:text-purple-300 underline"
+                                >
+                                    Clear search
+                                </button>
+                            </div>
                         ) : (
-                            <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                                {fixtures.map(match => (
-                                    <div
-                                        key={match.id}
-                                        onClick={() => toggleMatchSelection(match)}
-                                        className={`p-4 rounded-lg cursor-pointer transition-all border ${selectedMatches.some(m => m.id === match.id)
-                                            ? 'bg-purple-900/40 border-purple-500'
-                                            : 'bg-gray-700/50 border-gray-600 hover:bg-gray-700'
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedMatches.some(m => m.id === match.id) ? 'bg-purple-500 border-purple-500' : 'border-gray-500'
-                                                }`}>
-                                                {selectedMatches.some(m => m.id === match.id) && <CheckCircle className="w-3.5 h-3.5 text-white" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-center gap-2">
-                                                    <span className="font-semibold text-gray-200 truncate">{match.homeTeam.name}</span>
-                                                    <span className="text-xs text-gray-400 shrink-0">vs</span>
-                                                    <span className="font-semibold text-gray-200 truncate text-right">{match.awayTeam.name}</span>
+                            <>
+                                {searchQuery && (
+                                    <div className="mb-3 text-xs text-gray-400 flex items-center justify-between bg-gray-700/30 rounded-lg px-3 py-2 border border-gray-700/50">
+                                        <span>Found {filteredFixtures.length} match{filteredFixtures.length !== 1 ? 'es' : ''}</span>
+                                    </div>
+                                )}
+                                <div key={`matches-${searchQuery}-${filteredFixtures.length}`} className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {filteredFixtures.map(match => (
+                                        <div
+                                            key={match.id}
+                                            onClick={() => toggleMatchSelection(match)}
+                                            className={`p-4 rounded-lg cursor-pointer transition-all border ${selectedMatches.some(m => m.id === match.id)
+                                                ? 'bg-purple-900/40 border-purple-500'
+                                                : 'bg-gray-700/50 border-gray-600 hover:bg-gray-700'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedMatches.some(m => m.id === match.id) ? 'bg-purple-500 border-purple-500' : 'border-gray-500'
+                                                    }`}>
+                                                    {selectedMatches.some(m => m.id === match.id) && <CheckCircle className="w-3.5 h-3.5 text-white" />}
                                                 </div>
-                                                <div className="text-xs text-gray-400 mt-1 truncate">
-                                                    {new Date(match.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })} • {match.competition.name}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-center gap-2">
+                                                        <span className="font-semibold text-gray-200 truncate">{match.homeTeam.name}</span>
+                                                        <span className="text-xs text-gray-400 shrink-0">vs</span>
+                                                        <span className="font-semibold text-gray-200 truncate text-right">{match.awayTeam.name}</span>
+                                                    </div>
+                                                    <div className="text-xs text-gray-400 mt-1 truncate">
+                                                        {new Date(match.utcDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Lagos' })} • {match.competition.name}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
 
                         <div className="mt-6 pt-4 border-t border-gray-700 space-y-3">
