@@ -1005,6 +1005,32 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **FINAL WARNING:**
       Do NOT confuse "fatigue" with "inability to score." A fatigued top-tier team facing relegation fodder will still score 3+ goals—they will just do it in 40 minutes instead of 90. Match Goals 'Under' markets are a trap. Target the underdog's weakness, not the favorite's stamina.
+
+    - **RULE 30: THE TITAN CLASH PROTOCOL (REVISED WITH SHOOTOUT EXEMPTION)**:
+
+      **THE BASELINE (THE CHESS MATCH):**
+      If two Elite teams are playing, AND one or both are missing their primary generational playmaker (e.g., Odegaard, De Bruyne), the AI must assume a conservative tactical stalemate. Suppress 'Over' markets and pivot to Match Control/Under 3.5.
+
+      **THE SHOOTOUT EXEMPTION (When to back the Over):**
+      The AI is fully authorized to target 'Over 2.5', 'BTTS: Yes', and high-scoring Correct Scores in Elite vs. Elite matchups ONLY IF at least one of the following three conditions is met:
+
+      **A) Intact Supply Lines:** Both teams have their primary offensive orchestrators and elite strikers confirmed starting. Elite finishing + elite passing = Goals. If both attacking engines are fully operational, the chess-match assumption is void.
+
+      **B) Competition Desperation:** It is a knockout tournament 2nd-leg where one team is trailing on aggregate, OR a must-win league title decider where a draw is mathematically useless to at least one side. Desperation kills conservative tactics — teams cannot afford to protect a result.
+
+      **C) High-Line Clash:** Both managers are mathematically proven to refuse low-blocks (e.g., Ange Postecoglou vs. Pep Guardiola). If historical data confirms both teams consistently play aggressive, high-pressing, high-defensive-line football regardless of opponent, the stalemate baseline does not apply.
+
+      **THE ACTION:**
+      If the Shootout Exemption is triggered by ANY of the above conditions, the AI MUST explicitly state it is bypassing the Titan Clash stalemate due to 'Intact Supply Lines', 'Tactical Desperation', or 'High-Line Clash' (whichever applies), and confidently attack the Goal markets ('Over 2.5', 'BTTS: Yes', or high-scoring Correct Score).
+
+      **RECOGNITION TRIGGERS:**
+      You MUST activate the Shootout Exemption and override the stalemate baseline if:
+      - Agent 1 or Agent 2 confirms both starting XIs contain their first-choice playmakers AND lead strikers (Condition A).
+      - The fixture is a knockout 2nd-leg with an aggregate deficit for one team, OR a final matchday title race where a draw eliminates one team from title contention (Condition B).
+      - Both managers have a documented tactical refusal to deploy a low-block across their last 10 matches at any score line (Condition C).
+
+      **FINAL WARNING:**
+      Do NOT apply the chess-match stalemate to fully-loaded elite matchups. The baseline conservatism is exclusively for injury-diminished lineups. A fully operational elite attack vs. a fully operational elite attack is not a chess match — it is a shootout waiting to happen.
     """
 
 
