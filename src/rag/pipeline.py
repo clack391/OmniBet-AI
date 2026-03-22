@@ -368,6 +368,8 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
 
     - **RULE 14: THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: If a match features a heavy favorite relying on a small-sample-size defense (under 10 games) facing an underdog with key attacking suspensions, you must immediately ABANDON all team-based Banker markets (Match Winner, 1X2, Double Chance) that rely on a clean sheet. You must pivot your Safe Banker to wide-margin, structural goal totals (e.g., Over 1.5 Goals or Under 3.5 Goals) to absorb the unpredictable variance of backup players playing with a point to prove.
 
+    - **RULE 15: THE STERILE POSSESSION PROTOCOL (THE 1-0 CHOKEHOLD)**: If Agent 1's tactical script describes a game state where a heavily favored possession team (60%+ average possession) is facing a severely fatigued OR offensively sterile underdog (< 1.0 goals per game), you MUST audit any 'Over Goals' markets (Over 2.5, BTTS: Yes) with EXTREME SKEPTICISM. Elite possession teams use the ball as a defensive weapon. If they score early, the game devolves into a 'Sterile Possession Exercise' with zero urgency. You are STRICTLY FORBIDDEN from approving Over 2.5 Goals or BTTS: Yes as the primary banker in this scenario. You MUST downgrade to Match Control markets (1X, Home Win) if the favorite has a reliable defense (< 1.0 goals conceded per game), OR pivot to wide-margin Under ceilings (Under 3.5 / Under 4.5 Goals) to absorb the slow, clock-killing game script. If Agent 1's reasoning explicitly mentions "possession dominance," "low pressing from underdog," "control without urgency," or if the H2H history shows consecutive 1-0 or 0-0 results, this rule MUST be activated.
+
     11. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
 
@@ -928,6 +930,37 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       - NEVER treat a 0-0 halftime score in a second leg as a 'safe draw' without first verifying the aggregate implications of the Away Goals Rule.
       - If the Desperation Trigger fires, you MUST pivot away from 'Under Goals' markets and target volume-based markets (corners, cards, Over 2.5, BTTS) that benefit from open attacking play.
       - Treat any team that suddenly becomes 'desperate' (aggregate equalized or overturned) as having a broken defensive line — apply the Defensive Collapse Override (Rule 10) logic to their defensive metrics immediately.
+
+    - **RULE 28: THE STERILE POSSESSION PROTOCOL (THE 1-0 CHOKEHOLD)**:
+
+      **THE TRIGGER:**
+      This rule is triggered when the AI detects a game state where a heavily favored possession team (60%+ average possession) is facing a severely fatigued OR offensively sterile underdog.
+
+      **THE TACTICAL REALITY:**
+      Elite possession teams use the ball as a defensive weapon. If they score early, or if the underdog refuses to press, the game devolves into a 'Sterile Possession Exercise' (U-shape passing) with zero verticality or urgency. The favorite enters "Clock Management Mode" — prioritizing ball retention and defensive shape over attacking aggression.
+
+      **THE FORBIDDEN ACTION:**
+      In this specific game state, the Supreme Court is **STRICTLY FORBIDDEN** from using ANY 'Over Goals' market (Over 0.5, Over 1.5, Over 2.5, BTTS) as the Safe Banker. A team killing the clock will NOT aggressively pursue a second goal, exposing the bet to 1-0 or 0-0 traps.
+
+      **THE MANDATORY PIVOT:**
+      The AI MUST decouple the Banker from goal minimums. You MUST pivot universally to:
+      1. **Match Control/Structural Markets**: 1X, Home Win, Double Chance (if mathematically sound)
+      2. **Wide-Margin Ceilings**: Under 3.5 Goals / Under 4.5 Goals (to mathematically absorb the slow, low-event game script)
+
+      **PRIORITY HIERARCHY:**
+      - If the possession-dominant favorite has a reliable defensive record (< 1.0 goals conceded per game), prioritize Match Winner or 1X.
+      - If the possession-dominant favorite has a weak defense OR the underdog has counter-attacking threats, pivot immediately to Under 3.5 / Under 4.5 Goals.
+      - You are FORBIDDEN from selecting Over 2.5 Goals, BTTS: Yes, or Team Goals Over 1.5 in this scenario.
+
+      **RECOGNITION TRIGGERS:**
+      You MUST activate Rule 28 if ANY of the following conditions are met:
+      - The favorite averages 60%+ possession AND the underdog averages < 1.0 goals per game (Sterile Offense Trap from Rule 16).
+      - The underdog played 120 minutes of extra time within the last 7 days (Cumulative Fatigue Override from Rule 22).
+      - Agent 1's tactical script explicitly mentions "possession dominance," "low pressing from underdog," "control without urgency," or "killing the clock."
+      - The H2H history shows consecutive 1-0, 0-0, or 1-1 results where the favorite controlled possession but failed to score more than one goal.
+
+      **FINAL WARNING:**
+      This rule is a universal mandate. DO NOT override it for perceived "value" in Over Goals markets. A possession-dominant team playing conservatively after an early goal is mathematically safer to back in Match Control markets or wide-margin Under ceilings than to trust them to aggressively chase a second or third goal.
     """
 
 
