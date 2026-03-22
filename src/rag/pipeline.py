@@ -17,8 +17,28 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 MODEL_NAME = "gemini-3-pro-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
+def check_cancelled(match_id: int):
+    """Checks the global cancellation registry. Raises Exception to kill the thread if cancelled."""
+    # 1. Check in-memory flags (for UI-triggered requests)
+    try:
+        from src.api.main import CANCELLATION_FLAGS
+        if match_id and CANCELLATION_FLAGS.get(match_id):
+            print(f"🛑 [KILL SWITCH] Aborting active Gemini task for Match {match_id}")
+            raise Exception("Prediction manually cancelled by user")
+    except ImportError:
+        pass
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, advanced_stats: dict = None, match_date: str = None):
+    # 2. Check Database for Global/Cron Kill Signal (for background processes)
+    try:
+        from src.database.db import get_app_setting
+        if get_app_setting("cron_kill_signal", "false") == "true":
+            print(f"🛑 [GLOBAL KILL] Aborting active Gemini task due to global stop signal")
+            raise Exception("Daily Cron manually stopped by user")
+    except Exception:
+        pass
+
+
+def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, advanced_stats: dict = None, match_date: str = None, match_id: int = None):
 
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
@@ -241,6 +261,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         
         max_retries = 3
         for attempt in range(max_retries):
+            check_cancelled(match_id)
             try:
                 # Add timeout and retry logic to gracefully handle RemoteDisconnected drops
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
@@ -289,7 +310,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             "alternative_pick": {"tip": "Analysis Failed", "confidence": 0}
         }
 
-def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -> dict:
+def risk_manager_review(initial_prediction_json: dict, match_date: str = None, match_id: int = None) -> dict:
     """
     Second agent in the Multi-Agent Loop. Acts as a strict Risk Manager to verify 
     the safety of the initial prediction.
@@ -440,6 +461,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None) -
         
         max_retries = 3
         for attempt in range(max_retries):
+            check_cancelled(match_id)
             try:
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
@@ -554,7 +576,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
             "picks": []
         }
 
-def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: str = None):
+def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: str = None, match_id: int = None):
     """
     The Betslip Auditor Mode (Pipeline B - Dual Agent Phase 2)
     Evaluates the 'user_selected_bet' against Agent 1's full tactical breakdown.
@@ -645,6 +667,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         
         max_retries = 3
         for attempt in range(max_retries):
+            check_cancelled(match_id)
             try:
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
@@ -675,7 +698,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
             "verdict_reasoning": "Could not extract statistical data to verify bet safety."
         }
 
-def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique: dict) -> dict:
+def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique: dict, match_id: int = None) -> dict:
     """
     The Final Risk Arbiter (Pipeline B - Phase 3).
     Resolves the debate between Agent 1 (Tactical) and Agent 2 (Risk Manager).
@@ -940,6 +963,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         if not is_historical:
             payload["tools"] = [{"google_search": {}}]
 
+        check_cancelled(match_id)
         response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
         response.raise_for_status()
         

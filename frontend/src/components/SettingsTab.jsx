@@ -205,11 +205,30 @@ const SettingsTab = () => {
                                 />
                             </button>
                         </div>
-                        <div className="flex items-center gap-2 text-xs">
-                            <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${automationEnabled ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
-                                {automationEnabled ? 'Automation Active' : 'Automation Paused'}
-                            </span>
-                            <span className="text-gray-500 italic">Next run scheduled for 02:00 AM UTC</span>
+                        <div className="flex items-start md:items-center justify-between flex-col md:flex-row gap-4">
+                            <div className="flex items-center gap-2 text-xs">
+                                <span className={`px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${automationEnabled ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                    {automationEnabled ? 'Automation Active' : 'Automation Paused'}
+                                </span>
+                                <span className="text-gray-500 italic">Next run scheduled for 02:00 AM WAT</span>
+                            </div>
+
+                            <button
+                                onClick={async () => {
+                                    if (!window.confirm("This will instantly kill any currently running background analysis to save API credits. Continue?")) return;
+                                    try {
+                                        await api.post('/settings/kill-active-cron');
+                                        setMessage({ type: 'success', text: 'Emergency stop signal sent to background processes.' });
+                                    } catch (err) {
+                                        console.error(err);
+                                        setMessage({ type: 'error', text: 'Failed to send kill signal.' });
+                                    }
+                                }}
+                                className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 group"
+                            >
+                                <ShieldAlert className="w-3.5 h-3.5 group-hover:animate-pulse" />
+                                STOP ACTIVE AUTOMATION
+                            </button>
                         </div>
                     </div>
 

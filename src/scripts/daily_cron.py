@@ -21,13 +21,15 @@ from src.services.sports_api import (
     resolve_sofascore_match_id,
     get_sofascore_match_stats
 )
-from src.rag.pipeline import predict_match, risk_manager_review, supreme_court_judge
-from src.database.db import get_cached_prediction, save_prediction, get_app_setting
+from src.database.db import get_cached_prediction, save_prediction, get_app_setting, set_app_setting
 from src.services.sports_api import get_sofascore_fixtures
 from src.utils.image_generator import cleanup_temp_cards
 
 def run_daily_cron():
     print("🚀 Starting OmniBet AI Daily Cron Job...")
+    
+    # Reset any previous kill signal to allow this run to proceed
+    set_app_setting("cron_kill_signal", "false")
     
     # 0. Check if automation is enabled in settings
     if get_app_setting("cron_enabled", "true") != "true":
@@ -81,6 +83,11 @@ def run_daily_cron():
     print(f"⚽ Found {len(today_matches)} matches scheduled in the 2:00 AM -> 1:59 AM window.")
     
     for i, match in enumerate(today_matches):
+        # 0. Check for Manual Kill Signal from UI
+        if get_app_setting("cron_kill_signal", "false") == "true":
+            print("\n🛑 [EMERGENCY STOP] Kill signal detected from UI. Aborting cron job immediately.")
+            break
+
         match_id = match['id']
         home_team = match.get('homeTeam', {}).get('name', 'Unknown')
         away_team = match.get('awayTeam', {}).get('name', 'Unknown')
@@ -118,13 +125,13 @@ def run_daily_cron():
                     home_team, away_team, 
                     match_stats={}, odds_data=odds, h2h_data={}, home_form=None, away_form=None, 
                     home_standings={}, away_standings={}, 
-                    advanced_stats=advanced_stats, match_date=match_date
+                    advanced_stats=advanced_stats, match_date=match_date, match_id=match_id
                 )
                 
-                final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+                final_prediction = risk_manager_review(initial_prediction, match_date=match_date, match_id=match_id)
                 
                 # Agent 3: Supreme Court Final Adjudication
-                supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, final_prediction)
+                supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, final_prediction, match_id=match_id)
                 final_prediction['supreme_court'] = supreme_verdict
                 final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
                 final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
@@ -193,14 +200,14 @@ def run_daily_cron():
             
             # 9. Agent 1
             initial_prediction = predict_match(
-                home_team, away_team, stats, odds, h2h_data, home_form, away_form, home_standings, away_standings, advanced_stats=advanced_stats, match_date=match_date
+                home_team, away_team, stats, odds, h2h_data, home_form, away_form, home_standings, away_standings, advanced_stats=advanced_stats, match_date=match_date, match_id=match_id
             )
             
             # 9. Agent 2
-            final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+            final_prediction = risk_manager_review(initial_prediction, match_date=match_date, match_id=match_id)
             
             # 9.5 Agent 3: Supreme Court Final Adjudication
-            supreme_verdict = supreme_court_judge(advanced_stats or stats, initial_prediction, final_prediction)
+            supreme_verdict = supreme_court_judge(advanced_stats or stats, initial_prediction, final_prediction, match_id=match_id)
             final_prediction['supreme_court'] = supreme_verdict
             
             # 10. Prepare and Save

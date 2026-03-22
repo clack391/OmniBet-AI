@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Calendar, CheckCircle, Search, Trophy, AlertCircle, Loader2, Zap, LogIn, LogOut, ShieldAlert, FolderOpen, Send, Plus, Check, X, Scale, Gavel } from 'lucide-react';
 import PredictionCard from './PredictionCard';
@@ -25,6 +25,35 @@ api.interceptors.request.use((config) => {
 });
 
 const Dashboard = () => {
+    const abortControllerRef = useRef(null);
+    const cancelRequestedRef = useRef(false);
+    const currentlyProcessingIdRef = useRef(null);
+
+    const handleStopAnalysis = async () => {
+        if (!analyzing) return;
+
+        console.log("🛑 Stopping analysis...");
+        cancelRequestedRef.current = true;
+
+        // 1. Abort the active Axios request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+
+        // 2. Clear state
+        setAnalyzing(false);
+        setProgressInfo({ current: 0, total: 0, matchName: '' });
+
+        // 3. Notify backend to kill its internal loop to save API credits
+        if (currentlyProcessingIdRef.current) {
+            try {
+                // Fire and forget, don't wait for it
+                api.post('/cancel-prediction', { match_id: currentlyProcessingIdRef.current })
+                    .catch(e => console.error("Cancel notify failed", e));
+            } catch (e) { }
+        }
+    };
+
     const getLogoUrl = (logoPath) => {
         if (!logoPath) return null;
         if (logoPath.startsWith('http') || logoPath.startsWith(API_URL)) return logoPath;
@@ -286,23 +315,35 @@ const Dashboard = () => {
         setAnalyzing(true);
         setPredictions([]);
         setError(null);
+        cancelRequestedRef.current = false;
         const total = selectedMatches.length;
         const allResults = [];
 
         try {
             for (let i = 0; i < total; i++) {
+                if (cancelRequestedRef.current) break;
+
                 const match = selectedMatches[i];
+                currentlyProcessingIdRef.current = match.id;
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
                 setProgressInfo({ current: i + 1, total, matchName: matchLabel });
 
+                abortControllerRef.current = new AbortController();
+
                 const response = await resilientApiCall(
-                    () => api.post(`/predict-batch`, { match_ids: [match.id] }),
+                    () => api.post(`/predict-batch`, { match_ids: [match.id] }, {
+                        signal: abortControllerRef.current.signal
+                    }),
                     matchLabel
                 );
                 allResults.push(...response.data);
                 setPredictions([...allResults]);
             }
         } catch (err) {
+            if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
+                console.log("Analysis aborted by user.");
+                return;
+            }
             console.error(err);
             if (err.response) {
                 setError("Analysis failed. Please try again.");
@@ -310,8 +351,11 @@ const Dashboard = () => {
                 setError("Connection lost. Your analysis is still running on the server — check History for results.");
             }
         } finally {
-            setAnalyzing(false);
-            setProgressInfo({ current: 0, total: 0, matchName: '' });
+            if (!cancelRequestedRef.current) {
+                setAnalyzing(false);
+                setProgressInfo({ current: 0, total: 0, matchName: '' });
+                currentlyProcessingIdRef.current = null;
+            }
         }
     };
 
@@ -321,17 +365,25 @@ const Dashboard = () => {
         setAnalyzing(true);
         setPredictions([]);
         setError(null);
+        cancelRequestedRef.current = false;
         const total = selectedMatches.length;
         const allResults = [];
 
         try {
             for (let i = 0; i < total; i++) {
+                if (cancelRequestedRef.current) break;
+
                 const match = selectedMatches[i];
+                currentlyProcessingIdRef.current = match.id;
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
                 setProgressInfo({ current: i + 1, total, matchName: matchLabel });
 
+                abortControllerRef.current = new AbortController();
+
                 const response = await resilientApiCall(
-                    () => api.post(`/predict-batch`, { match_ids: [match.id] }),
+                    () => api.post(`/predict-batch`, { match_ids: [match.id] }, {
+                        signal: abortControllerRef.current.signal
+                    }),
                     matchLabel
                 );
                 const result = response.data[0];
@@ -339,7 +391,7 @@ const Dashboard = () => {
                 setPredictions([...allResults]);
 
                 // Auto-add safe bet as soon as it arrives
-                if (result && !result.error) {
+                if (result && !result.error && !cancelRequestedRef.current) {
                     const primaryPick = result.primary_pick;
                     const tipToAdd = primaryPick?.tip || result.safe_bet_tip || "Unknown Tip";
                     const oddsToAdd = primaryPick?.odds ? parseFloat(primaryPick.odds) : 1.85;
@@ -357,10 +409,16 @@ const Dashboard = () => {
                 }
             }
 
-            // Clear queue on success
-            setSelectedMatches([]);
+            // Clear queue on success (only if not cancelled)
+            if (!cancelRequestedRef.current) {
+                setSelectedMatches([]);
+            }
 
         } catch (err) {
+            if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
+                console.log("Auto-Generate aborted by user.");
+                return;
+            }
             console.error(err);
             if (err.response) {
                 setError("Auto-Generate failed. Please try again.");
@@ -368,8 +426,11 @@ const Dashboard = () => {
                 setError("Connection lost. Your analysis is still running on the server — check History for results.");
             }
         } finally {
-            setAnalyzing(false);
-            setProgressInfo({ current: 0, total: 0, matchName: '' });
+            if (!cancelRequestedRef.current) {
+                setAnalyzing(false);
+                setProgressInfo({ current: 0, total: 0, matchName: '' });
+                currentlyProcessingIdRef.current = null;
+            }
         }
     };
 
@@ -379,14 +440,20 @@ const Dashboard = () => {
         setAnalyzing(true);
         setPredictions([]);
         setError(null);
+        cancelRequestedRef.current = false;
         const total = selectedMatches.length;
         const allResults = [];
 
         try {
             for (let i = 0; i < total; i++) {
+                if (cancelRequestedRef.current) break;
+
                 const match = selectedMatches[i];
+                currentlyProcessingIdRef.current = match.id;
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
                 setProgressInfo({ current: i + 1, total, matchName: matchLabel });
+
+                abortControllerRef.current = new AbortController();
 
                 const response = await resilientApiCall(
                     () => api.post(`/predict-audit`, {
@@ -395,6 +462,8 @@ const Dashboard = () => {
                             match_id: match.id || match.match_id,
                             user_selected_bet: match._user_selected_bet || match.selection || "Unknown Bet"
                         }]
+                    }, {
+                        signal: abortControllerRef.current.signal
                     }),
                     matchLabel
                 );
@@ -402,6 +471,10 @@ const Dashboard = () => {
                 setPredictions([...allResults]);
             }
         } catch (err) {
+            if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
+                console.log("Audit aborted by user.");
+                return;
+            }
             console.error(err);
             if (err.response) {
                 setError("Betslip Auditor failed. Please try again.");
@@ -409,8 +482,11 @@ const Dashboard = () => {
                 setError("Connection lost. Your audit is still running on the server — check History for results.");
             }
         } finally {
-            setAnalyzing(false);
-            setProgressInfo({ current: 0, total: 0, matchName: '' });
+            if (!cancelRequestedRef.current) {
+                setAnalyzing(false);
+                setProgressInfo({ current: 0, total: 0, matchName: '' });
+                currentlyProcessingIdRef.current = null;
+            }
         }
     };
 
@@ -641,121 +717,106 @@ const Dashboard = () => {
                         )}
 
                         <div className="mt-6 pt-4 border-t border-gray-700 space-y-3">
-                            <button
-                                onClick={handleAnalyze}
-                                disabled={selectedMatches.length === 0 || analyzing}
-                                className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedMatches.length === 0 || analyzing
-                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                    : 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
-                                    }`}
-                            >
-                                {analyzing ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Analyzing {progressInfo.current} of {progressInfo.total}...
-                                    </>
-                                ) : (
-                                    <>
+                            {analyzing ? (
+                                <button
+                                    onClick={handleStopAnalysis}
+                                    className="w-full py-4 rounded-lg font-bold flex items-center justify-center gap-2 transition-all bg-red-600 hover:bg-red-500 text-white animate-pulse"
+                                >
+                                    <X className="w-6 h-6" />
+                                    STOP ANALYSIS SHARPLY
+                                </button>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={handleAnalyze}
+                                        disabled={selectedMatches.length === 0 || analyzing}
+                                        className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedMatches.length === 0 || analyzing
+                                            ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-600'
+                                            }`}
+                                    >
                                         <Search className="w-5 h-5" />
                                         Manual Analyze ({selectedMatches.length})
-                                    </>
-                                )}
-                            </button>
+                                    </button>
 
-                            <button
-                                onClick={handleAutoGenerate}
-                                disabled={selectedMatches.length === 0 || analyzing}
-                                className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedMatches.length === 0 || analyzing
-                                    ? 'bg-gray-600/50 text-gray-500 cursor-not-allowed hidden'
-                                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white shadow-lg shadow-green-900/20'
-                                    }`}
-                            >
-                                {analyzing ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Generating {progressInfo.current} of {progressInfo.total}...
-                                    </>
-                                ) : (
-                                    <>
+                                    <button
+                                        onClick={handleAutoGenerate}
+                                        disabled={selectedMatches.length === 0 || analyzing}
+                                        className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedMatches.length === 0 || analyzing
+                                            ? 'bg-gray-600/50 text-gray-500 cursor-not-allowed hidden'
+                                            : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white shadow-lg shadow-green-900/20'
+                                            }`}
+                                    >
                                         <Zap className="w-5 h-5 text-yellow-300 fill-current" />
                                         Auto-Generate Bet Slip ({selectedMatches.length})
-                                    </>
-                                )}
-                            </button>
+                                    </button>
 
-                            <button
-                                onClick={handleAudit}
-                                disabled={selectedMatches.length === 0 || analyzing}
-                                className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedMatches.length === 0 || analyzing
-                                    ? 'bg-gray-600/50 text-gray-500 cursor-not-allowed hidden'
-                                    : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white shadow-lg shadow-red-900/20'
-                                    }`}
-                            >
-                                {analyzing ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Auditing {progressInfo.current} of {progressInfo.total}...
-                                    </>
-                                ) : (
-                                    <>
-                                        <ShieldAlert className="w-5 h-5 text-white" />
-                                        Audit Slip (AI Judge)
-                                    </>
-                                )}
-                            </button>
-
-                            {selectedMatches.length > 0 && (
-                                <div className="mt-4 bg-gray-700/30 rounded-lg p-4 border border-gray-700">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm font-semibold text-gray-300">Selected Matches ({selectedMatches.length})</span>
-                                        <button
-                                            onClick={() => { setSelectedMatches([]); setActiveBookingCode(null); }}
-                                            className="text-xs text-red-400 hover:text-red-300 underline"
-                                        >
-                                            Clear All
-                                        </button>
-                                    </div>
-                                    <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
-                                        {selectedMatches
-                                            .map(m => (
-                                                <div key={m.id} className="flex justify-between items-center text-xs bg-gray-800 p-2 rounded border border-gray-700/50">
-                                                    <div className="flex flex-col gap-0.5 min-w-0">
-                                                        <span className="truncate font-medium text-gray-200">{m.homeTeam?.name} vs {m.awayTeam?.name}</span>
-                                                        {m._user_selected_bet && (
-                                                            <span className="text-[10px] text-purple-400 font-bold truncate">Pick: {m._user_selected_bet}</span>
-                                                        )}
-                                                    </div>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); toggleMatchSelection(m); }}
-                                                        className="text-gray-500 hover:text-red-400 p-1 transition-colors"
-                                                    >
-                                                        <X className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </div>
-                                            ))
-                                        }
-                                    </div>
-                                </div>
+                                    <button
+                                        onClick={handleAudit}
+                                        disabled={selectedMatches.length === 0 || analyzing}
+                                        className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-all ${selectedMatches.length === 0 || analyzing
+                                            ? 'bg-gray-600/50 text-gray-500 cursor-not-allowed hidden'
+                                            : 'bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white shadow-lg shadow-red-900/20'
+                                            }`}
+                                    >
+                                        <Scale className="w-5 h-5" />
+                                        Audit Selected Matches ({selectedMatches.length})
+                                    </button>
+                                </>
                             )}
-
-                            {analyzing && (
-                                <div className="mt-3 space-y-2">
-                                    <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
-                                            style={{ width: `${progressInfo.total > 0 ? (progressInfo.current / progressInfo.total) * 100 : 0}%` }}
-                                        />
-                                    </div>
-                                    <p className="text-xs text-center text-gray-400">
-                                        ⚡ Analyzing: <span className="text-blue-400 font-medium">{progressInfo.matchName}</span>
-                                    </p>
-                                    <p className="text-[10px] text-center text-gray-500">
-                                        Match {progressInfo.current} of {progressInfo.total} • Respecting API rate limits
-                                    </p>
-                                </div>
-                            )}
-                            {error && <p className="text-sm text-red-400 mt-2 text-center">{error}</p>}
                         </div>
+
+                        {selectedMatches.length > 0 && (
+                            <div className="mt-4 bg-gray-700/30 rounded-lg p-4 border border-gray-700">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-semibold text-gray-300">Selected Matches ({selectedMatches.length})</span>
+                                    <button
+                                        onClick={() => { setSelectedMatches([]); setActiveBookingCode(null); }}
+                                        className="text-xs text-red-400 hover:text-red-300 underline"
+                                    >
+                                        Clear All
+                                    </button>
+                                </div>
+                                <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+                                    {selectedMatches
+                                        .map(m => (
+                                            <div key={m.id} className="flex justify-between items-center text-xs bg-gray-800 p-2 rounded border border-gray-700/50">
+                                                <div className="flex flex-col gap-0.5 min-w-0">
+                                                    <span className="truncate font-medium text-gray-200">{m.homeTeam?.name} vs {m.awayTeam?.name}</span>
+                                                    {m._user_selected_bet && (
+                                                        <span className="text-[10px] text-purple-400 font-bold truncate">Pick: {m._user_selected_bet}</span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); toggleMatchSelection(m); }}
+                                                    className="text-gray-500 hover:text-red-400 p-1 transition-colors"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            </div>
+                        )}
+
+                        {analyzing && (
+                            <div className="mt-3 space-y-2">
+                                <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-500 ease-out"
+                                        style={{ width: `${progressInfo.total > 0 ? (progressInfo.current / progressInfo.total) * 100 : 0}%` }}
+                                    />
+                                </div>
+                                <p className="text-xs text-center text-gray-400">
+                                    ⚡ Analyzing: <span className="text-blue-400 font-medium">{progressInfo.matchName}</span>
+                                </p>
+                                <p className="text-[10px] text-center text-gray-500">
+                                    Match {progressInfo.current} of {progressInfo.total} • Respecting API rate limits
+                                </p>
+                            </div>
+                        )}
+                        {error && <p className="text-sm text-red-400 mt-2 text-center">{error}</p>}
                     </div>
 
                     {/* Right Column: Predictions */}
@@ -893,70 +954,67 @@ const Dashboard = () => {
                         })}
                     </div>
                 </main>
-            )
-            }
+            )}
 
             {/* Admin Login Modal */}
-            {
-                showLoginModal && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
-                            <button
-                                onClick={() => !loginLoading && setShowLoginModal(false)}
-                                className="absolute top-4 right-4 text-gray-400 hover:text-white"
-                            >
-                                ×
-                            </button>
+            {showLoginModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
+                        <button
+                            onClick={() => !loginLoading && setShowLoginModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-white"
+                        >
+                            ×
+                        </button>
 
-                            <div className="mb-6 text-center">
-                                <ShieldAlert className="w-12 h-12 text-blue-500 mx-auto mb-3" />
-                                <h3 className="text-xl font-bold text-white">Admin Authentication</h3>
-                                <p className="text-sm text-gray-400 mt-1">Please log in to perform this action.</p>
+                        <div className="mb-6 text-center">
+                            <ShieldAlert className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+                            <h3 className="text-xl font-bold text-white">Admin Authentication</h3>
+                            <p className="text-sm text-gray-400 mt-1">Please log in to perform this action.</p>
+                        </div>
+
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            {loginError && (
+                                <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
+                                    {loginError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
+                                <input
+                                    type="text"
+                                    value={loginForm.username}
+                                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                                    required
+                                />
                             </div>
 
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                {loginError && (
-                                    <div className="p-3 rounded bg-red-500/10 border border-red-500/20 text-red-500 text-sm text-center">
-                                        {loginError}
-                                    </div>
-                                )}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
+                                <input
+                                    type="password"
+                                    value={loginForm.password}
+                                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                                    className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
+                                    required
+                                />
+                            </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Username</label>
-                                    <input
-                                        type="text"
-                                        value={loginForm.username}
-                                        onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Password</label>
-                                    <input
-                                        type="password"
-                                        value={loginForm.password}
-                                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                                        className="w-full bg-gray-900 border border-gray-700 rounded px-3 py-2 text-white focus:outline-none focus:border-blue-500"
-                                        required
-                                    />
-                                </div>
-
-                                <button
-                                    type="submit"
-                                    disabled={loginLoading}
-                                    className="w-full py-2.5 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-4"
-                                >
-                                    {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
-                                    Login
-                                </button>
-                            </form>
-                        </div>
+                            <button
+                                type="submit"
+                                disabled={loginLoading}
+                                className="w-full py-2.5 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-colors disabled:opacity-50 mt-4"
+                            >
+                                {loginLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogIn className="w-5 h-5" />}
+                                Login
+                            </button>
+                        </form>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 };
 

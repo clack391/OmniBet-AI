@@ -91,6 +91,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Global registry for active prediction cancellations
+CANCELLATION_FLAGS: Dict[int, bool] = {}
+
 # --- Team Logo Proxy (bypasses SofaScore Cloudflare 403) ---
 @app.get("/api/team-logo/{team_id}")
 @app.get("/team-logo/{team_id}")
@@ -154,6 +157,16 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     role: str
+
+class CancelPredictionRequest(BaseModel):
+    match_id: int
+
+@app.post("/cancel-prediction")
+def cancel_prediction(req: CancelPredictionRequest):
+    """Flags an active AI analysis loop or LLM task for immediate abortion."""
+    logger.info(f"🛑 Received manual kill signal for match {req.match_id}")
+    CANCELLATION_FLAGS[req.match_id] = True
+    return {"status": "cancelled", "match_id": req.match_id}
 
 class MatchBatchRequest(BaseModel):
     match_ids: List[int]
@@ -518,6 +531,14 @@ def api_set_automation(req: AutomationSettingRequest, current_user: dict = Depen
         raise HTTPException(status_code=500, detail="Failed to update automation setting")
     return {"status": "success", "enabled": req.enabled}
 
+@app.post("/settings/kill-active-cron")
+def api_kill_active_cron(current_user: dict = Depends(get_admin_user)):
+    """Sets a global flag to stop any currently running background cron analysis."""
+    success = set_app_setting("cron_kill_signal", "true")
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to set kill signal")
+    return {"status": "success", "message": "Global kill signal sent to background processes."}
+
 @app.get("/settings/telegram-mode")
 def api_get_telegram_mode(current_user: dict = Depends(get_admin_user)):
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
@@ -664,6 +685,10 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
     results = []
 
     for match_id in request.match_ids:
+        if CANCELLATION_FLAGS.get(match_id):
+            print(f"🛑 Match {match_id} skipped because it was manually cancelled by user.")
+            continue
+            
         # 0. Check Prediction Cache First
         cached_prediction = get_cached_prediction(match_id)
         if cached_prediction:
@@ -711,9 +736,10 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
                         odds = fetch_latest_odds(hp, ap)
                         initial_prediction = predict_match(
                             hp, ap, match_stats={}, odds_data=odds, 
-                            match_date=match_date if match_date and "1970" not in match_date else None
+                            match_date=match_date if match_date and "1970" not in match_date else None,
+                            match_id=match_id
                         )
-                        final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+                        final_prediction = risk_manager_review(initial_prediction, match_date=match_date, match_id=match_id)
                         final_prediction['match_id'] = match_id
                         final_prediction['match_date'] = match_date
                         final_prediction['match'] = recovered_match
@@ -722,6 +748,9 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
                         results.append(final_prediction)
                         continue
                     except Exception as pred_e:
+                        if str(pred_e) == "Prediction manually cancelled by user":
+                            print(f"🛑 Fallback prediction for {recovered_match} cleanly aborted by user.")
+                            continue
                         print(f"Fallback Prediction Failed: {pred_e}")
 
                 results.append({
@@ -760,31 +789,36 @@ def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_a
                 finally:
                     conn.close()
 
-            
-            odds = fetch_latest_odds(home_team, away_team)
-            
-            initial_prediction = predict_match(
-                home_team, away_team, 
-                match_stats={}, odds_data=odds, h2h_data={}, home_form=None, away_form=None, 
-                home_standings={}, away_standings={}, 
-                advanced_stats=advanced_stats, match_date=match_date
-            )
-            
-            final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
-            
-            # Agent 3: The Supreme Court Judge (Final Resolution Tier)
-            # For predict-batch, we use Agent 1 and Agent 2 to feed into Agent 3
-            # We treat Agent 2's review as the 'critique'
-            supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, final_prediction)
-            final_prediction['supreme_court'] = supreme_verdict
-
-            final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
-            final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
-            final_prediction['match_id'] = match_id
-            final_prediction['match_date'] = match_date
-            
-            save_prediction(final_prediction)
-            results.append(final_prediction)
+            try:
+                odds = fetch_latest_odds(home_team, away_team)
+                
+                initial_prediction = predict_match(
+                    home_team, away_team, 
+                    match_stats={}, odds_data=odds, h2h_data={}, home_form=None, away_form=None, 
+                    home_standings={}, away_standings={}, 
+                    advanced_stats=advanced_stats, match_date=match_date, match_id=match_id
+                )
+                
+                final_prediction = risk_manager_review(initial_prediction, match_date=match_date, match_id=match_id)
+                
+                # Agent 3: The Supreme Court Judge (Final Resolution Tier)
+                supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, final_prediction, match_id=match_id)
+                final_prediction['supreme_court'] = supreme_verdict
+    
+                final_prediction['home_logo'] = advanced_stats.get('metadata', {}).get('home_logo')
+                final_prediction['away_logo'] = advanced_stats.get('metadata', {}).get('away_logo')
+                final_prediction['match_id'] = match_id
+                final_prediction['match_date'] = match_date
+                
+                save_prediction(final_prediction)
+                results.append(final_prediction)
+            except Exception as e:
+                if str(e) == "Prediction manually cancelled by user":
+                    print(f"🛑 Match {match_id} cleanly aborted by user.")
+                    continue
+                else:
+                    print(f"Prediction Pipeline Failed Error: {e}")
+                    
             continue
 
         # 1. Get Stats (Respects Rate Limit of 6s) - Football Data Route
@@ -972,15 +1006,15 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
                 home_team, away_team, 
                 match_stats={}, odds_data=odds, h2h_data={}, 
                 home_form=None, away_form=None, home_standings={}, away_standings={}, 
-                advanced_stats=advanced_stats, match_date=match_date
+                advanced_stats=advanced_stats, match_date=match_date, match_id=match_id
             )
             
             # Agent 2: The Lead Risk Manager Auditor
-            audit_verdict_json = audit_match(initial_prediction, user_selected_bet, match_date=match_date)
+            audit_verdict_json = audit_match(initial_prediction, user_selected_bet, match_date=match_date, match_id=match_id)
             
             # Agent 3: The Supreme Court Judge (Final Resolution Tier)
             from src.rag.pipeline import supreme_court_judge
-            supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, audit_verdict_json)
+            supreme_verdict = supreme_court_judge(advanced_stats, initial_prediction, audit_verdict_json, match_id=match_id)
             
             # Merge the output
             initial_prediction['audit_verdict'] = audit_verdict_json.get('audit_verdict')
@@ -1040,15 +1074,15 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
         initial_prediction = predict_match(
             home_team, away_team, 
             stats, odds, h2h_data, home_form, away_form, 
-            home_standings, away_standings, advanced_stats=advanced_stats, match_date=match_date
+            home_standings, away_standings, advanced_stats=advanced_stats, match_date=match_date, match_id=match_id
         )
 
         # Agent 2: The Lead Risk Manager Auditor
-        audit_verdict_json = audit_match(initial_prediction, user_selected_bet, match_date=match_date)
+        audit_verdict_json = audit_match(initial_prediction, user_selected_bet, match_date=match_date, match_id=match_id)
         
         # Agent 3: The Supreme Court Judge (Final Resolution Tier)
         from src.rag.pipeline import supreme_court_judge
-        supreme_verdict = supreme_court_judge(advanced_stats or stats, initial_prediction, audit_verdict_json)
+        supreme_verdict = supreme_court_judge(advanced_stats or stats, initial_prediction, audit_verdict_json, match_id=match_id)
         
         # Merge the output
         initial_prediction['audit_verdict'] = audit_verdict_json.get('audit_verdict')
