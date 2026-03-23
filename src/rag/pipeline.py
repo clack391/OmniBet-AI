@@ -1031,6 +1031,32 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **FINAL WARNING:**
       Do NOT apply the chess-match stalemate to fully-loaded elite matchups. The baseline conservatism is exclusively for injury-diminished lineups. A fully operational elite attack vs. a fully operational elite attack is not a chess match — it is a shootout waiting to happen.
+
+    - **RULE 31: THE CLINICAL INEPTITUDE OVERRIDE (THE xG TRAP)**:
+
+      **THE TRIGGER:**
+      If the AI flags a team for severe finishing anxiety, quantified by a high Big Chance Miss Rate (e.g., 80%+ miss rate) OR consecutive matches dominating possession without scoring.
+
+      **THE TACTICAL REALITY:**
+      Bad finishing always neutralizes bad defending. If a team is statistically proven to be clinically inept in front of goal, you cannot trust them to exploit a weak defense or a fatigued opponent. They will simply generate a 'sterile siege' of missed opportunities.
+
+      **THE FORBIDDEN ACTION:**
+      If the Clinical Ineptitude trigger is active, the AI is strictly FORBIDDEN from using ANY 'Over Goals' market ('Over 1.5', 'Over 2.5') or 'BTTS: Yes' as a Safe Banker.
+
+      **THE GENERAL RULE VETO:**
+      This rule strictly OVERRIDES generalized high-scoring league mandates (e.g., Rule 18 Youth/Reserve Variance). Specific team ineptitude always cancels out general league trends.
+
+      **THE PIVOT:**
+      The AI MUST pivot away from goal floors. Accept the ugly reality of the 0-0 or 1-0 grind. Pivot the Banker to wide-margin structural ceilings like 'Under 3.5 Goals', 'Under 4.5 Goals', or 'Underdog +2.5 Asian Handicap'.
+
+      **RECOGNITION TRIGGERS:**
+      You MUST activate the Clinical Ineptitude Override if:
+      - Agent 1 or Agent 2 reports a Big Chance Miss Rate of 80% or higher for either attacking team.
+      - A team has dominated possession in 2+ consecutive matches without scoring (sterile siege pattern).
+      - The pre-match report highlights xG dramatically outpacing actual goals scored over the last 3–5 matches.
+
+      **FINAL WARNING:**
+      Do NOT allow a favorable matchup context (weak opponent, fatigued defense, high-scoring league) to override a team's proven clinical ineptitude. The xG trap is real — a team that cannot finish will not finish, regardless of the opportunity quality. One specific statistical red flag cancels all generalized green flags.
     """
 
 
