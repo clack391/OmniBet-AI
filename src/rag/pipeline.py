@@ -14,8 +14,16 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a standard stable model compatible with the free tier/broad availability
 # We use gemini-3-pro-preview for deeper analytical reasoning and Google Search Grounding support 
-MODEL_NAME = "gemini-3.1-pro-preview" 
+MODEL_NAME = "gemini-3.1-pro-preview"
 model = genai.GenerativeModel(MODEL_NAME)
+
+def get_active_model() -> str:
+    """Read the active Gemini model from app settings at call time."""
+    try:
+        from src.database.db import get_app_setting
+        return get_app_setting("gemini_model", MODEL_NAME) or MODEL_NAME
+    except Exception:
+        return MODEL_NAME
 
 def check_cancelled(match_id: int):
     """Checks the global cancellation registry. Raises Exception to kill the thread if cancelled."""
@@ -242,7 +250,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         
         # Blind Backtest Mode: prepend date-bound search protocol header so the LLM
         # never retrieves post-match reports. Normal predictions are unaffected.
@@ -458,7 +466,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -583,7 +591,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -684,7 +692,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -1109,7 +1117,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         payload = {
             "contents": [({"parts": [{"text": prompt}]})],
             "generationConfig": {

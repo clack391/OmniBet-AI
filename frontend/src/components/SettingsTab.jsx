@@ -18,6 +18,7 @@ api.interceptors.request.use((config) => {
 
 const SettingsTab = () => {
     const [provider, setProvider] = useState('football-data');
+    const [geminiModel, setGeminiModel] = useState('gemini-3-pro-preview');
     const [automationEnabled, setAutomationEnabled] = useState(true);
     const [telegramMode, setTelegramMode] = useState('text');
     const [loading, setLoading] = useState(true);
@@ -35,6 +36,9 @@ const SettingsTab = () => {
 
                 const telegramRes = await api.get('/settings/telegram-mode');
                 setTelegramMode(telegramRes.data.mode);
+
+                const modelRes = await api.get('/settings/gemini-model');
+                setGeminiModel(modelRes.data.model);
             } catch (err) {
                 console.error("Failed to fetch settings", err);
             } finally {
@@ -50,6 +54,7 @@ const SettingsTab = () => {
         try {
             await Promise.all([
                 api.put('/settings/provider', { provider }),
+                api.put('/settings/gemini-model', { model: geminiModel }),
                 api.put('/settings/automation', { enabled: automationEnabled }),
                 api.put('/settings/telegram-mode', { mode: telegramMode })
             ]);
@@ -143,6 +148,44 @@ const SettingsTab = () => {
                                     </div>
                                 </div>
                             </label>
+                        </div>
+                    </div>
+
+                    {/* Gemini AI Model Section */}
+                    <div className="bg-gray-900/50 p-5 rounded-lg border border-gray-700">
+                        <h3 className="text-lg font-semibold text-gray-200 mb-1">Gemini AI Model</h3>
+                        <p className="text-sm text-gray-400 mb-4">Select the model used by Agent 1, Agent 2, Agent 3, and the AI Accumulator. Switch here instantly if a model goes down.</p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[
+                                { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', badge: 'Latest',   badgeColor: 'text-blue-400',   desc: 'Newest generation Pro model with the latest reasoning improvements.' },
+                                { value: 'gemini-3-pro-preview',   label: 'Gemini 3 Pro Preview',   badge: 'Default',  badgeColor: 'text-green-400',  desc: 'Current production model. Deep analytical reasoning and Search Grounding support.' },
+                                { value: 'gemini-3-flash',         label: 'Gemini 3 Flash',          badge: 'Fast',     badgeColor: 'text-yellow-400', desc: 'Faster responses with lower latency. Good for high-volume analysis runs.' },
+                                { value: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash',        badge: 'Fast',     badgeColor: 'text-yellow-400', desc: 'Previous-gen flash model. Reliable fallback when newer models are unavailable.' },
+                            ].map(opt => (
+                                <label
+                                    key={opt.value}
+                                    className={`cursor-pointer border rounded-xl p-4 transition-all ${geminiModel === opt.value ? 'bg-purple-900/30 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.15)]' : 'bg-gray-800 border-gray-600 hover:border-gray-500'}`}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="pt-1">
+                                            <input
+                                                type="radio"
+                                                name="geminiModel"
+                                                value={opt.value}
+                                                checked={geminiModel === opt.value}
+                                                onChange={(e) => setGeminiModel(e.target.value)}
+                                                className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 focus:ring-purple-500 focus:ring-2"
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-white">{opt.label}</div>
+                                            <div className={`text-xs font-medium mb-2 mt-1 uppercase tracking-wider ${opt.badgeColor}`}>{opt.badge}</div>
+                                            <p className="text-sm text-gray-400">{opt.desc}</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            ))}
                         </div>
                     </div>
 
