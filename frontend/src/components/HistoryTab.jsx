@@ -19,7 +19,7 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-const HistoryTab = ({ onSelectHistoryItem }) => {
+const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
     const getLogoUrl = (logoPath) => {
         if (!logoPath) return null;
         if (logoPath.startsWith('http') || logoPath.startsWith(API_URL)) return logoPath;
@@ -49,6 +49,13 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
         fetchGroups();
     }, []);
 
+    // Re-fetch silently when the tab becomes active so new predictions appear
+    useEffect(() => {
+        if (isActive && history.length > 0) {
+            fetchHistorySilent();
+        }
+    }, [isActive]);
+
     const fetchHistory = async () => {
         setLoading(true);
         try {
@@ -58,6 +65,15 @@ const HistoryTab = ({ onSelectHistoryItem }) => {
             console.error("Failed to fetch history:", err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchHistorySilent = async () => {
+        try {
+            const response = await api.get(`/history`);
+            setHistory(response.data);
+        } catch (err) {
+            console.error("Failed to refresh history:", err);
         }
     };
 
