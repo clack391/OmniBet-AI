@@ -1162,6 +1162,12 @@ def cancel_job_endpoint(job_id: str, current_user: dict = Depends(get_admin_user
         r.setex(f"job:{job_id}:cancel", 3600, "1")
     except Exception as e:
         logger.warning(f"Redis unavailable for job cancellation: {e}")
+
+    # Also set the in-memory flag so pipeline.py's check_cancelled() stops LLM work mid-run
+    job = get_job(job_id)
+    if job and job.get("match_id"):
+        CANCELLATION_FLAGS[job["match_id"]] = True
+
     update_job_status(job_id, "CANCELLED")
     return {"status": "cancelled", "job_id": job_id}
 
