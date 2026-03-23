@@ -4,7 +4,7 @@ import re
 import requests
 import google.generativeai as genai
 from dotenv import load_dotenv
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from src.utils.time_utils import get_now_wat, get_today_wat_str, to_wat
 
 load_dotenv()
@@ -43,16 +43,18 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
     is_historical = False
+    before_date = ""
     try:
         if match_date:
             # Parse ISO8601 string (e.g. 2026-02-19T00:30:00Z)
             match_dt = datetime.fromisoformat(match_date.replace("Z", "+00:00"))
             now_dt = datetime.now(timezone.utc)
             duration = (now_dt - match_dt).total_seconds() / 3600
-            
-            # Strict Backtesting Mode: If match started in the past, disable Live Search to prevent cheating
+
+            # Blind Backtest Mode: If match started in the past, constrain search to pre-match data only
             if duration > 0:
                 is_historical = True
+                before_date = (match_dt - timedelta(days=1)).strftime("%Y-%m-%d")
                 
             if match_stats.get('status') == 'IN_PLAY' and duration > 4:
                 is_stale = True
@@ -242,7 +244,26 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL_NAME}:generateContent?key={api_key}"
         
-        # Build payload dynamically to support Strict Backtesting Mode
+        # Blind Backtest Mode: prepend date-bound search protocol header so the LLM
+        # never retrieves post-match reports. Normal predictions are unaffected.
+        if is_historical:
+            blind_backtest_header = f"""    ⚠️ BLIND BACKTEST MODE — ACTIVE ⚠️
+    You are analysing a HISTORICAL match for validation and backtesting purposes.
+    The match has already been played, but you MUST NOT discover or use the final result.
+
+    MANDATORY SEARCH PROTOCOL (violations invalidate this backtest):
+    1. You MUST append the operator before:{before_date} to EVERY search query you execute.
+    2. You MUST include at least one of these terms in every query: "preview", "predicted lineup", "injury news", "team news", "pre-match", "form guide".
+    3. You are STRICTLY FORBIDDEN from searching bare team names alone. Every query MUST include pre-match terms AND the before:{before_date} operator.
+    4. If a query does not contain before:{before_date}, DO NOT execute it — reformulate it first.
+    5. You are STRICTLY FORBIDDEN from referencing, using, or incorporating the final score, match result, half-time score, or any in-game statistics from this fixture.
+
+    Your goal: produce a full pre-match prediction exactly as if the match has not yet been played.
+    ---
+
+"""
+            prompt = blind_backtest_header + prompt
+
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
@@ -250,12 +271,11 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
                 "responseMimeType": "application/json"
             }
         }
-        
+
+        payload["tools"] = [{"google_search": {}}]
         if is_historical:
-            print(f"🛡️ Strict Backtesting Mode: Disabling Google Search for past match {team_a} vs {team_b}")
-        else:
-            payload["tools"] = [{"google_search": {}}]
-        
+            print(f"🔍 [Agent 1] Blind Backtest Mode: Search enabled with before:{before_date} date constraints for {team_a} vs {team_b}")
+
         print(f"🧠 [Agent 1] Generating analysis for {team_a} vs {team_b} (Searching web if future match)...")
         request_start = get_now_wat()
         
@@ -448,6 +468,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
         }
         
         is_historical = False
+        before_date = ""
         if match_date:
             try:
                 match_dt = datetime.fromisoformat(match_date.replace("Z", "+00:00"))
@@ -455,13 +476,32 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
                 duration = (now_dt - match_dt).total_seconds() / 3600
                 if duration > 0:
                     is_historical = True
+                    before_date = (match_dt - timedelta(days=1)).strftime("%Y-%m-%d")
             except Exception:
                 pass
-                
+
         if is_historical:
-            print(f"🛡️ Risk Manager Backtesting Mode: Disabling Search for past match")
-        else:
-            payload["tools"] = [{"google_search": {}}]
+            blind_backtest_header = f"""    ⚠️ BLIND BACKTEST MODE — ACTIVE ⚠️
+    You are analysing a HISTORICAL match for validation and backtesting purposes.
+    The match has already been played, but you MUST NOT discover or use the final result.
+
+    MANDATORY SEARCH PROTOCOL (violations invalidate this backtest):
+    1. You MUST append the operator before:{before_date} to EVERY search query you execute.
+    2. You MUST include at least one of these terms in every query: "preview", "predicted lineup", "injury news", "team news", "pre-match", "form guide".
+    3. You are STRICTLY FORBIDDEN from searching bare team names alone. Every query MUST include pre-match terms AND the before:{before_date} operator.
+    4. If a query does not contain before:{before_date}, DO NOT execute it — reformulate it first.
+    5. You are STRICTLY FORBIDDEN from referencing, using, or incorporating the final score, match result, half-time score, or any in-game statistics from this fixture.
+
+    Your goal: produce a full pre-match prediction exactly as if the match has not yet been played.
+    ---
+
+"""
+            prompt = blind_backtest_header + prompt
+            # Rebuild payload with updated prompt
+            payload["contents"] = [{"parts": [{"text": prompt}]}]
+            print(f"🔍 [Agent 2] Blind Backtest Mode: Search enabled with before:{before_date} date constraints")
+
+        payload["tools"] = [{"google_search": {}}]
         
         max_retries = 3
         for attempt in range(max_retries):
@@ -1078,8 +1118,9 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             }
         }
         
-        # Judge is purely logic-driven, usually doesn't need fresh search but we'll allow it if future match
+        # Blind Backtest Mode: constrain search to pre-match data only for historical matches
         is_historical = False
+        before_date = ""
         match_date = agent_1_pitch.get('match_date')
         if match_date:
             try:
@@ -1087,10 +1128,30 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                 now_dt = datetime.now(timezone.utc)
                 if (now_dt - match_dt).total_seconds() > 0:
                     is_historical = True
+                    before_date = (match_dt - timedelta(days=1)).strftime("%Y-%m-%d")
             except: pass
-            
-        if not is_historical:
-            payload["tools"] = [{"google_search": {}}]
+
+        if is_historical:
+            blind_backtest_header = f"""    ⚠️ BLIND BACKTEST MODE — ACTIVE ⚠️
+    You are analysing a HISTORICAL match for validation and backtesting purposes.
+    The match has already been played, but you MUST NOT discover or use the final result.
+
+    MANDATORY SEARCH PROTOCOL (violations invalidate this backtest):
+    1. You MUST append the operator before:{before_date} to EVERY search query you execute.
+    2. You MUST include at least one of these terms in every query: "preview", "predicted lineup", "injury news", "team news", "pre-match", "form guide".
+    3. You are STRICTLY FORBIDDEN from searching bare team names alone. Every query MUST include pre-match terms AND the before:{before_date} operator.
+    4. If a query does not contain before:{before_date}, DO NOT execute it — reformulate it first.
+    5. You are STRICTLY FORBIDDEN from referencing, using, or incorporating the final score, match result, half-time score, or any in-game statistics from this fixture.
+
+    Your goal: produce a full pre-match prediction exactly as if the match has not yet been played.
+    ---
+
+"""
+            prompt = blind_backtest_header + prompt
+            payload["contents"] = [({"parts": [{"text": prompt}]})]
+            print(f"🔍 [Agent 3] Blind Backtest Mode: Search enabled with before:{before_date} date constraints")
+
+        payload["tools"] = [{"google_search": {}}]
 
         check_cancelled(match_id)
         response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
