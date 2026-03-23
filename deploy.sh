@@ -6,9 +6,13 @@ echo " OmniBet AI EC2 Deployment Script"
 echo "==========================================="
 
 # 1. Update system and install dependencies
-echo ">> Installing system dependencies (Nginx, Node, Python, SQLite)..."
+echo ">> Installing system dependencies (Nginx, Node, Python, SQLite, Redis)..."
 sudo apt update
-sudo apt install -y nginx python3-venv python3-pip curl git sqlite3
+sudo apt install -y nginx python3-venv python3-pip curl git sqlite3 redis-server
+
+# Enable and start Redis
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
 
 # Install Node.js 20 (LTS)
 if ! command -v node >/dev/null 2>&1; then
@@ -60,9 +64,17 @@ sudo systemctl daemon-reload
 sudo systemctl enable omnibet.service
 sudo systemctl restart omnibet.service
 
+# 6. Configure Systemd Daemon for Celery Worker
+echo ">> Configuring Systemd Service for Celery Worker..."
+sudo cp omnibet-celery.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable omnibet-celery.service
+sudo systemctl restart omnibet-celery.service
+
 echo "==========================================="
 echo " Deployment Complete! 🚀"
 echo " The frontend is running on Port 80."
 echo " The backend is running via Systemd on Port 8000."
-echo " To view API logs: sudo journalctl -u omnibet.service -f"
+echo " To view API logs:    sudo journalctl -u omnibet.service -f"
+echo " To view Celery logs: sudo journalctl -u omnibet-celery.service -f"
 echo "==========================================="
