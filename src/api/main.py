@@ -528,7 +528,7 @@ def api_set_provider(req: ProviderSettingRequest, current_user: dict = Depends(g
 VALID_GEMINI_MODELS = [
     "gemini-3.1-pro-preview",
     "gemini-3-pro-preview",
-    "gemini-3-flash",
+    "gemini-3-flash-preview",
     "gemini-2.5-flash",
 ]
 

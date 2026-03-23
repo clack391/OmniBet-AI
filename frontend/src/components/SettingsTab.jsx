@@ -160,7 +160,7 @@ const SettingsTab = () => {
                             {[
                                 { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', badge: 'Latest',   badgeColor: 'text-blue-400',   desc: 'Newest generation Pro model with the latest reasoning improvements.' },
                                 { value: 'gemini-3-pro-preview',   label: 'Gemini 3 Pro Preview',   badge: 'Default',  badgeColor: 'text-green-400',  desc: 'Current production model. Deep analytical reasoning and Search Grounding support.' },
-                                { value: 'gemini-3-flash',         label: 'Gemini 3 Flash',          badge: 'Fast',     badgeColor: 'text-yellow-400', desc: 'Faster responses with lower latency. Good for high-volume analysis runs.' },
+                                { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash',          badge: 'Fast',     badgeColor: 'text-yellow-400', desc: 'Faster responses with lower latency. Good for high-volume analysis runs.' },
                                 { value: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash',        badge: 'Fast',     badgeColor: 'text-yellow-400', desc: 'Previous-gen flash model. Reliable fallback when newer models are unavailable.' },
                             ].map(opt => (
                                 <label
