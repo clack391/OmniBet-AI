@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from typing import List, Dict, Any, Optional
@@ -6,8 +6,10 @@ from pydantic import BaseModel
 import sqlite3
 import json
 import os
+import uuid
 import requests
 import logging
+import redis as redis_lib
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -47,7 +49,8 @@ from src.database.db import (
 from src.utils.delivery_router import deliver_prediction, deliver_accumulator
 from src.bot.pref_manager import get_user_preference, set_user_preference
 from src.services.grader import fetch_result_with_ai
-from src.utils.auth import get_password_hash, verify_password, create_access_token, get_admin_user
+from src.utils.auth import get_password_hash, verify_password, create_access_token, get_admin_user, get_current_user_from_token
+from src.database.db import create_job, update_job_status, save_job_result, fail_job, get_job
 from src.utils.time_utils import get_now_wat, get_today_wat_str, to_wat
 from fastapi.responses import Response
 
@@ -1098,8 +1101,125 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
         initial_prediction['match_date'] = match_date
         initial_prediction['booking_code'] = booking_code
         initial_prediction['user_selected_bet'] = user_selected_bet
-        
+
         save_prediction(initial_prediction)
         results.append(initial_prediction)
-        
+
     return results
+
+
+# =============================================================================
+# ASYNC TASK QUEUE — Never-Timeout endpoints
+# =============================================================================
+
+@app.post("/predict-async", status_code=202)
+def predict_async(request: MatchBatchRequest, current_user: dict = Depends(get_admin_user)):
+    """
+    Submit one or more match IDs for async background analysis.
+    Returns immediately with a job_id per match.
+    The frontend polls GET /jobs/{job_id} to retrieve results.
+    """
+    from src.worker.tasks import analyze_match
+
+    results = []
+    for match_id in request.match_ids:
+        job_id = str(uuid.uuid4())
+        create_job(job_id, match_id)
+        analyze_match.delay(match_id, job_id)
+        results.append({"job_id": job_id, "match_id": match_id, "status": "PENDING"})
+    return results
+
+
+@app.get("/jobs/{job_id}")
+def get_job_status(job_id: str, current_user: dict = Depends(get_admin_user)):
+    """Poll a background job for its current status and result."""
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return job
+
+
+@app.post("/jobs/{job_id}/cancel")
+def cancel_job_endpoint(job_id: str, current_user: dict = Depends(get_admin_user)):
+    """Cancel a running background job via Redis flag."""
+    try:
+        r = redis_lib.Redis(host="localhost", port=6379, db=0)
+        r.setex(f"job:{job_id}:cancel", 3600, "1")
+    except Exception as e:
+        logger.warning(f"Redis unavailable for job cancellation: {e}")
+    update_job_status(job_id, "CANCELLED")
+    return {"status": "cancelled", "job_id": job_id}
+
+
+# =============================================================================
+# ADMIN LIVE TERMINAL — WebSocket log stream
+# =============================================================================
+
+@app.websocket("/ws/terminal/{job_id}")
+async def terminal_websocket(websocket: WebSocket, job_id: str, token: str = Query(...)):
+    """
+    Streams real-time backend logs for a running job to admin clients.
+    Authentication: JWT token passed as ?token= query parameter.
+    Non-admin connections are rejected immediately with code 4003.
+    """
+    import redis.asyncio as aioredis
+
+    # --- Auth gate ---
+    try:
+        user = get_current_user_from_token(token)
+        if user.get("role") != "admin":
+            await websocket.close(code=4003)
+            return
+    except Exception:
+        await websocket.close(code=4001)
+        return
+
+    await websocket.accept()
+
+    # Check if job already completed before subscribing
+    job = get_job(job_id)
+    if job and job.get("status") in ("COMPLETED", "FAILED", "CANCELLED"):
+        await websocket.send_text(json.dumps({
+            "type": "done",
+            "job_id": job_id,
+            "status": job.get("status"),
+        }))
+        await websocket.close()
+        return
+
+    r = None
+    pubsub = None
+    try:
+        r = aioredis.Redis(host="localhost", port=6379, db=0)
+        pubsub = r.pubsub()
+        await pubsub.subscribe(f"job:{job_id}:logs")
+
+        async for message in pubsub.listen():
+            if message["type"] == "message":
+                raw = message["data"]
+                text = raw.decode() if isinstance(raw, bytes) else raw
+                await websocket.send_text(text)
+                # Stop streaming once the task signals completion
+                try:
+                    payload = json.loads(text)
+                    if payload.get("type") == "done":
+                        break
+                except Exception:
+                    pass
+    except Exception as e:
+        logger.debug(f"WebSocket terminal closed for job {job_id}: {e}")
+    finally:
+        if pubsub:
+            try:
+                await pubsub.unsubscribe()
+            except Exception:
+                pass
+        if r:
+            try:
+                await r.aclose()
+            except Exception:
+                pass
+        try:
+            await websocket.close()
+        except Exception:
+            pass

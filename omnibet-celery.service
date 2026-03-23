@@ -1,0 +1,18 @@
+[Unit]
+Description=OmniBet AI Celery Worker
+After=network.target redis.service
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/OmniBet-AI
+Environment="PATH=/home/ubuntu/OmniBet-AI/.venv/bin"
+ExecStart=/home/ubuntu/OmniBet-AI/.venv/bin/celery \
+    -A src.worker.celery_app worker \
+    --loglevel=info \
+    --concurrency=1
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

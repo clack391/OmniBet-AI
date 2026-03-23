@@ -65,6 +65,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except jwt.JWTError:
         raise credentials_exception
 
+def get_current_user_from_token(token: str) -> dict:
+    """Synchronous JWT decode used by WebSocket handlers that cannot use Depends()."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        role: str = payload.get("role")
+        if username is None or role is None:
+            raise ValueError("Invalid token payload")
+        return {"username": username, "role": role}
+    except Exception:
+        raise ValueError("Could not validate credentials")
+
+
 async def get_admin_user(current_user: dict = Depends(get_current_user)):
     """Verifies the current user has the 'admin' role."""
     if current_user.get("role") != "admin":
