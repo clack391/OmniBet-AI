@@ -189,6 +189,9 @@ class GroupMatchRequest(BaseModel):
 class ProviderSettingRequest(BaseModel):
     provider: str
 
+class GeminiModelRequest(BaseModel):
+    model: str
+
 class TelegramModeRequest(BaseModel):
     mode: str
 
@@ -521,6 +524,25 @@ def api_set_provider(req: ProviderSettingRequest, current_user: dict = Depends(g
         raise HTTPException(status_code=500, detail="Failed to update provider setting")
     
     return {"status": "success", "provider": req.provider}
+
+VALID_GEMINI_MODELS = [
+    "gemini-3.1-pro-preview",
+    "gemini-3-pro-preview",
+    "gemini-3-flash",
+    "gemini-2.5-flash",
+]
+
+@app.get("/settings/gemini-model")
+def api_get_gemini_model(current_user: dict = Depends(get_admin_user)):
+    model = get_app_setting("gemini_model", "gemini-3-pro-preview")
+    return {"model": model}
+
+@app.put("/settings/gemini-model")
+def api_set_gemini_model(req: GeminiModelRequest, current_user: dict = Depends(get_admin_user)):
+    if req.model not in VALID_GEMINI_MODELS:
+        raise HTTPException(status_code=400, detail="Invalid model specified")
+    set_app_setting("gemini_model", req.model)
+    return {"status": "success", "model": req.model}
 
 @app.get("/settings/automation")
 def api_get_automation(current_user: dict = Depends(get_admin_user)):
