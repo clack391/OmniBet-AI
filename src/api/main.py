@@ -1130,6 +1130,21 @@ def predict_async(request: MatchBatchRequest, current_user: dict = Depends(get_a
     return results
 
 
+@app.post("/audit-async", status_code=202)
+def audit_async(request: AuditBatchRequest, current_user: dict = Depends(get_admin_user)):
+    """Submit betslip audit jobs to Celery. Returns a job_id per item immediately."""
+    from src.worker.tasks import analyze_audit
+
+    results = []
+    booking_code = request.booking_code
+    for item in request.items:
+        job_id = str(uuid.uuid4())
+        create_job(job_id, item.match_id)
+        analyze_audit.delay(item.match_id, job_id, item.user_selected_bet, booking_code)
+        results.append({"job_id": job_id, "match_id": item.match_id, "status": "PENDING"})
+    return results
+
+
 @app.get("/jobs/{job_id}")
 def get_job_status(job_id: str, current_user: dict = Depends(get_admin_user)):
     """Poll a background job for its current status and result."""
