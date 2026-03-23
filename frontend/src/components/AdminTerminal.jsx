@@ -21,6 +21,7 @@ const AdminTerminal = ({ jobId, token, apiUrl }) => {
     const wsRef = useRef(null);
     const reconnectTimerRef = useRef(null);
     const attemptsRef = useRef(0);
+    const doneRef = useRef(false);   // ref mirrors `done` state for use inside WS closures
     const MAX_RECONNECT = 5;
 
     const buildWsUrl = () => {
@@ -57,6 +58,7 @@ const AdminTerminal = ({ jobId, token, apiUrl }) => {
                 if (data.type === 'log') {
                     setLogs(prev => [...prev, { type: 'log', message: data.message, ts: data.ts }]);
                 } else if (data.type === 'done') {
+                    doneRef.current = true;  // set ref BEFORE ws.close() so onclose sees it
                     setDone(true);
                     setConnected(false);
                     setLogs(prev => [...prev, { type: 'system', message: '✅ Analysis complete.' }]);
@@ -75,7 +77,8 @@ const AdminTerminal = ({ jobId, token, apiUrl }) => {
         ws.onclose = (event) => {
             setConnected(false);
             // 4001 = invalid token, 4003 = not admin — don't reconnect
-            if (event.code === 4001 || event.code === 4003 || done) return;
+            // doneRef.current (not `done` state) used here to avoid stale closure
+            if (event.code === 4001 || event.code === 4003 || doneRef.current) return;
 
             if (attemptsRef.current < MAX_RECONNECT) {
                 attemptsRef.current += 1;
@@ -93,6 +96,7 @@ const AdminTerminal = ({ jobId, token, apiUrl }) => {
     useEffect(() => {
         setLogs([]);
         setDone(false);
+        doneRef.current = false;
         attemptsRef.current = 0;
         connect();
 
