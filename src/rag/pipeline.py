@@ -158,6 +158,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         - **Rule 19 - THE EXPECTED GOALS (xG) REALITY CHECK**: You MUST prioritize Expected Goals (xG) over raw goals scored to detect "luck". FIRST, check the 'Advanced Tactical Metrics' JSON block provided above for 'Expected goals (xG) per game'. If the API provided it, use it immediately. If a team's actual goals are much higher than their xG, they are lucky and due for regression. If the xG data is MISSING from the JSON payload (e.g., obscure leagues), you may fallback to your Google Search tool to find recent xG data. If search also fails, default to 'Big chances created' to evaluate their true offensive threat.
         - **Rule 20 - THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 10 matches. Early-season variance is a massive trap. Furthermore, you must NEVER assume an opposing team's offensive output will drop to zero simply because 1 or 2 starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance (The Wounded Animal Effect) and often play with a high-intensity point to prove.
         - **THE DATA PURITY MANDATE**: When conducting Live Searches for rosters, injuries, or stats, you MUST ONLY pull data from official, verified sports databases (e.g., Transfermarkt, Soccerway, Flashscore, Sofascore, or official club websites). You are strictly forbidden from citing data from gaming wikis (SOFIFA, Football Manager), Reddit career mode threads, or fan-concept sites.
+        - **RULE 32 — THE HOME BUZZSAW OVERRIDE (THE AWAY FAVORITE TRAP)**: If the Home Underdog averages > 1.3 goals per game in the current season, OR has recently scored multiple goals against elite/top-tier opposition, you MUST flag the Home Buzzsaw as ACTIVE. In this state: (a) you are FORBIDDEN from selecting an Away Team Asian Handicap (Away +1.0, Away +1.5) or Away Double Chance (X2) as the Safe Banker; (b) you MUST ignore H2H win streaks for the Away team — current offensive form overrides historical data entirely; (c) you MUST pivot the Banker to structural floors that embrace the home team's threat: 'Home Over 0.5 Goals', 'Home +2.5 Asian Handicap', or 'Over 1.5 Match Goals'. The tactical reality: if the away favorite falls behind a potent home underdog, they will chase, expose their defensive line, and concede devastating counter-attacks — turning projected 2-1 losses into 3-1 or 4-1 blowouts. You cannot cap that variance with a narrow away handicap.
     
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -399,6 +400,8 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
     - **RULE 15: THE STERILE POSSESSION PROTOCOL (THE 1-0 CHOKEHOLD)**: If Agent 1's tactical script describes a game state where a heavily favored possession team (60%+ average possession) is facing a severely fatigued OR offensively sterile underdog (< 1.0 goals per game), you MUST audit any 'Over Goals' markets (Over 2.5, BTTS: Yes) with EXTREME SKEPTICISM. Elite possession teams use the ball as a defensive weapon. If they score early, the game devolves into a 'Sterile Possession Exercise' with zero urgency. You are STRICTLY FORBIDDEN from approving Over 2.5 Goals or BTTS: Yes as the primary banker in this scenario. You MUST downgrade to Match Control markets (1X, Home Win) if the favorite has a reliable defense (< 1.0 goals conceded per game), OR pivot to wide-margin Under ceilings (Under 3.5 / Under 4.5 Goals) to absorb the slow, clock-killing game script. If Agent 1's reasoning explicitly mentions "possession dominance," "low pressing from underdog," "control without urgency," or if the H2H history shows consecutive 1-0 or 0-0 results, this rule MUST be activated.
 
     - **RULE 16: THE ASYMMETRIC FATIGUE PROTOCOL (THE EARLY KILL TRAP)**: If Agent 1 flags the HOME FAVORITE for 'Fatigue' (midweek European match, 120-minute match in last 7 days, congested fixture schedule) but the opponent is a vastly inferior underdog (bottom 25% of table, concedes >= 1.5 goals per game, OR recent defeats by 2+ goal margins), you MUST audit any Match Goals 'Under' markets (Under 2.5, Under 3.5) with EXTREME SKEPTICISM. Superior teams dealing with fatigue do NOT play slow football against bad teams—they execute an 'Early Kill Strategy,' scoring 2-3 goals in the first 40 minutes to secure the game early, then coasting in the second half. You are STRICTLY FORBIDDEN from approving Under 2.5 or Under 3.5 Match Goals as the primary banker when there is a massive class disparity. Instead, you MUST pivot to: (1) Away Team Under 0.5/1.5 Goals (isolate the underdog's ineptitude), (2) Home Win, (3) Home Team Over 1.5 Goals, or (4) Asian Handicap -1.5/-2.0. Do NOT cap the favorite's goal ceiling—target the underdog's weakness. This rule OVERRIDES Rule 13 (Cumulative Fatigue Override) when the FAVORITE is fatigued but facing relegation fodder. The goals will come early, not late.
+
+    - **RULE 17: THE HOME BUZZSAW OVERRIDE (THE AWAY FAVORITE TRAP)**: If Agent 1 identifies the Home Underdog as a high-scoring threat (averaging > 1.3 goals per game this season, OR recently scoring multiple goals against elite opposition), you MUST immediately audit any Away Team Asian Handicap (Away +1.0, Away +1.5) or Away Double Chance (X2) that Agent 1 selected as the Safe Banker. These markets are FORBIDDEN when the Home Buzzsaw is active. The blowout risk is real: an away favorite who falls behind a potent home underdog will push forward to equalize, exposing their defensive line to devastating counter-attacks — turning a projected 2-1 defeat into a 3-1 or 4-1 blowout. You MUST downgrade any Away Match Control market and force a pivot to: 'Home Over 0.5 Goals', 'Home +2.5 Asian Handicap', or 'Over 1.5 Match Goals'. Additionally, you MUST completely disregard any H2H win streak the away team holds — current offensive potency of the home team overrides all historical H2H data.
 
     11. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
@@ -1105,6 +1108,38 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **FINAL WARNING:**
       Do NOT allow a favorable matchup context (weak opponent, fatigued defense, high-scoring league) to override a team's proven clinical ineptitude. The xG trap is real — a team that cannot finish will not finish, regardless of the opportunity quality. One specific statistical red flag cancels all generalized green flags.
+
+    - **RULE 32: THE HOME BUZZSAW OVERRIDE (THE AWAY FAVORITE TRAP)**:
+
+      **THE TRIGGER:**
+      If the AI identifies a Home Underdog with a highly potent offense — averaging > 1.3 goals per game in the current season — OR the AI text (from any Agent) explicitly acknowledges that the home team recently scored multiple goals against elite/top-tier opposition, proving they can inflict damage on superior teams.
+
+      **THE TACTICAL REALITY (THE BLOWOUT RISK):**
+      Historical H2H dominance means absolutely nothing if the home team is currently a high-scoring threat. If an away favorite falls behind against a potent home underdog, they will push forward to equalize, exposing their defensive line to devastating counter-attacks. This turns projected 2-1 losses into 3-1 or 4-1 blowouts. The narrower the away handicap, the more catastrophically it dies. You cannot cap the variance of a live buzzsaw with a fragile +1.5 line.
+
+      **THE FORBIDDEN ACTION:**
+      If the Home Buzzsaw trigger is active, the Supreme Court is **STRICTLY FORBIDDEN** from selecting:
+      - Any **Away Team Asian Handicap** (e.g., Away +1.0, Away +1.5) as the Safe Banker.
+      - Any **Away Double Chance (X2)** as the Safe Banker.
+      These markets assume the away team can absorb punishment. A potent home offense destroys that assumption.
+
+      **THE PIVOT:**
+      The Supreme Court MUST abandon the away team's Match Control entirely. Pivot the Safe Banker to structural floors that embrace the home team's offensive threat:
+      1. **'Home Over 0.5 Goals'** — The absolute safest floor: a potent home offense will score at least once.
+      2. **'Home +2.5 Asian Handicap'** — Absorbs blowout risk if the home team wins outright or keeps it close.
+      3. **'Over 1.5 Match Goals'** — Embraces the open, counter-attacking chaos a potent home underdog creates.
+
+      **RECOGNITION TRIGGERS:**
+      You MUST activate the Home Buzzsaw Override if ANY of the following conditions are met:
+      - The Home Underdog averages **1.3+ goals per match** in the current season.
+      - Any Agent's reasoning explicitly states the home team 'thrives in chaotic game states' or has a recent multi-goal result against a top-tier or elite-level opponent.
+      - The pre-match data shows the home team has scored 2+ goals in a single recent match against a team ranked in the top 25% of their league or competition.
+
+      **THE H2H IMMUNITY CLAUSE (OVERRIDE OF RULE 20):**
+      Rule 32 **STRICTLY OVERRIDES Rule 20 (The H2H Respect Clause)** when the Home Buzzsaw trigger is active. You are FORBIDDEN from using the away team's historical H2H win streak to justify an away handicap or away match control banker. A 10-game H2H win streak is irrelevant against a home team averaging 1.5 goals per game who just scored 3 against a top-tier opponent. Current form obliterates historical patterns.
+
+      **FINAL WARNING:**
+      The Away Favorite Trap is one of the most catastrophic and financially destructive analytical errors in football betting. An AI that correctly identifies a potent home threat but then anchors its Safe Banker to a narrow away handicap is contradicting its own intelligence. The moment the buzzsaw activates, the away handicap is not a safe floor — it is a trap door. Trust the current data. Ignore the historical H2H. Embrace the home team's threat.
     """
 
 
