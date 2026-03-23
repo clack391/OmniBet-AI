@@ -842,7 +842,7 @@ const Dashboard = () => {
 
             {historyTabMounted && (
                 <div style={{ display: activeTab === 'history' ? 'block' : 'none' }}>
-                    <HistoryTab onSelectHistoryItem={handleSelectHistoryItem} />
+                    <HistoryTab onSelectHistoryItem={handleSelectHistoryItem} isActive={activeTab === 'history'} />
                 </div>
             )}
             {activeTab === 'groups' && <GroupsTab onSelectHistoryItem={handleSelectHistoryItem} />}
