@@ -14,7 +14,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Use a standard stable model compatible with the free tier/broad availability
 # We use gemini-3-pro-preview for deeper analytical reasoning and Google Search Grounding support 
-MODEL_NAME = "gemini-3-pro-preview" 
+MODEL_NAME = "gemini-3.1-pro-preview" 
 model = genai.GenerativeModel(MODEL_NAME)
 
 def check_cancelled(match_id: int):
@@ -583,7 +583,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         if not api_key:
             raise ValueError("API Key is missing")
             
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key={api_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key={api_key}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {
