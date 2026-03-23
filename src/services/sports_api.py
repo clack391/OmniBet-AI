@@ -23,7 +23,7 @@ BASE_URL = "https://api.football-data.org/v4"
 # Use GEMINI_API_KEY or GOOGLE_API_KEY interchangeably
 gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=gemini_key)
-model = genai.GenerativeModel("gemini-3-pro-preview")
+model = genai.GenerativeModel("gemini-3.1-pro-preview")
 
 # Cache for league standings with TTL 
 # Structure: { competition_id: {"data": [...], "fetched_at": datetime} }
