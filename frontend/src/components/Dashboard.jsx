@@ -668,51 +668,41 @@ const Dashboard = () => {
         setError(null);
         cancelRequestedRef.current = false;
         const total = selectedMatches.length;
-        const allResults = [];
 
         try {
             for (let i = 0; i < total; i++) {
                 if (cancelRequestedRef.current) break;
 
                 const match = selectedMatches[i];
-                currentlyProcessingIdRef.current = match.id;
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: matchLabel });
+                setProgressInfo({ current: i + 1, total, matchName: `Queuing audit: ${matchLabel}` });
 
-                abortControllerRef.current = new AbortController();
-
-                const response = await resilientApiCall(
-                    () => api.post(`/predict-audit`, {
+                try {
+                    const res = await api.post('/audit-async', {
                         booking_code: activeBookingCode || null,
                         items: [{
                             match_id: match.id || match.match_id,
                             user_selected_bet: match._user_selected_bet || match.selection || "Unknown Bet"
                         }]
-                    }, {
-                        signal: abortControllerRef.current.signal
-                    }),
-                    matchLabel
-                );
-                allResults.push(...response.data);
-                setPredictions([...allResults]);
+                    });
+                    const jobInfo = res.data[0]; // { job_id, match_id, status }
+                    savePendingJob(match.id || match.match_id, jobInfo.job_id);
+                    setTerminalJobId(jobInfo.job_id);
+                    startPolling(match.id || match.match_id, jobInfo.job_id);
+                } catch (err) {
+                    console.error(`Failed to queue audit for ${matchLabel}:`, err);
+                }
             }
+            setProgressInfo({ current: total, total, matchName: '⏳ Auditing in background…' });
         } catch (err) {
             if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
                 console.log("Audit aborted by user.");
                 return;
             }
             console.error(err);
-            if (err.response) {
-                setError("Betslip Auditor failed. Please try again.");
-            } else {
-                setError("Connection lost. Your audit is still running on the server — check History for results.");
-            }
-        } finally {
-            if (!cancelRequestedRef.current) {
-                setAnalyzing(false);
-                setProgressInfo({ current: 0, total: 0, matchName: '' });
-                currentlyProcessingIdRef.current = null;
-            }
+            setError("Betslip Auditor failed. Please try again.");
+            setAnalyzing(false);
+            setProgressInfo({ current: 0, total: 0, matchName: '' });
         }
     };
 
