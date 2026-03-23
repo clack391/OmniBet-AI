@@ -24,10 +24,18 @@ const AdminTerminal = ({ jobId, token, apiUrl }) => {
     const MAX_RECONNECT = 5;
 
     const buildWsUrl = () => {
-        const wsBase = apiUrl
-            .replace(/^http:\/\//, 'ws://')
-            .replace(/^https:\/\//, 'wss://');
-        return `${wsBase}/api/ws/terminal/${jobId}?token=${encodeURIComponent(token)}`;
+        if (apiUrl.startsWith('http://') || apiUrl.startsWith('https://')) {
+            // Dev: full URL pointing directly at uvicorn — swap protocol, no /api prefix
+            const base = apiUrl
+                .replace(/^http:\/\//, 'ws://')
+                .replace(/^https:\/\//, 'wss://');
+            return `${base}/ws/terminal/${jobId}?token=${encodeURIComponent(token)}`;
+        } else {
+            // Production: relative path like "/api" — derive host from window.location
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const base = `${protocol}//${window.location.host}${apiUrl}`;
+            return `${base}/ws/terminal/${jobId}?token=${encodeURIComponent(token)}`;
+        }
     };
 
     const connect = () => {
