@@ -6,6 +6,7 @@ import SupremeCourtCard from './SupremeCourtCard';
 import HistoryTab from './HistoryTab';
 import GroupsTab from './GroupsTab';
 import SettingsTab from './SettingsTab';
+import AdminTerminal from './AdminTerminal';
 import { useBetSlip } from '../context/BetSlipContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -35,23 +36,27 @@ const Dashboard = () => {
         console.log("🛑 Stopping analysis...");
         cancelRequestedRef.current = true;
 
-        // 1. Abort the active Axios request
+        // 1. Abort any active Axios request
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
         }
 
-        // 2. Clear state
+        // 2. Clear all polling timers
+        Object.values(pollingTimersRef.current).forEach(clearInterval);
+        pollingTimersRef.current = {};
+
+        // 3. Cancel all pending background jobs via the new endpoint
+        const saved = JSON.parse(localStorage.getItem('omnibetPendingJobs') || '{}');
+        Object.entries(saved).forEach(([matchId, jobId]) => {
+            api.post(`/jobs/${jobId}/cancel`).catch(() => {});
+            removePendingJob(matchId);
+        });
+
+        // 4. Clear state
         setAnalyzing(false);
         setProgressInfo({ current: 0, total: 0, matchName: '' });
-
-        // 3. Notify backend to kill its internal loop to save API credits
-        if (currentlyProcessingIdRef.current) {
-            try {
-                // Fire and forget, don't wait for it
-                api.post('/cancel-prediction', { match_id: currentlyProcessingIdRef.current })
-                    .catch(e => console.error("Cancel notify failed", e));
-            } catch (e) { }
-        }
+        setTerminalJobId(null);
+        currentlyProcessingIdRef.current = null;
     };
 
     const getLogoUrl = (logoPath) => {
@@ -149,6 +154,11 @@ const Dashboard = () => {
     const [loginLoading, setLoginLoading] = useState(false);
     const [loginError, setLoginError] = useState('');
 
+    // Async job tracking state (Walk-Away feature)
+    const [pendingJobs, setPendingJobs] = useState({});   // { match_id: job_id }
+    const [terminalJobId, setTerminalJobId] = useState(null);
+    const pollingTimersRef = useRef({});                   // { job_id: intervalId }
+
     // Axios Response Interceptor to handle expired/invalid tokens globally
     useEffect(() => {
         const interceptor = api.interceptors.response.use(
@@ -164,6 +174,88 @@ const Dashboard = () => {
         );
         return () => api.interceptors.response.eject(interceptor);
     }, []);
+
+    // --- Walk-Away: reconnect to any pending jobs on mount ---
+    useEffect(() => {
+        if (!isLoggedIn) return;
+        let saved;
+        try {
+            saved = JSON.parse(localStorage.getItem('omnibetPendingJobs') || '{}');
+        } catch {
+            saved = {};
+        }
+        if (Object.keys(saved).length === 0) return;
+
+        const resumeJob = async (matchId, jobId) => {
+            try {
+                const res = await api.get(`/jobs/${jobId}`);
+                const job = res.data;
+                if (job.status === 'COMPLETED' && job.result) {
+                    setPredictions(prev => {
+                        const alreadyPresent = prev.some(p => p.match_id === job.result.match_id);
+                        return alreadyPresent ? prev : [...prev, job.result];
+                    });
+                    removePendingJob(matchId);
+                } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
+                    removePendingJob(matchId);
+                } else {
+                    // Still running — start polling
+                    setTerminalJobId(jobId);
+                    startPolling(matchId, jobId);
+                }
+            } catch {
+                removePendingJob(matchId);
+            }
+        };
+
+        Object.entries(saved).forEach(([matchId, jobId]) => resumeJob(matchId, jobId));
+    }, [isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const savePendingJob = (matchId, jobId) => {
+        const current = JSON.parse(localStorage.getItem('omnibetPendingJobs') || '{}');
+        current[matchId] = jobId;
+        localStorage.setItem('omnibetPendingJobs', JSON.stringify(current));
+        setPendingJobs(prev => ({ ...prev, [matchId]: jobId }));
+    };
+
+    const removePendingJob = (matchId) => {
+        const current = JSON.parse(localStorage.getItem('omnibetPendingJobs') || '{}');
+        delete current[matchId];
+        localStorage.setItem('omnibetPendingJobs', JSON.stringify(current));
+        setPendingJobs(prev => { const n = { ...prev }; delete n[matchId]; return n; });
+    };
+
+    const startPolling = (matchId, jobId) => {
+        if (pollingTimersRef.current[jobId]) return; // already polling
+        const intervalId = setInterval(async () => {
+            try {
+                const res = await api.get(`/jobs/${jobId}`);
+                const job = res.data;
+                if (job.status === 'COMPLETED' && job.result) {
+                    clearInterval(pollingTimersRef.current[jobId]);
+                    delete pollingTimersRef.current[jobId];
+                    setPredictions(prev => {
+                        const alreadyPresent = prev.some(p => p.match_id === job.result.match_id);
+                        return alreadyPresent ? prev : [...prev, job.result];
+                    });
+                    removePendingJob(matchId);
+                    setAnalyzing(prev => {
+                        // Only turn off spinner when all jobs are done
+                        const remaining = Object.keys(pollingTimersRef.current).length;
+                        return remaining > 0 ? prev : false;
+                    });
+                } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
+                    clearInterval(pollingTimersRef.current[jobId]);
+                    delete pollingTimersRef.current[jobId];
+                    removePendingJob(matchId);
+                    setError(`Job for match ${matchId} ${job.status.toLowerCase()}: ${job.error_msg || ''}`);
+                }
+            } catch {
+                // Network blip — keep polling
+            }
+        }, 3000);
+        pollingTimersRef.current[jobId] = intervalId;
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -440,46 +532,40 @@ const Dashboard = () => {
         setError(null);
         cancelRequestedRef.current = false;
         const total = selectedMatches.length;
-        const allResults = [];
 
         try {
+            // Submit ALL jobs immediately (no waiting) then poll each for results
             for (let i = 0; i < total; i++) {
                 if (cancelRequestedRef.current) break;
 
                 const match = selectedMatches[i];
-                currentlyProcessingIdRef.current = match.id;
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: matchLabel });
+                setProgressInfo({ current: i + 1, total, matchName: `Queuing: ${matchLabel}` });
 
-                abortControllerRef.current = new AbortController();
-
-                const response = await resilientApiCall(
-                    () => api.post(`/predict-batch`, { match_ids: [match.id] }, {
-                        signal: abortControllerRef.current.signal
-                    }),
-                    matchLabel
-                );
-                allResults.push(...response.data);
-                setPredictions([...allResults]);
+                try {
+                    const res = await api.post('/predict-async', { match_ids: [match.id] });
+                    const jobInfo = res.data[0]; // { job_id, match_id, status }
+                    savePendingJob(match.id, jobInfo.job_id);
+                    // Show terminal for the first (or latest) job
+                    setTerminalJobId(jobInfo.job_id);
+                    startPolling(match.id, jobInfo.job_id);
+                } catch (err) {
+                    console.error(`Failed to queue ${matchLabel}:`, err);
+                }
             }
+
+            setProgressInfo({ current: total, total, matchName: '⏳ Analyzing in background…' });
         } catch (err) {
             if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
                 console.log("Analysis aborted by user.");
                 return;
             }
             console.error(err);
-            if (err.response) {
-                setError("Analysis failed. Please try again.");
-            } else {
-                setError("Connection lost. Your analysis is still running on the server — check History for results.");
-            }
-        } finally {
-            if (!cancelRequestedRef.current) {
-                setAnalyzing(false);
-                setProgressInfo({ current: 0, total: 0, matchName: '' });
-                currentlyProcessingIdRef.current = null;
-            }
+            setError("Failed to queue analysis. Please try again.");
+            setAnalyzing(false);
+            setProgressInfo({ current: 0, total: 0, matchName: '' });
         }
+        // Note: setAnalyzing(false) is handled inside startPolling when the last job completes
     };
 
     const handleAutoGenerate = async () => {
@@ -490,70 +576,87 @@ const Dashboard = () => {
         setError(null);
         cancelRequestedRef.current = false;
         const total = selectedMatches.length;
-        const allResults = [];
+
+        // Auto-add picks to slip as each job completes — wrap startPolling with auto-add logic
+        const startAutoGeneratePolling = (matchId, jobId) => {
+            if (pollingTimersRef.current[jobId]) return;
+            const intervalId = setInterval(async () => {
+                try {
+                    const res = await api.get(`/jobs/${jobId}`);
+                    const job = res.data;
+                    if (job.status === 'COMPLETED' && job.result) {
+                        clearInterval(pollingTimersRef.current[jobId]);
+                        delete pollingTimersRef.current[jobId];
+                        const result = job.result;
+                        setPredictions(prev => {
+                            const alreadyPresent = prev.some(p => p.match_id === result.match_id);
+                            return alreadyPresent ? prev : [...prev, result];
+                        });
+                        removePendingJob(matchId);
+                        // Auto-add to bet slip
+                        if (result && !result.error) {
+                            const primaryPick = result.primary_pick;
+                            const tipToAdd = primaryPick?.tip || result.safe_bet_tip || "Unknown Tip";
+                            const oddsToAdd = primaryPick?.odds ? parseFloat(primaryPick.odds) : 1.85;
+                            addToSlip({
+                                match_id: result.match_id || Math.random(),
+                                match: result.match,
+                                match_date: result.match_date,
+                                selection: tipToAdd,
+                                market: primaryPick?.market || result.market || '',
+                                type: 'Primary',
+                                odds: oddsToAdd,
+                            });
+                        }
+                        const remaining = Object.keys(pollingTimersRef.current).length;
+                        if (remaining === 0) {
+                            setAnalyzing(false);
+                            setProgressInfo({ current: 0, total: 0, matchName: '' });
+                            setSelectedMatches([]);
+                        }
+                    } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
+                        clearInterval(pollingTimersRef.current[jobId]);
+                        delete pollingTimersRef.current[jobId];
+                        removePendingJob(matchId);
+                        const remaining = Object.keys(pollingTimersRef.current).length;
+                        if (remaining === 0) {
+                            setAnalyzing(false);
+                            setProgressInfo({ current: 0, total: 0, matchName: '' });
+                        }
+                    }
+                } catch {
+                    // Network blip — keep polling
+                }
+            }, 3000);
+            pollingTimersRef.current[jobId] = intervalId;
+        };
 
         try {
             for (let i = 0; i < total; i++) {
                 if (cancelRequestedRef.current) break;
-
                 const match = selectedMatches[i];
-                currentlyProcessingIdRef.current = match.id;
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: matchLabel });
-
-                abortControllerRef.current = new AbortController();
-
-                const response = await resilientApiCall(
-                    () => api.post(`/predict-batch`, { match_ids: [match.id] }, {
-                        signal: abortControllerRef.current.signal
-                    }),
-                    matchLabel
-                );
-                const result = response.data[0];
-                allResults.push(result);
-                setPredictions([...allResults]);
-
-                // Auto-add safe bet as soon as it arrives
-                if (result && !result.error && !cancelRequestedRef.current) {
-                    const primaryPick = result.primary_pick;
-                    const tipToAdd = primaryPick?.tip || result.safe_bet_tip || "Unknown Tip";
-                    const oddsToAdd = primaryPick?.odds ? parseFloat(primaryPick.odds) : 1.85;
-
-                    const bet = {
-                        match_id: result.match_id || Math.random(),
-                        match: result.match,
-                        match_date: result.match_date,
-                        selection: tipToAdd,
-                        market: primaryPick?.market || result.market || '',
-                        type: 'Primary',
-                        odds: oddsToAdd
-                    };
-                    addToSlip(bet);
+                setProgressInfo({ current: i + 1, total, matchName: `Queuing: ${matchLabel}` });
+                try {
+                    const res = await api.post('/predict-async', { match_ids: [match.id] });
+                    const jobInfo = res.data[0];
+                    savePendingJob(match.id, jobInfo.job_id);
+                    setTerminalJobId(jobInfo.job_id);
+                    startAutoGeneratePolling(match.id, jobInfo.job_id);
+                } catch (err) {
+                    console.error(`Failed to queue ${matchLabel}:`, err);
                 }
             }
-
-            // Clear queue on success (only if not cancelled)
-            if (!cancelRequestedRef.current) {
-                setSelectedMatches([]);
-            }
-
+            setProgressInfo({ current: total, total, matchName: '⏳ Analyzing in background…' });
         } catch (err) {
             if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
                 console.log("Auto-Generate aborted by user.");
                 return;
             }
             console.error(err);
-            if (err.response) {
-                setError("Auto-Generate failed. Please try again.");
-            } else {
-                setError("Connection lost. Your analysis is still running on the server — check History for results.");
-            }
-        } finally {
-            if (!cancelRequestedRef.current) {
-                setAnalyzing(false);
-                setProgressInfo({ current: 0, total: 0, matchName: '' });
-                currentlyProcessingIdRef.current = null;
-            }
+            setError("Auto-Generate failed. Please try again.");
+            setAnalyzing(false);
+            setProgressInfo({ current: 0, total: 0, matchName: '' });
         }
     };
 
@@ -989,6 +1092,15 @@ const Dashboard = () => {
                         <h2 className="text-xl font-semibold flex items-center gap-2">
                             <Trophy className="w-5 h-5 text-yellow-500" /> AI Predictions
                         </h2>
+
+                        {/* Admin Live Terminal — only visible when logged in and a job is active */}
+                        {isLoggedIn && terminalJobId && (
+                            <AdminTerminal
+                                jobId={terminalJobId}
+                                token={localStorage.getItem('token')}
+                                apiUrl={API_URL}
+                            />
+                        )}
 
                         {predictions.length === 0 && !analyzing && (
                             <div className="bg-gray-800/50 border border-dashed border-gray-700 rounded-xl p-12 text-center text-gray-500">

@@ -8,6 +8,8 @@ DB_NAME = "omnibet.db"
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
     cursor = conn.cursor()
     
     cursor.execute('''
@@ -153,7 +155,19 @@ def init_db():
             value TEXT
         )
     ''')
-    
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS jobs (
+            job_id      TEXT PRIMARY KEY,
+            match_id    INTEGER,
+            status      TEXT DEFAULT 'PENDING',
+            result_json TEXT,
+            error_msg   TEXT,
+            created_at  TEXT DEFAULT (datetime('now')),
+            updated_at  TEXT DEFAULT (datetime('now'))
+        )
+    ''')
+
     conn.commit()
     conn.close()
 
@@ -740,6 +754,80 @@ def set_app_setting(key: str, value: str):
     except Exception as e:
         print(f"Error setting {key}: {e}")
         return False
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Jobs table — async task tracking
+# ---------------------------------------------------------------------------
+
+def create_job(job_id: str, match_id: int):
+    conn = sqlite3.connect(DB_NAME)
+    try:
+        conn.execute(
+            "INSERT INTO jobs (job_id, match_id, status) VALUES (?, ?, 'PENDING')",
+            (job_id, match_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def update_job_status(job_id: str, status: str):
+    conn = sqlite3.connect(DB_NAME)
+    try:
+        conn.execute(
+            "UPDATE jobs SET status=?, updated_at=datetime('now') WHERE job_id=?",
+            (status, job_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def save_job_result(job_id: str, result: dict):
+    conn = sqlite3.connect(DB_NAME)
+    try:
+        conn.execute(
+            "UPDATE jobs SET status='COMPLETED', result_json=?, updated_at=datetime('now') WHERE job_id=?",
+            (json.dumps(result), job_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def fail_job(job_id: str, error_msg: str):
+    conn = sqlite3.connect(DB_NAME)
+    try:
+        conn.execute(
+            "UPDATE jobs SET status='FAILED', error_msg=?, updated_at=datetime('now') WHERE job_id=?",
+            (error_msg, job_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_job(job_id: str):
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    try:
+        row = conn.execute(
+            "SELECT * FROM jobs WHERE job_id=?", (job_id,)
+        ).fetchone()
+        if not row:
+            return None
+        d = dict(row)
+        if d.get("result_json"):
+            try:
+                d["result"] = json.loads(d["result_json"])
+            except Exception:
+                d["result"] = None
+        else:
+            d["result"] = None
+        return d
     finally:
         conn.close()
 
