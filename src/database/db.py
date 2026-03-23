@@ -42,7 +42,15 @@ def init_db():
             UNIQUE(match_id, booking_code)
         )
     ''')
-    
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_predictions_history
+        ON predictions (visible_in_history, match_date DESC)
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_predictions_match_id
+        ON predictions (match_id)
+    """)
+
     # --- MIGRATION BLOCK: predictions ---
     try:
         cursor.execute('ALTER TABLE predictions ADD COLUMN booking_code TEXT')
