@@ -142,6 +142,7 @@ const Dashboard = () => {
     const [predictions, setPredictions] = useState([]);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('calendar');
+    const [historyTabMounted, setHistoryTabMounted] = useState(false);
     const [bookingCode, setBookingCode] = useState('');
     const [activeBookingCode, setActiveBookingCode] = useState(null);
     const [isParsingCode, setIsParsingCode] = useState(false);
@@ -817,7 +818,7 @@ const Dashboard = () => {
                         <FolderOpen className="w-4 h-4" /> Groups
                     </button>
                     <button
-                        onClick={() => setActiveTab('history')}
+                        onClick={() => { setActiveTab('history'); setHistoryTabMounted(true); }}
                         className={`px-4 py-2 rounded-md font-medium text-sm transition-all flex items-center gap-1.5 ${activeTab === 'history'
                             ? 'bg-gray-800 text-indigo-400 shadow-sm border border-gray-700'
                             : 'text-gray-400 hover:text-white'
@@ -839,7 +840,11 @@ const Dashboard = () => {
                 </div>
             </header>
 
-            {activeTab === 'history' && <HistoryTab onSelectHistoryItem={handleSelectHistoryItem} />}
+            {historyTabMounted && (
+                <div style={{ display: activeTab === 'history' ? 'block' : 'none' }}>
+                    <HistoryTab onSelectHistoryItem={handleSelectHistoryItem} />
+                </div>
+            )}
             {activeTab === 'groups' && <GroupsTab onSelectHistoryItem={handleSelectHistoryItem} />}
             {activeTab === 'settings' && isLoggedIn && <SettingsTab />}
 
