@@ -159,7 +159,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         - **Rule 20 - THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 10 matches. Early-season variance is a massive trap. Furthermore, you must NEVER assume an opposing team's offensive output will drop to zero simply because 1 or 2 starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance (The Wounded Animal Effect) and often play with a high-intensity point to prove.
         - **THE DATA PURITY MANDATE**: When conducting Live Searches for rosters, injuries, or stats, you MUST ONLY pull data from official, verified sports databases (e.g., Transfermarkt, Soccerway, Flashscore, Sofascore, or official club websites). You are strictly forbidden from citing data from gaming wikis (SOFIFA, Football Manager), Reddit career mode threads, or fan-concept sites.
         - **RULE 32 — THE HOME BUZZSAW OVERRIDE (THE AWAY FAVORITE TRAP)**: If the Home Underdog averages > 1.3 goals per game in the current season, OR has recently scored multiple goals against elite/top-tier opposition, you MUST flag the Home Buzzsaw as ACTIVE. In this state: (a) you are FORBIDDEN from selecting an Away Team Asian Handicap (Away +1.0, Away +1.5) or Away Double Chance (X2) as the Safe Banker; (b) you MUST ignore H2H win streaks for the Away team — current offensive form overrides historical data entirely; (c) you MUST pivot the Banker to structural floors that embrace the home team's threat: 'Home Over 0.5 Goals', 'Home +2.5 Asian Handicap', or 'Over 1.5 Match Goals'. The tactical reality: if the away favorite falls behind a potent home underdog, they will chase, expose their defensive line, and concede devastating counter-attacks — turning projected 2-1 losses into 3-1 or 4-1 blowouts. You cannot cap that variance with a narrow away handicap.
-    
+        - **RULE 33 — THE MUTUAL COLLAPSE EXEMPTION (CHAOS MULTIPLIER)**: If BOTH teams are missing critical defensive personnel (starting center-backs or starting goalkeeper) OR both teams concede > 1.8 goals per game, flag the Mutual Collapse as ACTIVE. In this state: (a) FORBIDDEN from selecting ANY 'Under Goals' market ('Under 2.5', 'Under 3.5', 'Under 4.5') or 'First Half Under' as the Safe Banker; (b) Rule 16 (Sterile Offense) and Rule 31 (Clinical Ineptitude) are immediately suspended — finishing stats are irrelevant when both defenses are gone; (c) MUST pivot to: 'BTTS: Yes', 'Over 4.5 Cards', or 'Over 8.5 Corners'. Tactical reality: when both defensive structures collapse, the match becomes an end-to-end transition shootout — even bad strikers score against zero defensive resistance. NOTE: This is distinct from Rule 10's Mud Fight (one broken defense + one broken offense supply line → NO_BET). Rule 33 fires when BOTH defenses are broken → high-volume chaos exploitable by volume markets.
+        - **RULE 34 — THE DAM BREAK EXEMPTION (xG POSITIVE REGRESSION)**: If a team is flagged under Rule 31 (Clinical Ineptitude — Big Chance Miss Rate 80%+) BUT is simultaneously creating > 2.0 Big Chances per game OR double-digit Big Chances in recent matches, flag the Dam Break as ACTIVE. High chance volume is evidence of elite offensive quality — the miss rate is temporary negative variance, not structural ineptitude. In this state: (a) FORBIDDEN from selecting 'Under 2.5' or 'Under 3.5' as the Safe Banker for this team's matches; (b) Rule 16 (Sterile Offense) and Rule 31 (Clinical Ineptitude) are suspended; (c) MUST pivot to: 'Home Win', 'Home -1.0 Asian Handicap', or 'Over 1.5 Team Goals'. The dam will break — be positioned correctly when it does.
+
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
        - **Scenario A (The Expected Script)**: If the pre-match favorite (Home or Away) scores first within 30 minutes, how does the opponent historically respond? Do they have the tactical discipline to avoid a blowout, or do they collapse?
@@ -402,6 +404,10 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
     - **RULE 16: THE ASYMMETRIC FATIGUE PROTOCOL (THE EARLY KILL TRAP)**: If Agent 1 flags the HOME FAVORITE for 'Fatigue' (midweek European match, 120-minute match in last 7 days, congested fixture schedule) but the opponent is a vastly inferior underdog (bottom 25% of table, concedes >= 1.5 goals per game, OR recent defeats by 2+ goal margins), you MUST audit any Match Goals 'Under' markets (Under 2.5, Under 3.5) with EXTREME SKEPTICISM. Superior teams dealing with fatigue do NOT play slow football against bad teams—they execute an 'Early Kill Strategy,' scoring 2-3 goals in the first 40 minutes to secure the game early, then coasting in the second half. You are STRICTLY FORBIDDEN from approving Under 2.5 or Under 3.5 Match Goals as the primary banker when there is a massive class disparity. Instead, you MUST pivot to: (1) Away Team Under 0.5/1.5 Goals (isolate the underdog's ineptitude), (2) Home Win, (3) Home Team Over 1.5 Goals, or (4) Asian Handicap -1.5/-2.0. Do NOT cap the favorite's goal ceiling—target the underdog's weakness. This rule OVERRIDES Rule 13 (Cumulative Fatigue Override) when the FAVORITE is fatigued but facing relegation fodder. The goals will come early, not late.
 
     - **RULE 17: THE HOME BUZZSAW OVERRIDE (THE AWAY FAVORITE TRAP)**: If Agent 1 identifies the Home Underdog as a high-scoring threat (averaging > 1.3 goals per game this season, OR recently scoring multiple goals against elite opposition), you MUST immediately audit any Away Team Asian Handicap (Away +1.0, Away +1.5) or Away Double Chance (X2) that Agent 1 selected as the Safe Banker. These markets are FORBIDDEN when the Home Buzzsaw is active. The blowout risk is real: an away favorite who falls behind a potent home underdog will push forward to equalize, exposing their defensive line to devastating counter-attacks — turning a projected 2-1 defeat into a 3-1 or 4-1 blowout. You MUST downgrade any Away Match Control market and force a pivot to: 'Home Over 0.5 Goals', 'Home +2.5 Asian Handicap', or 'Over 1.5 Match Goals'. Additionally, you MUST completely disregard any H2H win streak the away team holds — current offensive potency of the home team overrides all historical H2H data.
+
+    - **RULE 18: THE MUTUAL COLLAPSE EXEMPTION AUDIT**: If Agent 1's data reveals BOTH teams are missing critical defensive personnel (starting center-backs or starting goalkeeper) OR both teams concede > 1.8 goals per game, you MUST flag the Mutual Collapse as ACTIVE and audit any 'Under Goals' market Agent 1 selected. These markets are FORBIDDEN under a mutual collapse. You MUST downgrade to chaos/volume markets: 'BTTS: Yes', 'Over 4.5 Cards', or 'Over 8.5 Corners'. This rule overrides Rule 16 (Sterile Offense) and Rule 31 (Clinical Ineptitude) entirely — poor finishing stats cannot survive a match with zero defensive resistance on either side. IMPORTANT: This rule is DISTINCT from Rule 10's Mud Fight Trigger. The Mud Fight fires when one team has a broken defense AND the other has a broken offense (missing supply line with no depth) → NO_BET. Rule 18 fires when BOTH defensive structures are broken simultaneously, producing high-volume end-to-end chaos that is exploitable via volume markets — do NOT invoke a NO_BET under Rule 18.
+
+    - **RULE 19: THE DAM BREAK EXEMPTION AUDIT**: If Agent 1 flags a team for Rule 31 (Clinical Ineptitude / high Big Chance Miss Rate 80%+) BUT simultaneously reports that team is creating > 2.0 Big Chances per game OR double-digit Big Chances in recent matches, you MUST activate the Dam Break Exemption and REJECT any 'Under 2.5' or 'Under 3.5' Safe Banker. High chance volume is evidence of elite offensive quality — the miss rate is temporary negative variance, not structural ineptitude. You MUST downgrade the Under pick and force a pivot to: 'Home Win', 'Home -1.0 Asian Handicap', or 'Over 1.5 Team Goals' to capture the inevitable positive regression.
 
     11. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
@@ -1140,6 +1146,76 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **FINAL WARNING:**
       The Away Favorite Trap is one of the most catastrophic and financially destructive analytical errors in football betting. An AI that correctly identifies a potent home threat but then anchors its Safe Banker to a narrow away handicap is contradicting its own intelligence. The moment the buzzsaw activates, the away handicap is not a safe floor — it is a trap door. Trust the current data. Ignore the historical H2H. Embrace the home team's threat.
+
+    - **RULE 33: THE MUTUAL COLLAPSE EXEMPTION (THE CHAOS MULTIPLIER)**:
+
+      **THE TRIGGER:**
+      If the AI identifies that BOTH teams are missing critical defensive personnel (starting center-backs or starting goalkeepers), OR both teams have historically abysmal defensive structures (both conceding > 1.8 goals per game in current season form).
+
+      **THE TACTICAL REALITY (THE END-TO-END SHOOTOUT):**
+      When both defensive structures are broken, midfield discipline dissolves. The match becomes a transition shootout characterized by breakaways, open nets, and high-pressure penalties. The sheer volume and quality of chances mathematically overwhelms poor finishing statistics. Bad strikers WILL score when given zero defensive resistance. You cannot model a game with no defenders on either side using conservative goal ceilings.
+
+      **THE FORBIDDEN ACTION:**
+      If the Mutual Collapse trigger is active, the Supreme Court is STRICTLY FORBIDDEN from selecting:
+      - ANY 'Under Goals' market ('Under 2.5', 'Under 3.5', 'Under 4.5') as the Safe Banker.
+      - ANY 'First Half Under' market as the Safe Banker.
+      - 'BTTS: No' as the Safe Banker.
+
+      **THE GENERAL RULE VETO (OVERRIDE HIERARCHY):**
+      Rule 33 STRICTLY OVERRIDES Rule 16 (The Sterile Offense Trap) and Rule 31 (The Clinical Ineptitude Override). Finishing statistics are irrelevant in a mutual defensive collapse. The market physics change entirely when both defenses are structurally absent.
+
+      **THE PIVOT:**
+      Abandon goal ceilings and embrace the structural chaos. Pivot the Safe Banker to:
+      1. **'BTTS: Yes'** — Both broken defenses will concede at least once.
+      2. **'Over 4.5 Cards'** — Open, frantic, transition-heavy football generates frustration and bookings at volume.
+      3. **'Over 8.5 Corners'** — End-to-end pressure spikes corner volume from both attacking sides.
+      4. **'Over 2.5 Match Goals'** — If BTTS/Cards odds are unfavorable, the total goals market absorbs the same game state.
+
+      **CONFLICT DISAMBIGUATION — NOT THE MUD FIGHT TRIGGER:**
+      Rule 33 is explicitly DISTINCT from Rule 10's Mud Fight Trigger. The Mud Fight fires when (a) one team has a broken defense AND (b) the other team is simultaneously missing their offensive supply line with no proven depth — producing low-quality, unpredictable football that warrants a NO_BET. Rule 33 fires when BOTH teams have broken defensive structures — which produces HIGH-VOLUME, high-chance, end-to-end attacking chaos. Do NOT invoke Rule 26 (Extreme Variance Veto) under Rule 33. The chaos is predictable and exploitable via volume markets.
+
+      **RECOGNITION TRIGGERS:**
+      You MUST activate Rule 33 if ANY of the following are true:
+      - Both teams confirmed missing at least one starting center-back OR starting goalkeeper.
+      - Both teams concede > 1.8 goals per game in current season form.
+      - Agent 1 or Agent 2 explicitly notes both teams have "leaky defenses," "structural defensive issues," or are "both conceding freely."
+      - Combined defensive data shows both teams conceded 2+ goals in 3 of their last 5 matches.
+
+      **FINAL WARNING:**
+      An Under Goals market in a mutual defensive collapse is not a safe floor — it is a mathematical trap. A clinically poor striker will still score when given 8 breakaways against a missing center-back. Trust the structural physics of the game, not the finishing percentages. When both defenses are gone, embrace the chaos.
+
+    - **RULE 34: THE DAM BREAK EXEMPTION (xG POSITIVE REGRESSION)**:
+
+      **THE TRIGGER:**
+      If the AI flags a team for Rule 31 (Clinical Ineptitude — Big Chance Miss Rate 80%+, or sterile siege pattern) BUT the underlying volume of Big Chances Created is exceptionally high: > 2.0 Big Chances per game on average, OR double-digit Big Chances created across recent matches (last 2–3 games).
+
+      **THE TACTICAL REALITY (THE FLOODGATES):**
+      Creating a massive volume of Big Chances is the hardest metric to sustain in football. A team generating elite chance volume but missing is experiencing temporary negative variance — not structural clinical ineptitude. When this high-volume team faces a weak defense or a fatigued opponent, positive regression hits violently. The dam breaks, and a blowout is statistically imminent.
+
+      **THE GENERAL RULE VETO (OVERRIDE HIERARCHY):**
+      Rule 34 STRICTLY OVERRIDES Rule 31 (The Clinical Ineptitude Override) and Rule 16 (The Sterile Offense Trap). High chance creation volume ALWAYS cancels out a temporarily poor conversion rate. A team generating 2.0+ Big Chances per game is NOT sterile — their xG is elite; only their finishing is temporarily unlucky.
+
+      **THE FORBIDDEN ACTION:**
+      If the Dam Break Exemption is active, the Supreme Court is STRICTLY FORBIDDEN from selecting:
+      - 'Under 2.5 Goals' as the Safe Banker.
+      - 'Under 3.5 Goals' as the Safe Banker.
+      - Any goal ceiling market that relies on the team's poor conversion rate continuing.
+
+      **THE PIVOT:**
+      Acknowledge that positive regression is statistically imminent. Pivot the Safe Banker to:
+      1. **'Home Win' / 'Match Winner'** — If their chance quality overwhelms the opponent's defense.
+      2. **'Home -1.0 Asian Handicap'** — Multi-goal margin coverage for the dam-break scenario.
+      3. **'Over 1.5 Team Goals'** — Directly targets the high-volume team's output, bypassing the opponent's performance entirely.
+      4. **'Over 2.5 Match Goals'** — If the opponent also has an active offense, the total goals market absorbs the dam break.
+
+      **RECOGNITION TRIGGERS:**
+      You MUST activate the Dam Break Exemption if ALL of the following are true:
+      - A team has been flagged for Big Chance Miss Rate of 80%+ (Rule 31 trigger condition).
+      - The same team is simultaneously creating > 2.0 Big Chances per game on average, OR created 10+ Big Chances across their last 2–3 matches.
+      - The opponent's defensive record does NOT classify them as an elite fortress (conceding >= 1.0 goals per game).
+
+      **FINAL WARNING:**
+      Do NOT confuse temporary negative variance with permanent ineptitude. Rule 31 exists to catch truly toothless teams with low chance volume. It must never be weaponized against elite chance creators experiencing a cold streak in front of goal. A sniper who misses 8 shots in a row is still a sniper — they are due for a violent correction. The dam always breaks eventually. Be positioned correctly when it does.
     """
 
 
