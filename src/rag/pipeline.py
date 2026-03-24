@@ -1311,15 +1311,26 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
         payload["tools"] = [{"google_search": {}}]
 
-        check_cancelled(match_id)
-        response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
-        response.raise_for_status()
-        
+        max_retries = 3
+        for attempt in range(max_retries):
+            check_cancelled(match_id)
+            try:
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
+                response.raise_for_status()
+                break
+            except requests.exceptions.RequestException as e:
+                if attempt < max_retries - 1:
+                    import time
+                    print(f"⚠️ Network error (Supreme Court). Retrying {attempt + 1}/{max_retries} in 5s...")
+                    time.sleep(5)
+                else:
+                    raise
+
         response_json = response.json()
         raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
-        
+
         return json.loads(raw_text)
-        
+
     except Exception as e:
         print(f"Supreme Court Error: {e}")
         
