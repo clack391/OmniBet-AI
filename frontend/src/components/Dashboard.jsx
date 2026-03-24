@@ -534,39 +534,68 @@ const Dashboard = () => {
         cancelRequestedRef.current = false;
         const total = selectedMatches.length;
 
+        // Wait for a single job to reach COMPLETED or FAILED before continuing
+        const waitForJob = (matchId, jobId) => new Promise((resolve) => {
+            const intervalId = setInterval(async () => {
+                try {
+                    const res = await api.get(`/jobs/${jobId}`);
+                    const job = res.data;
+                    if (job.status === 'COMPLETED' && job.result) {
+                        clearInterval(intervalId);
+                        delete pollingTimersRef.current[jobId];
+                        setPredictions(prev => {
+                            const alreadyPresent = prev.some(p => p.match_id === job.result.match_id);
+                            return alreadyPresent ? prev : [...prev, job.result];
+                        });
+                        removePendingJob(matchId);
+                        resolve(job.result);
+                    } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
+                        clearInterval(intervalId);
+                        delete pollingTimersRef.current[jobId];
+                        removePendingJob(matchId);
+                        setError(`Job for match ${matchId} ${job.status.toLowerCase()}: ${job.error_msg || ''}`);
+                        resolve(null);
+                    }
+                } catch {
+                    // Network blip — keep polling
+                }
+            }, 3000);
+            pollingTimersRef.current[jobId] = intervalId;
+        });
+
         try {
-            // Submit ALL jobs immediately (no waiting) then poll each for results
+            // Process matches one at a time: submit → wait for completion → next
             for (let i = 0; i < total; i++) {
                 if (cancelRequestedRef.current) break;
 
                 const match = selectedMatches[i];
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: `Queuing: ${matchLabel}` });
+                setProgressInfo({ current: i + 1, total, matchName: `Analyzing: ${matchLabel}` });
 
                 try {
                     const res = await api.post('/predict-async', { match_ids: [match.id] });
                     const jobInfo = res.data[0]; // { job_id, match_id, status }
                     savePendingJob(match.id, jobInfo.job_id);
-                    // Show terminal for the first (or latest) job
                     setTerminalJobId(jobInfo.job_id);
-                    startPolling(match.id, jobInfo.job_id);
+                    // Wait for this match to finish before moving to the next
+                    await waitForJob(match.id, jobInfo.job_id);
                 } catch (err) {
-                    console.error(`Failed to queue ${matchLabel}:`, err);
+                    console.error(`Failed to analyze ${matchLabel}:`, err);
                 }
             }
 
-            setProgressInfo({ current: total, total, matchName: '⏳ Analyzing in background…' });
+            setProgressInfo({ current: total, total, matchName: '✅ All matches analyzed.' });
         } catch (err) {
             if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
                 console.log("Analysis aborted by user.");
                 return;
             }
             console.error(err);
-            setError("Failed to queue analysis. Please try again.");
-            setAnalyzing(false);
+            setError("Failed to analyze matches. Please try again.");
             setProgressInfo({ current: 0, total: 0, matchName: '' });
+        } finally {
+            setAnalyzing(false);
         }
-        // Note: setAnalyzing(false) is handled inside startPolling when the last job completes
     };
 
     const handleAutoGenerate = async () => {
