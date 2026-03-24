@@ -29,6 +29,7 @@ const Dashboard = () => {
     const abortControllerRef = useRef(null);
     const cancelRequestedRef = useRef(false);
     const currentlyProcessingIdRef = useRef(null);
+    const waitForJobCancelRef = useRef(null); // lets Stop instantly resolve any pending waitForJob
 
     const handleStopAnalysis = async () => {
         if (!analyzing) return;
@@ -52,7 +53,13 @@ const Dashboard = () => {
             removePendingJob(matchId);
         });
 
-        // 4. Clear state
+        // 4. Immediately resolve any in-progress waitForJob promise
+        if (waitForJobCancelRef.current) {
+            waitForJobCancelRef.current();
+            waitForJobCancelRef.current = null;
+        }
+
+        // 5. Clear state
         setAnalyzing(false);
         setProgressInfo({ current: 0, total: 0, matchName: '' });
         setTerminalJobId(null);
@@ -534,8 +541,14 @@ const Dashboard = () => {
         cancelRequestedRef.current = false;
         const total = selectedMatches.length;
 
-        // Wait for a single job to reach COMPLETED or FAILED before continuing
+        // Wait for a single job to reach COMPLETED or FAILED before continuing.
+        // Registers a cancel resolver so handleStopAnalysis can unblock it instantly.
         const waitForJob = (matchId, jobId) => new Promise((resolve) => {
+            waitForJobCancelRef.current = () => {
+                clearInterval(intervalId);
+                delete pollingTimersRef.current[jobId];
+                resolve(null);
+            };
             const intervalId = setInterval(async () => {
                 try {
                     const res = await api.get(`/jobs/${jobId}`);
@@ -543,6 +556,7 @@ const Dashboard = () => {
                     if (job.status === 'COMPLETED' && job.result) {
                         clearInterval(intervalId);
                         delete pollingTimersRef.current[jobId];
+                        waitForJobCancelRef.current = null;
                         setPredictions(prev => {
                             const alreadyPresent = prev.some(p => p.match_id === job.result.match_id);
                             return alreadyPresent ? prev : [...prev, job.result];
@@ -552,6 +566,7 @@ const Dashboard = () => {
                     } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
                         clearInterval(intervalId);
                         delete pollingTimersRef.current[jobId];
+                        waitForJobCancelRef.current = null;
                         removePendingJob(matchId);
                         setError(`Job for match ${matchId} ${job.status.toLowerCase()}: ${job.error_msg || ''}`);
                         resolve(null);
