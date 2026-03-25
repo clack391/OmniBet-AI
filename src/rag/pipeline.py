@@ -1344,14 +1344,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       High 'Goals Against' (GA) averages for bottom-tier teams are mirages — they were conceded against top teams in mismatched fixtures, NOT against fellow relegation candidates. When two poor teams face each other, neither possesses the clinical quality to exploit the other's weak defense. Crucially, two desperate, winless managers will play 'not to lose' rather than 'to win,' producing a nervous, low-quality, foul-heavy grind devoid of incisive attacking play. These matches characteristically end 0-0, 1-0, or 0-1 — not high-scoring affairs. The 'Goals Against' paper mirage completely evaporates when neither team has the offensive engine to punish it.
 
       **THE FORBIDDEN ACTION:**
-      If the Desperation Grind trigger is active, the Supreme Court is STRICTLY FORBIDDEN from using 'Over 1.5 Goals', 'Over 2.5 Goals', or 'BTTS: Yes' as the Safe Banker. You cannot trust two bad offenses to coordinate a high-scoring game, regardless of how catastrophic their defensive averages appear on paper. The GA average was built against elite opponents — it is irrelevant in this fixture.
+      If the Desperation Grind trigger is active, the Supreme Court is STRICTLY FORBIDDEN from using ANY of the following as the Safe Banker:
+      - 'Over 1.5 Goals', 'Over 2.5 Goals', or any upward goals market — two bad offenses cannot coordinate a high-scoring game regardless of GA averages.
+      - 'BTTS: Yes' — neither team has the clinical quality to guarantee a goal.
+      - Any Match Control market: 'Match Winner (1X2)', 'Double Chance (1X / X2)', or 'Draw No Bet (DNB)' — in a low-quality coin-flip match, any team can scrape a 0-1 win. There is no reliable result floor. You cannot trust either team to avoid defeat. The result is irrelevant; only the goal volume is predictable.
 
       **THE PIVOT:**
-      The AI MUST pivot to low-event structural floors that reflect the tactical paralysis of mutual desperation:
+      The AI MUST completely decouple from Match Control (1X2, Double Chance, DNB). In a low-quality coin-flip match, any team can scrape a 0-1 win — there is no reliable result floor to stand on. The AI is STRICTLY FORBIDDEN from relying on either team to avoid defeat. The Safe Banker MUST be purely goal-based structural floors: you are betting entirely on the absence of offensive quality, completely ignoring who actually wins the game.
       1. **Anchor the Correct Score** to 0-0 or 0-1 — the two most statistically likely outcomes in a grind between bottom-feeders.
-      2. **'Under 3.5 Goals'** — The hard ceiling when neither team can attack with intent.
-      3. **'1st Half Under 1.5 Goals'** — Two desperate managers will start cautiously; the first half is almost always sterile.
-      4. **Wide Double Chance (1X or X2) + Under 4.5 Goals** — Survive the inevitable tactical paralysis by combining result insurance with a generous goal ceiling.
+      2. **'Under 3.5 Goals'** — The primary Safe Banker. The hard ceiling when neither team can attack with intent.
+      3. **'1st Half Under 1.5 Goals'** — The secondary Safe Banker. Two desperate managers will start cautiously; the first half is almost always sterile.
 
       **RECOGNITION TRIGGERS:**
       You MUST activate the Desperation Grind if ALL of the following are true:
