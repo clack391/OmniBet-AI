@@ -1289,6 +1289,51 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
       **FINAL WARNING:**
       Historical H2H records are ghosts — the squads that played those matches may no longer exist. A 0-0 H2H trend from two seasons ago is irrelevant when both teams are currently conceding 1.5+ goals per game. Do not let the ghost of past tactical matchups override the living, breathing mathematical reality of the current season. Current form always wins. Always.
+
+    - **RULE 37: THE WOUNDED ANIMAL OVERRIDE (THE INJURY TRAP)**:
+
+      **THE TRIGGER:**
+      If the AI flags a Home Team for a severe defensive injury crisis (triggering Rule 10: Defensive Collapse) against a superior Away Team.
+
+      **THE TACTICAL REALITY (THE WOUNDED ANIMAL EFFECT):**
+      Do not blindly assume an away blowout. Home teams missing key defenders do not simply roll over; managers overcompensate by deploying hyper-conservative, aggressive low-blocks and rely on desperate transition counters (the "Wounded Animal" effect). This frequently results in the Home Team scoring or dragging the Away Team into a chaotic shootout.
+
+      **THE FORBIDDEN ACTION:**
+      If the Wounded Animal trigger is active, the AI is strictly FORBIDDEN from isolating the Away Team's output (e.g., 'Away Over 1.5 Goals' or 'Away Win') as the Safe Banker. You cannot cap the variance of a broken, desperate home team.
+
+      **THE PIVOT:**
+      The AI MUST pivot to mutual goal markets to capture the two-way chaos. Set the Safe Banker to 'Over 1.5 Match Goals' or 'BTTS: Yes'.
+
+    - **RULE 38: THE ADDITIVE GOAL FALLACY (THE CHESS MATCH TRAP)**:
+
+      **THE TRIGGER:**
+      If the AI attempts to justify an 'Over 2.5' or 'BTTS: Yes' bet purely by adding the Goal For (GF) averages of two similarly ranked, potent attacking teams (e.g., Team A 1.6 GF + Team B 1.9 GF = 3.5 Combined Expected Goals).
+
+      **THE TACTICAL REALITY (TWO SWORDS CANCEL EACH OTHER):**
+      Adding two potent offensive averages together is a mathematical fallacy. When two high-quality attacking teams face off (especially in high-stakes table positioning), they typically cancel each other out in a tense, risk-averse midfield chess match.
+
+      **THE FORBIDDEN ACTION:**
+      The AI is strictly FORBIDDEN from projecting a high-scoring game (Over 2.5, Over 3.5, BTTS: Yes) based solely on additive goal averages between top-tier teams.
+
+      **THE PIVOT:**
+      The AI MUST respect the tactical neutralization. Downgrade the goal expectations and pivot the Safe Banker to wide Match Control floors (e.g., '1X', 'X2') or structural ceilings (e.g., 'Under 3.5 Goals').
+
+    - **RULE 39: THE SYMMETRIC FATIGUE INVERSION**:
+
+      **THE TRIGGER:**
+      If the AI identifies that BOTH teams are operating on severe short rest (e.g., 3 days or less between matches).
+
+      **THE TACTICAL REALITY (DEAD LEGS KILL DEFENDERS FIRST):**
+      Symmetric fatigue does NOT result in low-scoring, defensive games. This is the Fatigue Inversion: dead legs destroy a player's willingness to track back and maintain defensive structure much faster than it destroys attacking talent. This creates massive open spaces, lazy fouls, penalties, and chaotic late-game transitions.
+
+      **THE GENERAL RULE VETO (OVERRIDE HIERARCHY):**
+      This rule strictly OVERRIDES Rule 16 (Sterile Offense). Even two offensively sterile teams will score in a fatigue-induced shootout.
+
+      **THE FORBIDDEN ACTION:**
+      If the Symmetric Fatigue trigger is active, the AI is strictly FORBIDDEN from using ANY 'Under Goals' market ('Under 2.5', 'Under 3.5') as a Safe Banker. You cannot rely on exhausted players to maintain a disciplined clean sheet for 90 minutes.
+
+      **THE PIVOT:**
+      The AI MUST pivot to high-event structural floors. Set the Safe Banker to 'Over 1.5 Match Goals', 'Over 4.5 Cards' (due to lazy tackles), or 'BTTS: Yes'.
     """
 
 
