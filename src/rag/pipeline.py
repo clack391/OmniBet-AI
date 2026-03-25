@@ -1386,7 +1386,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 """
             prompt = blind_backtest_header + prompt
             payload["contents"] = [({"parts": [{"text": prompt}]})]
-            print(f"🔍 [Agent 3] Blind Backtest Mode: Search enabled with before:{before_date} date constraints")
+            print(f"🔍 [Supreme Court] Blind Backtest Mode: Search enabled with before:{before_date} date constraints")
 
         payload["tools"] = [{"google_search": {}}]
 
