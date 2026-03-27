@@ -49,7 +49,7 @@ const Dashboard = () => {
         // 3. Cancel all pending background jobs via the new endpoint
         const saved = JSON.parse(localStorage.getItem('omnibetPendingJobs') || '{}');
         Object.entries(saved).forEach(([matchId, jobId]) => {
-            api.post(`/jobs/${jobId}/cancel`).catch(() => {});
+            api.post(`/jobs/${jobId}/cancel`).catch(() => { });
             removePendingJob(matchId);
         });
 
@@ -208,7 +208,7 @@ const Dashboard = () => {
                     removePendingJob(matchId);
                 } else {
                     // Still running — start polling
-                    setTerminalJobId(jobId);
+                    setTerminalJobId(prev => prev || jobId);
                     startPolling(matchId, jobId);
                 }
             } catch {
@@ -233,6 +233,17 @@ const Dashboard = () => {
         setPendingJobs(prev => { const n = { ...prev }; delete n[matchId]; return n; });
     };
 
+    const advanceTerminalJob = (finishedJobId) => {
+        setTerminalJobId(prevTerm => {
+            if (prevTerm === finishedJobId) {
+                const remainingKeys = Object.keys(pollingTimersRef.current);
+                return remainingKeys.length > 0 ? remainingKeys[0] : null;
+            }
+            return prevTerm;
+        });
+    };
+
+
     const startPolling = (matchId, jobId) => {
         if (pollingTimersRef.current[jobId]) return; // already polling
         const intervalId = setInterval(async () => {
@@ -242,6 +253,7 @@ const Dashboard = () => {
                 if (job.status === 'COMPLETED' && job.result) {
                     clearInterval(pollingTimersRef.current[jobId]);
                     delete pollingTimersRef.current[jobId];
+                        advanceTerminalJob(jobId);
                     setPredictions(prev => {
                         const alreadyPresent = prev.some(p => p.match_id === job.result.match_id);
                         return alreadyPresent ? prev : [...prev, job.result];
@@ -255,6 +267,7 @@ const Dashboard = () => {
                 } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
                     clearInterval(pollingTimersRef.current[jobId]);
                     delete pollingTimersRef.current[jobId];
+                        advanceTerminalJob(jobId);
                     removePendingJob(matchId);
                     setError(`Job for match ${matchId} ${job.status.toLowerCase()}: ${job.error_msg || ''}`);
                 }
@@ -341,15 +354,25 @@ const Dashboard = () => {
 
             // Filter matches to only include those on the selected date IN WAT (Africa/Lagos, UTC+1).
             // IMPORTANT: We must NOT use the raw UTC date string — a match at 23:30 UTC on March 20
-            // is actually 00:30 WAT on March 21. We must convert to WAT first.
+            // is actually 00:30 WAT on March 21. We parse the UTC time, add 1 hour explicitly,
+            // and then extract the YYYY-MM-DD string to be completely environment-agnostic.
             const allMatches = response.data.matches || [];
             const filteredMatches = allMatches.filter(match => {
                 if (!match.utcDate) return false;
-                // Convert the UTC ISO timestamp to WAT date string (YYYY-MM-DD)
+
+                // Parse the ISO string to get the UTC milliseconds
                 const matchDate = new Date(match.utcDate);
-                const watDateStr = matchDate.toLocaleDateString('en-CA', {
-                    timeZone: 'Africa/Lagos' // WAT = UTC+1
-                }); // returns 'YYYY-MM-DD' format
+                // WAT is UTC + 1 hour (3600000 ms)
+                const watTimeMs = matchDate.getTime() + (1 * 60 * 60 * 1000);
+                // Create a new Date object representing WAT time, but stored as UTC internally
+                // so we can use the safe getUTCFullYear() methods
+                const watDateObj = new Date(watTimeMs);
+
+                const watYear = watDateObj.getUTCFullYear();
+                const watMonth = String(watDateObj.getUTCMonth() + 1).padStart(2, '0');
+                const watDay = String(watDateObj.getUTCDate()).padStart(2, '0');
+
+                const watDateStr = `${watYear}-${watMonth}-${watDay}`;
                 return watDateStr === date;
             });
 
@@ -479,8 +502,8 @@ const Dashboard = () => {
 
             return { match, score, matches };
         })
-        .filter(item => item.matches) // Only keep matches
-        .sort((a, b) => b.score - a.score); // Sort by score (highest first)
+            .filter(item => item.matches) // Only keep matches
+            .sort((a, b) => b.score - a.score); // Sort by score (highest first)
 
         return matchesWithScore.map(item => item.match);
     }, [fixtures, searchQuery]);
@@ -547,6 +570,7 @@ const Dashboard = () => {
             waitForJobCancelRef.current = () => {
                 clearInterval(intervalId);
                 delete pollingTimersRef.current[jobId];
+                        advanceTerminalJob(jobId);
                 resolve(null);
             };
             const intervalId = setInterval(async () => {
@@ -556,6 +580,7 @@ const Dashboard = () => {
                     if (job.status === 'COMPLETED' && job.result) {
                         clearInterval(intervalId);
                         delete pollingTimersRef.current[jobId];
+                        advanceTerminalJob(jobId);
                         waitForJobCancelRef.current = null;
                         setPredictions(prev => {
                             const alreadyPresent = prev.some(p => p.match_id === job.result.match_id);
@@ -566,6 +591,7 @@ const Dashboard = () => {
                     } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
                         clearInterval(intervalId);
                         delete pollingTimersRef.current[jobId];
+                        advanceTerminalJob(jobId);
                         waitForJobCancelRef.current = null;
                         removePendingJob(matchId);
                         setError(`Job for match ${matchId} ${job.status.toLowerCase()}: ${job.error_msg || ''}`);
@@ -579,24 +605,34 @@ const Dashboard = () => {
         });
 
         try {
-            // Process matches one at a time: submit → wait for completion → next
+            // Process matches rapidly: submit all to the backend queue immediately
+            const queuedJobs = [];
+
             for (let i = 0; i < total; i++) {
                 if (cancelRequestedRef.current) break;
 
                 const match = selectedMatches[i];
                 const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: `Analyzing: ${matchLabel}` });
+                setProgressInfo({ current: i + 1, total, matchName: `Queuing: ${matchLabel}` });
 
                 try {
                     const res = await api.post('/predict-async', { match_ids: [match.id] });
                     const jobInfo = res.data[0]; // { job_id, match_id, status }
                     savePendingJob(match.id, jobInfo.job_id);
-                    setTerminalJobId(jobInfo.job_id);
-                    // Wait for this match to finish before moving to the next
-                    await waitForJob(match.id, jobInfo.job_id);
+                    setTerminalJobId(prev => prev || jobInfo.job_id);
+                    startPolling(match.id, jobInfo.job_id);
+                    queuedJobs.push({ matchId: match.id, jobId: jobInfo.job_id });
                 } catch (err) {
-                    console.error(`Failed to analyze ${matchLabel}:`, err);
+                    console.error(`Failed to enqueue ${matchLabel}:`, err);
                 }
+            }
+
+            setProgressInfo({ current: total, total, matchName: '⏳ Analyzing in background…' });
+
+            // Wait for all queued jobs to finish before clearing the UI state
+            for (const { matchId, jobId } of queuedJobs) {
+                if (cancelRequestedRef.current) break;
+                await waitForJob(matchId, jobId);
             }
 
             setProgressInfo({ current: total, total, matchName: '✅ All matches analyzed.' });
@@ -632,6 +668,7 @@ const Dashboard = () => {
                     if (job.status === 'COMPLETED' && job.result) {
                         clearInterval(pollingTimersRef.current[jobId]);
                         delete pollingTimersRef.current[jobId];
+                        advanceTerminalJob(jobId);
                         const result = job.result;
                         setPredictions(prev => {
                             const alreadyPresent = prev.some(p => p.match_id === result.match_id);
@@ -662,6 +699,7 @@ const Dashboard = () => {
                     } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
                         clearInterval(pollingTimersRef.current[jobId]);
                         delete pollingTimersRef.current[jobId];
+                        advanceTerminalJob(jobId);
                         removePendingJob(matchId);
                         const remaining = Object.keys(pollingTimersRef.current).length;
                         if (remaining === 0) {
@@ -686,7 +724,7 @@ const Dashboard = () => {
                     const res = await api.post('/predict-async', { match_ids: [match.id] });
                     const jobInfo = res.data[0];
                     savePendingJob(match.id, jobInfo.job_id);
-                    setTerminalJobId(jobInfo.job_id);
+                    setTerminalJobId(prev => prev || jobInfo.job_id);
                     startAutoGeneratePolling(match.id, jobInfo.job_id);
                 } catch (err) {
                     console.error(`Failed to queue ${matchLabel}:`, err);
@@ -732,7 +770,7 @@ const Dashboard = () => {
                     });
                     const jobInfo = res.data[0]; // { job_id, match_id, status }
                     savePendingJob(match.id || match.match_id, jobInfo.job_id);
-                    setTerminalJobId(jobInfo.job_id);
+                    setTerminalJobId(prev => prev || jobInfo.job_id);
                     startPolling(match.id || match.match_id, jobInfo.job_id);
                 } catch (err) {
                     console.error(`Failed to queue audit for ${matchLabel}:`, err);
