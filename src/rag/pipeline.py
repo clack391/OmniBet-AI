@@ -827,23 +827,8 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     
     ### 3. AGENT 2'S CRITIQUE (The Pessimist)
     {json.dumps(agent_2_critique, indent=2)}
-"""
-    # Note: The rest of the prompt (rules, instructions) is appended here in the actual file
     
-    try:
-        print(f"⚖️ [Supreme Court] Adjudicating {agent_1_pitch.get('match')}...")
-        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("API Key is missing")
-            
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
-        payload = {
-            "contents": [({"parts": [{"text": prompt}]})],
-            "generationConfig": {
-                "temperature": 0.0, 
-                "responseMimeType": "application/json"
-            }
-        }
+    ### YOUR EXCLUSIVE JOB: RESOLVE THE DEBATE
     Calculate the Expected Value (EV) and the absolute safest mathematical probability.
     Follow the "OMNIBET 17-MARKET CORRELATION MATRIX" rules:
     - BUCKET 1 (Match Control): 1X2, Double Chance, DNB, Asian Handicap.
@@ -1428,16 +1413,6 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     
     try:
-        # Compact match_data to reduce prompt size (remove massive historical arrays)
-        compact_match_data = match_data.copy()
-        if "h2h" in compact_match_data:
-            compact_match_data["h2h_summary"] = f"Removed {len(compact_match_data['h2h'])} raw matches for prompt efficiency."
-            del compact_match_data["h2h"]
-        if "home_last_matches" in compact_match_data:
-            del compact_match_data["home_last_matches"]
-        if "away_last_matches" in compact_match_data:
-            del compact_match_data["away_last_matches"]
-
         print(f"⚖️ [Supreme Court] Adjudicating {agent_1_pitch.get('match')}...")
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -1445,7 +1420,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         payload = {
-            "contents": [({"parts": [{"text": prompt.replace(json.dumps(match_data, indent=2), json.dumps(compact_match_data, indent=2))}]})],
+            "contents": [({"parts": [{"text": prompt}]})],
             "generationConfig": {
                 "temperature": 0.0, 
                 "responseMimeType": "application/json"
@@ -1481,7 +1456,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     ---
 
 """
-            prompt_with_header = blind_backtest_header + prompt.replace(json.dumps(match_data, indent=2), json.dumps(compact_match_data, indent=2))
+            prompt_with_header = blind_backtest_header + prompt
             payload["contents"] = [({"parts": [{"text": prompt_with_header}]})]
             print(f"🔍 [Supreme Court] Blind Backtest Mode: Search enabled with before:{before_date} date constraints")
 
