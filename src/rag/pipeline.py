@@ -163,6 +163,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         - **RULE 34 — THE DAM BREAK EXEMPTION (xG POSITIVE REGRESSION)**: If a team is flagged under Rule 31 (Clinical Ineptitude — Big Chance Miss Rate 80%+) BUT is simultaneously creating > 2.0 Big Chances per game OR double-digit Big Chances in recent matches, flag the Dam Break as ACTIVE. High chance volume is evidence of elite offensive quality — the miss rate is temporary negative variance, not structural ineptitude. In this state: (a) FORBIDDEN from selecting 'Under 2.5' or 'Under 3.5' as the Safe Banker for this team's matches; (b) Rule 16 (Sterile Offense) and Rule 31 (Clinical Ineptitude) are suspended; (c) MUST pivot to: 'Home Win', 'Home -1.0 Asian Handicap', or 'Over 1.5 Team Goals'. The dam will break — be positioned correctly when it does.
         - **RULE 35 — THE DEAD ENGINE VETO (THE FLATLINE EXEMPTION)**: Before activating Rule 33 (Mutual Collapse Exemption) or Rule 18 (Youth Variance), you MUST first run the Dead Engine Check on BOTH teams. If ANY team in the match averages < 0.8 goals per game AND creates < 1.5 Big Chances per game, flag that team as a 'Dead Engine.' A Dead Engine STRICTLY VETOES Rule 33 and Rule 18 — you CANNOT project a chaotic transition shootout when one participant is incapable of crossing the midfield line. The tactical reality: a terrible defense is only a vulnerability if the opponent has an engine capable of exploiting it. A Dead Engine reduces the match to a one-sided siege, not a bilateral shootout. THE FORBIDDEN ACTION: If the Dead Engine Veto is active, you are STRICTLY FORBIDDEN from selecting 'BTTS: Yes', 'Over 2.5', or 'Over 3.5' as the Safe Banker, regardless of how catastrophic both defenses are. THE PIVOT: Revert to Rule 16 (Sterile Offense) logic and anchor to a low-scoring grind. Pivot the Safe Banker to: 'Under 3.5 Goals', 'Match Winner + Under 4.5', or 'Double Chance + Under 3.5' favoring the functional team.
         - **RULE 36 — THE H2H OBSESSION TRAP (CURRENT FORM SUPREMACY)**: If you are considering historical H2H data (e.g., 'the last two meetings ended 0-0') or 'Derby/Rivalry' narratives to justify an 'Under Goals' market, you MUST first check current season metrics for BOTH teams. If both teams currently average > 1.0 goals per game (scored OR conceded), the Current Form Supremacy trigger is ACTIVE. In this state: (a) you are STRICTLY FORBIDDEN from using historical H2H Unders or 'Derby Lockdown' narratives to veto current high-scoring metrics; (b) Rule 20 (The H2H Respect Clause) is immediately overridden — do NOT purge 'Over' or 'BTTS' projections just because previous H2H meetings were low-scoring; (c) you MUST trust the current mathematical reality. The tactical reality: squads, managers, and tactical structures change every season — a low-scoring H2H record cannot magically fix a defense currently leaking goals. Derby emotion produces chaotic mistakes, not tactical masterclasses. PIVOT: If current form dictates a porous, high-scoring game, anchor the Safe Banker to 'Over 1.5 Goals' or 'BTTS: Yes', completely ignoring the historical H2H.
+         - **RULE 41: THE PLAYOFF PARALYSIS VETO (HIGH-STAKES FEAR)**: If you identify the match as a high-stakes fixture: a Cup Final, a Knockout Match, a late-stage UEFA Qualifier, or a relegation survival decider. THE TACTICAL REALITY (FEAR OVER TALENT): In high-stakes matches, the fear of losing overrides statistical attacking averages. Teams abandon their open playstyles to avoid season-ending mistakes. Furthermore, if a team is missing key defenders/goalkeepers in these matches, the manager will overcompensate by playing a hyper-conservative, protective low-block. The match will devolve into a nervous, low-event 0-0 or 1-0 grind. THE GENERAL RULE VETO: This rule strictly VETOES Rule 33 (Mutual Collapse). Missing defenders in a Cup Final/Qualifier do NOT create a shootout; they create a fortified bunker. THE FORBIDDEN ACTION: If the Playoff Paralysis trigger is active, you are strictly FORBIDDEN from using 'Over 2.5', 'Over 3.5', or 'BTTS: Yes' as a Safe Banker. THE PIVOT: You MUST pivot to survival markets. Set the Safe Banker to wide Match Control (e.g., '1X' for a strong home team) or a massive structural ceiling (e.g., 'Under 3.5 Goals'). Respect the fear.
+         - **RULE 42: THE GLASS CANNON VETO (THE BROKEN FAVORITE)**: If you identify a Heavy Favorite (e.g., highly superior talent, dominant odds) BUT flag them for a structural defensive collapse (Rule 10 active - missing key CB/GK/Captain), AND the Underdog has a functional offense (Rule 35 Dead Engine is INACTIVE). THE TACTICAL REALITY (THE COUNTER-ATTACK TRAP): A heavy favorite with a broken defense is a 'Glass Cannon.' Because they are the favorite, they will push high up the pitch and dominate possession. Because their defense is broken, the underdog will successfully counter-attack and score. If the underdog scores, the favorite must score twice just to win the game. This introduces massive variance and frequently results in 1-1 or 2-2 draws. THE FORBIDDEN ACTION: If the Glass Cannon trigger is active, you are strictly FORBIDDEN from using the Match Winner (1X2) market or negative Asian Handicaps (-1.0, -1.5) on the Favorite as the Safe Banker. You cannot trust a broken defense to secure all 3 points. THE PIVOT: You MUST decouple the Safe Banker from the Match Winner entirely. Since both teams are highly likely to score, pivot the Safe Banker to structural goal floors: 'Over 1.5 Match Goals' or 'BTTS: Yes'.
+         - **RULE 43: THE EXHIBITION VOID (THE FRIENDLY MATCH TRAP)**: If you identify the match as a Non-Competitive Fixture: Club Friendlies, U21/U19 International Friendlies, or pre-season exhibitions. THE TACTICAL REALITY (NO MATCH CONTROL): In friendly matches, 'Home Advantage' is a mirage (empty stadiums, no crowd pressure). Furthermore, managers prioritize player evaluation over winning, leading to mass substitutions (6+ changes) in the second half. This completely destroys tactical structure and makes Match Control entirely unpredictable. A superior team will easily lose 0-1 to a late fluke goal from a reserve player. THE GENERAL RULE VETO: This rule strictly VETOES Rule 17 and Rule 32 (Home Buzzsaw). Home and Away splits are mathematically invalid in friendly exhibitions. THE FORBIDDEN ACTION: If the Exhibition Void trigger is active, you are strictly FORBIDDEN from using Match Control markets (1X2, Double Chance, Draw No Bet, Asian Handicaps) as the Safe Banker. You cannot trust a team to win or draw a match they do not care about winning. THE PIVOT: You MUST decouple the Safe Banker from the Match Winner entirely. Pivot to purely structural goal floors that survive disjointed, sloppy football: 'Under 3.5 Goals', '1st Half Under 1.5 Goals', or if both teams have elite offensive depth, 'Over 1.5 Match Goals'.
 
     3. **GAME STATE SIMULATION**:
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
@@ -328,7 +331,10 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         text_content = re.sub(r',\s*}', '}', text_content)
         text_content = re.sub(r',\s*\]', ']', text_content)
                 
-        return json.loads(text_content)
+        parsed = json.loads(text_content)
+        if isinstance(parsed, list) and len(parsed) > 0:
+            return parsed[0]
+        return parsed
     except Exception as e:
         safe_error = re.sub(r'key=[^&\s]+', 'key=[REDACTED]', str(e))
         print(f"Gemini API Error in predict_match: {safe_error}")
@@ -348,6 +354,10 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
     Second agent in the Multi-Agent Loop. Acts as a strict Risk Manager to verify 
     the safety of the initial prediction.
     """
+    # Harden against list-wrapped JSON from Agent 1
+    if isinstance(initial_prediction_json, list) and len(initial_prediction_json) > 0:
+        initial_prediction_json = initial_prediction_json[0]
+
     if "error" in initial_prediction_json:
         print("⚠️ [Agent 2] Skipping Risk Review: Primary Agent failed with an API error.")
         return initial_prediction_json
@@ -414,6 +424,9 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
     - **RULE 20: THE DEAD ENGINE VETO AUDIT**: Before approving any 'BTTS: Yes', 'Over 2.5', or 'Over 3.5' market justified by RULE 18 (Mutual Collapse) activation, you MUST run the Dead Engine Check. If ANY team in the match averages < 0.8 goals per game AND creates < 1.5 Big Chances per game, the Dead Engine Veto is active and RULE 18 is immediately suspended. You MUST REJECT or DOWNGRADE any volume market (BTTS: Yes, Over 2.5, Over 3.5) that relies on both teams attacking freely — a broken defense is only exploitable if the opponent has a functioning engine. A Dead Engine cannot produce a transition shootout. THE PIVOT: Downgrade to 'Under 3.5 Goals', 'Match Winner + Under 4.5', or 'Double Chance + Under 3.5' favoring the functional team.
 
     - **RULE 21: THE H2H OBSESSION TRAP AUDIT**: If Agent 1's data shows historical H2H records (e.g., consecutive 0-0s, low-scoring Derby results) were used to justify an 'Under Goals' market, you MUST immediately check current season form. If BOTH teams currently average > 1.0 goals per game (scored OR conceded), the Current Form Supremacy trigger is ACTIVE. You MUST REJECT or DOWNGRADE any 'Under 2.5' or 'Under 3.5' Safe Banker justified purely by H2H history or Derby/Rivalry narratives. Current defensive metrics are demonstrably poor — historical H2H data cannot override live, current-season evidence. PIVOT: Downgrade to 'Over 1.5 Goals' or 'BTTS: Yes', treating the H2H record as statistically irrelevant.
+    - **RULE 22: THE PLAYOFF PARALYSIS AUDIT (HIGH-STAKES FEAR OVERRIDE)**: If Agent 1's analysis identifies the match as a high-stakes fixture — a Cup Final, a Knockout Match, a late-stage UEFA/Continental Qualifier, or a relegation survival decider — you MUST immediately audit any high-goal or BTTS market Agent 1 selected. These markets are STRICTLY FORBIDDEN when the Playoff Paralysis trigger is active. THE TACTICAL REALITY: Fear of losing overrides statistical attacking averages in knockout football. If a key defender or goalkeeper is missing, the manager OVERCOMPENSATES with a hyper-conservative low-block — the match devolves into a 0-0 or 1-0 grind, NOT a chaotic shootout. RULE VETO: This rule STRICTLY VETOES RULE 18 (Mutual Collapse Audit) — missing defenders in a Cup Final do NOT create a shootout. THE FORBIDDEN ACTION: You MUST REJECT or DOWNGRADE 'Over 2.5 Goals', 'Over 3.5 Goals', or 'BTTS: Yes' if they are the primary banker in a verified high-stakes match. THE PIVOT: Force Agent 1's pick to survival markets — wide Match Control (e.g., '1X' for the stronger home side) or a massive ceiling (e.g., 'Under 3.5 Goals').
+    - **RULE 23: THE GLASS CANNON AUDIT (BROKEN FAVORITE VETO)**: If Agent 1 identifies a Heavy Favorite (dominant odds, superior talent) BUT simultaneously flags them for Rule 10 (Defensive Collapse — missing key CB, GK, or defensive captain), AND the Underdog has a functional offense (Rule 35 Dead Engine is INACTIVE for the underdog), you MUST immediately audit any Match Winner (1X2) or negative Asian Handicap pick Agent 1 used as the Safe Banker. These markets are STRICTLY FORBIDDEN when the Glass Cannon is active. THE TACTICAL REALITY: A heavy favorite with a broken defense will dominate possession but concede from underdog counter-attacks — frequently resulting in 1-1 or 2-2 draws. THE FORBIDDEN ACTION: You MUST REJECT or DOWNGRADE any Match Winner (1X2) or negative Asian Handicap (-1.0, -1.5) on the Favorite as the primary banker. THE PIVOT: Force the Safe Banker to structural goal floors: 'Over 1.5 Match Goals' or 'BTTS: Yes'.
+    - **RULE 24: THE EXHIBITION VOID AUDIT (FRIENDLY MATCH WIPE)**: If Agent 1's analysis identifies the match as a Non-Competitive Fixture — a Club Friendly, a U21/U19 International Friendly, or a pre-season exhibition — you MUST immediately wipe any Match Control market Agent 1 selected as the Safe Banker. RULE VETO: This rule STRICTLY VETOES Agent 1's Rule 17 (Home Buzzsaw) and Rule 32 — these rules were built on competitive match data and CANNOT be applied in friendly exhibitions. THE FORBIDDEN ACTION: You MUST REJECT any Match Control market (Match Winner 1X2, Double Chance, Draw No Bet, Asian Handicap) as the primary banker if the Exhibition Void is active. THE PIVOT: Force the Safe Banker to purely structural goal floors: 'Under 3.5 Goals', '1st Half Under 1.5 Goals', or — if both teams have elite offensive squad depth — 'Over 1.5 Match Goals'.
 
     11. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
@@ -434,8 +447,8 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
     Return ONLY valid JSON. It MUST EXACTLY MATCH this schema:
     {{
         "step_by_step_reasoning": "Risk Manager's evaluation of the original tips...",
-        "scenario_analysis": {json.dumps(initial_prediction_json.get('scenario_analysis', {}))},
-        "match": "{initial_prediction_json.get('match')}",
+        "scenario_analysis": {json.dumps(initial_prediction_json.get('scenario_analysis', {})) if isinstance(initial_prediction_json, dict) else '[]'},
+        "match": "{initial_prediction_json.get('match') if isinstance(initial_prediction_json, dict) else 'Unknown'}",
         "full_analysis": {{
             "1X2": {{"prediction": "[Home/Draw/Away]", "odds": 1.95, "reasoning": "..."}},
             "Match_Goals": {{"prediction": "[Over/Under 2.5]", "odds": 1.80, "reasoning": "..."}},
@@ -648,6 +661,10 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     The Betslip Auditor Mode (Pipeline B - Dual Agent Phase 2)
     Evaluates the 'user_selected_bet' against Agent 1's full tactical breakdown.
     """
+    # Harden against list-wrapped JSON from Agent 1
+    if isinstance(initial_prediction, list) and len(initial_prediction) > 0:
+        initial_prediction = initial_prediction[0]
+
     prompt = f"""
     You are the Lead Risk Manager and Betslip Auditor for OmniBet AI.
     Your colleague (The Master Tactical Analyzer) has just produced a rigorous, deeply researched 17-market statistical breakdown of an upcoming football match.
@@ -703,6 +720,9 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
       - **RULE 9: THE HOME BUZZSAW AUDIT**: If the match data shows the Home Underdog averages > 1.3 goals per game in the current season, OR has recently scored multiple goals against elite/top-tier opposition, you MUST REJECT or DOWNGRADE any Away Team Asian Handicap (Away +1.0, Away +1.5) or Away Double Chance (X2) the user has selected. These markets cannot absorb the blowout risk of a potent home underdog — if the away favorite falls behind, they chase, expose their defensive line, and concede devastating counter-attacks. Downgrade to: 'Home Over 0.5 Goals', 'Home +2.5 Asian Handicap', or 'Over 1.5 Match Goals'. You MUST also ignore any H2H win streak the away team holds — current home offensive form overrides all historical H2H data.
       - **RULE 10: THE DEAD ENGINE VETO AUDIT**: Before approving any user-selected 'BTTS: Yes', 'Over 2.5', or 'Over 3.5' bet backed by RULE 7 (Mutual Collapse Exemption), you MUST run the Dead Engine Check. If ANY team in the match averages < 0.8 goals per game AND creates < 1.5 Big Chances per game, the Dead Engine Veto is active and RULE 7 is immediately suspended. You MUST REJECT the user's over/BTTS selection — a terrible defense is only a liability if the opponent can attack. A Dead Engine cannot generate a shootout. Downgrade to: 'Under 3.5 Goals', 'Match Winner + Under 4.5', or 'Double Chance + Under 3.5' favoring the functional team.
       - **RULE 11: THE H2H OBSESSION TRAP AUDIT**: Before approving any user-selected 'Under 2.5' or 'Under 3.5' bet backed by H2H history or Derby/Rivalry narratives, check current season metrics. If BOTH teams average > 1.0 goals per game (scored OR conceded) in the current season, you MUST REJECT the Under bet — historical low-scoring H2H records cannot override currently leaking defenses. Derby emotion does not create tactical discipline; it creates chaotic mistakes. Downgrade to: 'Over 1.5 Goals' or 'BTTS: Yes', ignoring the historical H2H entirely.
+      - **RULE 12: THE PLAYOFF PARALYSIS AUDIT (HIGH-STAKES FEAR)**: If the match is a high-stakes fixture: a Cup Final, a Knockout Match, a late-stage UEFA Qualifier, or a relegation survival decider. THE TACTICAL REALITY: In high-stakes matches, the fear of losing overrides statistical attacking averages. Teams abandon their open playstyles to avoid season-ending mistakes. Furthermore, if a team is missing key defenders/goalkeepers in these matches, the manager overcompensate by playing a hyper-conservative, protective low-block. The match will devolve into a nervous, low-event 0-0 or 1-0 grind. THE GENERAL RULE VETO: This rule strictly VETOES Rule 7 (Mutual Collapse). Missing defenders in a Cup Final/Qualifier do NOT create a shootout; they create a fortified bunker. THE FORBIDDEN ACTION: If the Playoff Paralysis trigger is active, the AI is strictly FORBIDDEN from using 'Over 2.5', 'Over 3.5', or 'BTTS: Yes' as a Safe Banker. THE PIVOT: The AI MUST pivot to survival markets. Set the Safe Banker to wide Match Control (e.g., '1X' for a strong home team) or a massive structural ceiling (e.g., 'Under 3.5 Goals'). Respect the fear.
+      - **RULE 13: THE GLASS CANNON AUDIT (THE BROKEN FAVORITE)**: If the AI identifies a Heavy Favorite (e.g., highly superior talent, dominant odds) BUT flags them for a structural defensive collapse (Rule 10 active - missing key CB/GK/Captain), AND the Underdog has a functional offense (Rule 10 Dead Engine Veto is INACTIVE). THE TACTICAL REALITY (THE COUNTER-ATTACK TRAP): A heavy favorite with a broken defense is a 'Glass Cannon.' Because they are the favorite, they will push high up the pitch and dominate possession. Because their defense is broken, the underdog will successfully counter-attack and score. If the underdog scores, the favorite must score twice just to win the game. This introduces massive variance and frequently results in 1-1 or 2-2 draws. THE FORBIDDEN ACTION: If the Glass Cannon trigger is active, the AI is strictly FORBIDDEN from using the Match Winner (1X2) market or negative Asian Handicaps (-1.0, -1.5) on the Favorite as the Safe Banker. You cannot trust a broken defense to secure all 3 points. THE PIVOT: The AI MUST decouple the Safe Banker from the Match Winner entirely. Since both teams are highly likely to score, pivot the Safe Banker to structural goal floors: 'Over 1.5 Match Goals' or 'BTTS: Yes'.
+      - **RULE 14: THE EXHIBITION VOID AUDIT (THE FRIENDLY MATCH TRAP)**: If the match is a Non-Competitive Fixture: Club Friendlies, U21/U19 International Friendlies, or pre-season exhibitions. THE TACTICAL REALITY (NO MATCH CONTROL): In friendly matches, 'Home Advantage' is a mirage (empty stadiums, no crowd pressure). Furthermore, managers prioritize player evaluation over winning, leading to mass substitutions (6+ changes) in the second half. This completely destroys tactical structure and makes Match Control entirely unpredictable. A superior team will easily lose 0-1 to a late fluke goal from a reserve player. THE GENERAL RULE VETO: This rule strictly VETOES Rule 9 (Home Buzzsaw). Home and Away splits are mathematically invalid in friendly exhibitions. THE FORBIDDEN ACTION: If the Exhibition Void trigger is active, the AI is strictly FORBIDDEN from using Match Control markets (1X2, Double Chance, Draw No Bet, Asian Handicaps) as the Safe Banker. You cannot trust a team to win or draw a match they do not care about winning. THE PIVOT: The AI MUST decouple the Safe Banker from the Match Winner entirely. Pivot to purely structural goal floors that survive disjointed, sloppy football: 'Under 3.5 Goals', '1st Half Under 1.5 Goals', or if both teams have elite offensive depth, 'Over 1.5 Match Goals'.
     """
     
     try:
@@ -755,7 +775,10 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         response_json = response.json()
         raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
         
-        return json.loads(raw_text)
+        parsed = json.loads(raw_text)
+        if isinstance(parsed, list) and len(parsed) > 0:
+            return parsed[0]
+        return parsed
         
     except Exception as e:
         print(f"Error executing Auditor: {e}")
@@ -776,20 +799,51 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     Resolves the debate between Agent 1 (Tactical) and Agent 2 (Risk Manager).
     Applies the OmniBet 17-Market Correlation Matrix for EV calculation.
     """
+    # Harden against list-wrapped JSON
+    if isinstance(agent_1_pitch, list) and len(agent_1_pitch) > 0:
+        agent_1_pitch = agent_1_pitch[0]
+    if isinstance(agent_2_critique, list) and len(agent_2_critique) > 0:
+        agent_2_critique = agent_2_critique[0]
+
+    # Compact match_data to reduce prompt size (remove massive historical arrays)
+    compact_match_data = match_data.copy()
+    if "h2h" in compact_match_data:
+        compact_match_data["h2h_summary"] = f"Removed {len(compact_match_data['h2h'])} raw matches for prompt efficiency."
+        del compact_match_data["h2h"]
+    if "home_last_matches" in compact_match_data:
+        del compact_match_data["home_last_matches"]
+    if "away_last_matches" in compact_match_data:
+        del compact_match_data["away_last_matches"]
+
     prompt = f"""
     You are the Supreme Court Judge and Final Risk Arbiter for OmniBet AI.
     You are evaluating a multi-agent debate regarding a football match.
     
     ### 1. RAW MATCH DATA (Tactical metrics)
-    {json.dumps(match_data, indent=2)}
+    {json.dumps(compact_match_data, indent=2)}
     
     ### 2. AGENT 1'S PITCH (The Optimist)
     {json.dumps(agent_1_pitch, indent=2)}
     
     ### 3. AGENT 2'S CRITIQUE (The Pessimist)
     {json.dumps(agent_2_critique, indent=2)}
+"""
+    # Note: The rest of the prompt (rules, instructions) is appended here in the actual file
     
-    ### YOUR EXCLUSIVE JOB: RESOLVE THE DEBATE
+    try:
+        print(f"⚖️ [Supreme Court] Adjudicating {agent_1_pitch.get('match')}...")
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not api_key:
+            raise ValueError("API Key is missing")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
+        payload = {
+            "contents": [({"parts": [{"text": prompt}]})],
+            "generationConfig": {
+                "temperature": 0.0, 
+                "responseMimeType": "application/json"
+            }
+        }
     Calculate the Expected Value (EV) and the absolute safest mathematical probability.
     Follow the "OMNIBET 17-MARKET CORRELATION MATRIX" rules:
     - BUCKET 1 (Match Control): 1X2, Double Chance, DNB, Asian Handicap.
@@ -1374,6 +1428,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     
     try:
+        # Compact match_data to reduce prompt size (remove massive historical arrays)
+        compact_match_data = match_data.copy()
+        if "h2h" in compact_match_data:
+            compact_match_data["h2h_summary"] = f"Removed {len(compact_match_data['h2h'])} raw matches for prompt efficiency."
+            del compact_match_data["h2h"]
+        if "home_last_matches" in compact_match_data:
+            del compact_match_data["home_last_matches"]
+        if "away_last_matches" in compact_match_data:
+            del compact_match_data["away_last_matches"]
+
         print(f"⚖️ [Supreme Court] Adjudicating {agent_1_pitch.get('match')}...")
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -1381,7 +1445,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         payload = {
-            "contents": [({"parts": [{"text": prompt}]})],
+            "contents": [({"parts": [{"text": prompt.replace(json.dumps(match_data, indent=2), json.dumps(compact_match_data, indent=2))}]})],
             "generationConfig": {
                 "temperature": 0.0, 
                 "responseMimeType": "application/json"
@@ -1417,8 +1481,8 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     ---
 
 """
-            prompt = blind_backtest_header + prompt
-            payload["contents"] = [({"parts": [{"text": prompt}]})]
+            prompt_with_header = blind_backtest_header + prompt.replace(json.dumps(match_data, indent=2), json.dumps(compact_match_data, indent=2))
+            payload["contents"] = [({"parts": [{"text": prompt_with_header}]})]
             print(f"🔍 [Supreme Court] Blind Backtest Mode: Search enabled with before:{before_date} date constraints")
 
         payload["tools"] = [{"google_search": {}}]
@@ -1427,7 +1491,8 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         for attempt in range(max_retries):
             check_cancelled(match_id)
             try:
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
+                # Increased timeout to 300s to allow for deep reasoning + search
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=300)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -1441,7 +1506,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         response_json = response.json()
         raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
 
-        return json.loads(raw_text)
+        parsed = json.loads(raw_text)
+        if isinstance(parsed, list) and len(parsed) > 0:
+            return parsed[0]
+        return parsed
 
     except Exception as e:
         print(f"Supreme Court Error: {e}")
