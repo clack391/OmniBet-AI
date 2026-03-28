@@ -182,7 +182,9 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
          - **RULE 41 — THE PLAYOFF PARALYSIS VETO (HIGH-STAKES FEAR)**: If you identify the match as a high-stakes fixture — a Cup Final, a Knockout Match, a late-stage UEFA/Continental Qualifier, or a relegation survival decider — flag the Playoff Paralysis as ACTIVE. THE TACTICAL REALITY: In high-stakes matches, the fear of losing overrides statistical attacking averages. Teams abandon their open playstyles to avoid season-ending mistakes. Critically, if a team is missing key defenders or a goalkeeper in these matches, their manager will OVERCOMPENSATE by playing a hyper-conservative, protective low-block. The match will devolve into a nervous, low-event 0-0 or 1-0 grind, NOT a chaotic shootout. THE GENERAL RULE VETO: Rule 41 STRICTLY VETOES Rule 33 (Mutual Collapse). Missing defenders in a Cup Final or Qualifier do NOT create a transition shootout — they create a fortified bunker. THE FORBIDDEN ACTION: If the Playoff Paralysis trigger is active, you are STRICTLY FORBIDDEN from using 'Over 2.5 Goals', 'Over 3.5 Goals', or 'BTTS: Yes' as the Safe Banker. THE PIVOT: You MUST pivot to survival markets. Set the Safe Banker to wide Match Control (e.g., '1X' for a strong home side) or a massive structural ceiling (e.g., 'Under 3.5 Goals'). Respect the fear — fear overrides talent in knockout football.
          - **RULE 42 — THE GLASS CANNON VETO (THE BROKEN FAVORITE)**: If you identify a Heavy Favorite (vastly superior talent, dominant odds) BUT flag them for a structural defensive collapse (Rule 10 active — missing key CB, GK, or defensive captain), AND the Underdog has a functional offense (Rule 35 Dead Engine is INACTIVE for the underdog), flag the Glass Cannon as ACTIVE. THE TACTICAL REALITY: A heavy favorite with a broken defense is a 'Glass Cannon.' Because they are the favorite, they will push high up the pitch and dominate possession. Because their defense is broken, the underdog will successfully counter-attack and score. If the underdog scores, the favorite must score twice just to win — introducing massive variance that frequently results in 1-1 or 2-2 draws. THE FORBIDDEN ACTION: If the Glass Cannon trigger is active, you are STRICTLY FORBIDDEN from using the Match Winner (1X2) market or negative Asian Handicaps (-1.0, -1.5) on the Favorite as the Safe Banker. You cannot trust a broken defense to secure all 3 points. THE PIVOT: You MUST decouple the Safe Banker from the Match Winner entirely. Since both teams are highly likely to score, pivot the Safe Banker to structural goal floors: 'Over 1.5 Match Goals' or 'BTTS: Yes'.
          - **RULE 43 — THE EXHIBITION VOID (THE FRIENDLY MATCH TRAP)**: If you identify the match as a Non-Competitive Fixture — a Club Friendly, a U21/U19 International Friendly, or a pre-season exhibition — flag the Exhibition Void as ACTIVE. THE TACTICAL REALITY: In friendly matches, 'Home Advantage' is a mirage (empty or low stadiums, no crowd pressure). Managers prioritize player evaluation over winning, deliberately deploying mass substitutions (6+ changes) in the second half that completely destroy tactical structure and make any Match Control outcome entirely unpredictable. A superior team will easily lose 0-1 to a late fluke goal from a reserve player. THE GENERAL RULE VETO: Rule 43 STRICTLY VETOES Rule 17 (Home Buzzsaw) and Rule 32. Home and Away splits are mathematically invalid in a friendly exhibition — they were built on competitive match data and cannot be applied here. THE FORBIDDEN ACTION: If the Exhibition Void trigger is active, you are STRICTLY FORBIDDEN from using Match Control markets (Match Winner 1X2, Double Chance, Draw No Bet, Asian Handicaps) as the Safe Banker. You cannot trust a team to win or draw a match they do not care about winning. THE PIVOT: You MUST decouple the Safe Banker from the Match Winner entirely. Pivot to purely structural goal floors that survive disjointed, sloppy football: 'Under 3.5 Goals', '1st Half Under 1.5 Goals', or — if both squads have elite offensive depth — 'Over 1.5 Match Goals'.
-         - **RULE 44 — THE UNCERTAINTY CEILING FALLACY (DEFENSIVE APATHY)**: If you identify the match as an Exhibition/Friendly (Rule 43 ACTIVE), OR involves a 'Dead Engine' (Rule 35) that ALSO possesses a porous defense (conceding >1.3 goals/game), flag the Defensive Apathy as ACTIVE. THE TACTICAL REALITY: 'Under' bets require highly motivated, elite defensive structures. Meaningless friendlies, mass substitutions, or matches between disjointed/apathetic teams result in sloppy, structureless football where defenders do not track back. Uncertainty and apathy breed GOALS, not stalemates. THE FORBIDDEN ACTION: You are STRICTLY FORBIDDEN from defaulting to 'Under 2.5' or 'Under 3.5' as the Safe Banker simply to 'absorb variance' in a chaotic or friendly match. You cannot bet a goal ceiling on a game that lacks a defensive floor. THE PIVOT: You MUST pivot to structural goal floors that embrace the sloppiness: 'Over 1.5 Match Goals', 'Favorite Over 1.5 Team Goals' (if a massive talent mismatch exists), or wide Match Control ('1X' ONLY if the favored team has a verifiably solid defense).
+          - **RULE 44 — THE UNCERTAINTY CEILING FALLACY (DEFENSIVE APATHY)**: This rule holds supreme hierarchical authority over Rule 16 (Sterile Offense) and Rule 17. If you identify the match as an Exhibition/Friendly (Rule 43 ACTIVE), or a chaotic lower-tier/regional league (NPL/QPL/Youth/Reserves), OR if it involves a 'Dead Engine' (Rule 35) that ALSO possesses a porous defense (conceding >1.3 goals/game), flag the Defensive Apathy as ACTIVE, which VETOES and DELETES any mandate to bet 'Under Goals'. THE TACTICAL REALITY: 'Under' bets require highly motivated, elite defensive structures. Meaningless or amateur matches result in sloppy, structureless football where defenders do not track back. Uncertainty and apathy breed GOALS. THE FORBIDDEN ACTION: You are STRICTLY FORBIDDEN from defaulting to 'Under' markets as the Safe Banker for these matches. THE PIVOT: You MUST pivot to structural goal floors that embrace the sloppiness: 'Over 1.5 Match Goals', 'Favorite Over 1.5 Team Goals', or wide Match Control ('1X' ONLY if the favored team has a verifiably solid defense).
+          - **RULE 45 — THE SQUAD DEPLETION VETO (THE PATCHWORK LIABILITY)**: If a team is suffering from a severe injury crisis/mass rotation (missing 3 or more key starters), flag the Squad Depletion as ACTIVE. THE TACTICAL REALITY: In non-elite leagues, missing 3+ structural players destroys tactical cohesion and defensive communication. A depleted team is a massive liability. THE FORBIDDEN ACTION: You are STRICTLY FORBIDDEN from backing the depleted team in ANY Match Control market (1X2, Double Chance, Draw No Bet). THE PIVOT: You MUST decouple the Safe Banker from the depleted team entirely. Pivot to 'Over 1.5 Match Goals', 'BTTS: Yes', or back the healthier opponent on a Double Chance.
+          - **RULE 46 — SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**: You MUST dynamically adjust the header of your final ruling based on the action taken against the primary pick: 'ORIGINAL PICK UPHELD', 'DOWNGRADE EXECUTED', or 'SUPREME OVERRIDE'.
 
        Do not just give a flat prediction. You MUST simulate conditional timelines based on who controls the game script.
        - **Scenario A (The Expected Script)**: If the pre-match favorite (Home or Away) scores first within 30 minutes, how does the opponent historically respond? Do they have the tactical discipline to avoid a blowout, or do they collapse?
@@ -1431,69 +1433,44 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       Do NOT confuse a bad defense with a porous one in this specific context. A bottom-tier team conceding 2.0 goals per game has done so against better opposition — it tells you nothing about what happens when the attacker is equally inept. Two bad offenses facing two bad defenses do not produce a high-scoring game. They produce a grinding, directionless non-event. The scoreboard stays blank until desperation forces a single mistake. Anchor to the floor. Do not trust the paper mirage.
 
     - **RULE 41: THE PLAYOFF PARALYSIS VETO (HIGH-STAKES FEAR)**:
-
       **THE TRIGGER:**
       If the AI identifies the match as a high-stakes fixture: a Cup Final, a Knockout Match, a late-stage UEFA/Continental Qualifier, or a relegation survival decider.
-
       **THE TACTICAL REALITY (FEAR OVER TALENT):**
-      In high-stakes matches, the fear of losing overrides statistical attacking averages. Teams abandon their open playstyles to avoid season-ending mistakes. Critically, if a team is missing key defenders or a goalkeeper in these matches, the manager OVERCOMPENSATES by playing a hyper-conservative, protective low-block. The match will devolve into a nervous, low-event 0-0 or 1-0 grind — NOT a shootout.
-
-      **THE GENERAL RULE VETO (OVERRIDE HIERARCHY):**
-      Rule 41 STRICTLY VETOES Rule 33 (Mutual Collapse Exemption). Missing defenders in a Cup Final or Qualifier do NOT create a transition shootout — they create a fortified bunker. Fear overrides talent.
-
+      In high-stakes matches, the fear of losing overrides statistical attacking averages. Teams abandon their open playstyles to avoid season-ending mistakes. Furthermore, if a team is missing key defenders/goalkeepers in these matches, the manager will overcompensate by playing a hyper-conservative, protective low-block. The match will devolve into a nervous, low-event 0-0 or 1-0 grind.
+      **THE GENERAL RULE VETO:**
+      This rule strictly VETOES Rule 33 (Mutual Collapse). Missing defenders in a Cup Final/Qualifier do NOT create a shootout; they create a fortified bunker.
       **THE FORBIDDEN ACTION:**
-      If the Playoff Paralysis trigger is active, the Supreme Court is STRICTLY FORBIDDEN from:
-      - Using 'Over 2.5 Goals' as the Safe Banker.
-      - Using 'Over 3.5 Goals' as the Safe Banker.
-      - Using 'BTTS: Yes' as the Safe Banker.
-
+      If the Playoff Paralysis trigger is active, the AI is strictly FORBIDDEN from using 'Over 2.5', 'Over 3.5', or 'BTTS: Yes' as a Safe Banker.
       **THE PIVOT:**
-      Set the Safe Banker to wide Match Control (e.g., '1X' for a strong home side) or a massive structural ceiling (e.g., 'Under 3.5 Goals'). Respect the fear.
+      The AI MUST pivot to survival markets. Set the Safe Banker to wide Match Control (e.g., '1X' for a strong home team) or a massive structural ceiling (e.g., 'Under 3.5 Goals'). Respect the fear.
 
       **RECOGNITION TRIGGERS:**
       Activate Rule 41 if the match is: Cup Final, Single-Elimination Knockout, Late-Stage UEFA Qualifier, or a verified relegation survival decider with no second-leg.
 
     - **RULE 42: THE GLASS CANNON VETO (THE BROKEN FAVORITE)**:
-
       **THE TRIGGER:**
-      If the AI identifies a Heavy Favorite (vastly superior talent, dominant odds) BUT flags them for a structural defensive collapse (Rule 10 active — missing key CB, GK, or defensive captain), AND the Underdog has a functional offense (Rule 35 Dead Engine is INACTIVE for the underdog).
-
+      If the AI identifies a Heavy Favorite (e.g., highly superior talent, dominant odds) BUT flags them for a structural defensive collapse (Rule 10 active - missing key CB/GK/Captain), AND the Underdog has a functional offense (Rule 35 Dead Engine is INACTIVE).
       **THE TACTICAL REALITY (THE COUNTER-ATTACK TRAP):**
-      A heavy favorite with a broken defense will dominate possession but concede from underdog counter-attacks — frequently resulting in 1-1 or 2-2 draws. You cannot trust a broken defense to secure all 3 points.
-
+      A heavy favorite with a broken defense is a 'Glass Cannon.' Because they are the favorite, they will push high up the pitch and dominate possession. Because their defense is broken, the underdog will successfully counter-attack and score. If the underdog scores, the favorite must score twice just to win the game. This introduces massive variance and frequently results in 1-1 or 2-2 draws.
       **THE FORBIDDEN ACTION:**
-      If the Glass Cannon trigger is active, the Supreme Court is STRICTLY FORBIDDEN from:
-      - Using the Match Winner (1X2) market on the Favorite as the Safe Banker.
-      - Using negative Asian Handicaps (-1.0, -1.5) on the Favorite as the Safe Banker.
-
+      If the Glass Cannon trigger is active, the AI is strictly FORBIDDEN from using the Match Winner (1X2) market or negative Asian Handicaps (-1.0, -1.5) on the Favorite as the Safe Banker. You cannot trust a broken defense to secure all 3 points.
       **THE PIVOT:**
-      The AI MUST decouple the Safe Banker from the Match Winner entirely. Pivot to structural goal floors:
-      1. **'Over 1.5 Match Goals'** — Almost guaranteed when a broken defense faces a functional offense.
-      2. **'BTTS: Yes'** — Both teams will score: the favorite from dominance, the underdog on the counter.
+      The AI MUST decouple the Safe Banker from the Match Winner entirely. Since both teams are highly likely to score, pivot the Safe Banker to structural goal floors: 'Over 1.5 Match Goals' or 'BTTS: Yes'.
 
       **RECOGNITION TRIGGERS:**
       Activate Rule 42 if: (a) Heavy Favorite with implied win probability >65%; (b) that team has Rule 10 (Defensive Collapse) active — verified missing 2+ key defenders OR starting GK; (c) the Underdog averages >= 0.8 goals per game OR creates >= 1.5 Big Chances per game.
 
     - **RULE 43: THE EXHIBITION VOID (THE FRIENDLY MATCH TRAP)**:
-
       **THE TRIGGER:**
       If the AI identifies the match as a Non-Competitive Fixture: Club Friendlies, U21/U19 International Friendlies, or pre-season exhibitions.
-
       **THE TACTICAL REALITY (NO MATCH CONTROL):**
-      In friendly matches, 'Home Advantage' is a mirage — empty or low-attendance stadiums produce zero crowd pressure. Managers deploy mass substitutions (6+ changes) in the second half, completely destroying tactical structure and making Match Control entirely unpredictable.
-
-      **THE GENERAL RULE VETO (OVERRIDE HIERARCHY):**
-      Rule 43 STRICTLY VETOES Rule 17 (Home Buzzsaw) and Rule 32. Home and Away venue splits are mathematically invalid in friendly exhibitions.
-
+      In friendly matches, 'Home Advantage' is a mirage (empty stadiums, no crowd pressure). Furthermore, managers prioritize player evaluation over winning, leading to mass substitutions (6+ changes) in the second half. This completely destroys tactical structure and makes Match Control entirely unpredictable. A superior team will easily lose 0-1 to a late fluke goal from a reserve player.
+      **THE GENERAL RULE VETO:**
+      This rule strictly VETOES Rule 17 and Rule 32 (Home Buzzsaw). Home and Away splits are mathematically invalid in friendly exhibitions.
       **THE FORBIDDEN ACTION:**
-      If the Exhibition Void trigger is active, the Supreme Court is STRICTLY FORBIDDEN from:
-      - Using Match Control markets (Match Winner 1X2, Double Chance, Draw No Bet, Asian Handicaps) as the Safe Banker.
-
+      If the Exhibition Void trigger is active, the AI is strictly FORBIDDEN from using Match Control markets (1X2, Double Chance, Draw No Bet, Asian Handicaps) as the Safe Banker. You cannot trust a team to win or draw a match they do not care about winning.
       **THE PIVOT:**
-      Pivot the Safe Banker to purely structural goal floors:
-      1. **'Under 3.5 Goals'** — Mass substitutions produce chaotic, low-quality football.
-      2. **'1st Half Under 1.5 Goals'** — First halves are typically more structured before wholesale changes.
-      3. **'Over 1.5 Match Goals'** — Only if both teams have elite offensive depth in their extended squads.
+      The AI MUST decouple the Safe Banker from the Match Winner entirely. Pivot to purely structural goal floors that survive disjointed, sloppy football: 'Under 3.5 Goals', '1st Half Under 1.5 Goals', or if both teams have elite offensive depth, 'Over 1.5 Match Goals'.
 
       **RECOGNITION TRIGGERS:**
       Activate Rule 43 if the tournament/round is: International Friendly, Club Friendly, Pre-Season Tour, U21 Friendly, or U19 Friendly.
@@ -1501,12 +1478,24 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       You cannot trust competitive match control markets in a match where winning is irrelevant to both managers. Bet the scoreline structure, not the result.
 
     - **RULE 44: THE UNCERTAINTY CEILING VETO (DEFENSIVE APATHY)**:
-      If the match is an Exhibition/Friendly (Rule 43) OR involves a 'Dead Engine' (Rule 35) that ALSO concedes >1.3 goals/game, the Defensive Apathy trigger is ACTIVE.
-      **THE TACTICAL REALITY:** Meaningless matches result in sloppy, structureless football. Defenders do not track back, and mass substitutions destroy tactical discipline. Uncertainty and apathy breed GOALS.
+      If the match is an Exhibition/Friendly (Rule 43) OR involves a 'Dead Engine' (Rule 35) that ALSO concedes >1.3 goals/game, the Defensive Apathy trigger is ACTIVE. 
+      **THE SUPREME VETO (RULE 16 & 17 OVERRIDE):** Rule 44 holds supreme hierarchical authority over Rule 16 (Sterile Offense) and Rule 17. If a team has a Sterile Offense/Dead Engine BUT their defense is also porous (conceding > 1.3 goals/game), Rule 44 instantly VETOES and DELETES the mandate to bet 'Under Goals'.
+      **LEAGUE CONTEXT ADDITION:** Furthermore, if the match takes place in an inherently chaotic, lower-tier, or regional league (e.g., Australian State Leagues like the NPL or QPL, youth leagues, or reserves), 'Under' markets are strictly forbidden for the Safe Banker due to the amateur nature of the defending.
+      **THE TACTICAL REALITY:** Meaningless or amateur matches result in sloppy, structureless football. Defenders do not track back, and mass substitutions or amateur errors destroy tactical discipline. Uncertainty and apathy breed GOALS.
       **THE FORBIDDEN ACTION:** The Supreme Court is STRICTLY FORBIDDEN from selecting ANY 'Under Match Goals' market (Under 2.5, Under 3.5, etc.) as the Safe Banker for these matches. You cannot bet a ceiling on a game that has no defensive floor.
-      **THE PIVOT:** You MUST pivot to structural goal floors that survive sloppiness: 'Over 1.5 Match Goals', 'Favorite Over 1.5 Team Goals', or wide Match Control ('1X' ONLY if the favorite has a verifiably elite defense).
+      **THE PIVOT:** In these scenarios, the AI MUST pivot to structural goal floors that survive sloppiness: 'Over 1.5 Match Goals', 'Favorite Over 1.5 Team Goals', or a wide Match Control market favoring the structurally superior team ('1X' ONLY if the favorite has a verifiably elite defense).
 
-    - **RULE 45: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
+    - **RULE 45: THE SQUAD DEPLETION VETO (THE PATCHWORK LIABILITY)**:
+      **THE TRIGGER:**
+      If the AI identifies that a team is suffering from a severe injury crisis/mass rotation (missing 3 or more key starters/structural players).
+      **THE TACTICAL REALITY (TOTAL SYSTEM FAILURE):**
+      In lower-tier or mid-tier leagues, teams lack elite bench depth. Missing 3+ key players does not just reduce offensive output; it destroys defensive communication, midfield transition, and overall tactical cohesion. A depleted team is a massive liability, especially away from home. Even a 'Dead Engine' opponent will look dangerous against a disjointed, patchwork starting XI.
+      **THE FORBIDDEN ACTION:**
+      If the Squad Depletion trigger is active, the AI is strictly FORBIDDEN from backing the depleted team in ANY Match Control market (1X2, Double Chance, Draw No Bet), even if they are playing against a statistically poor opponent.
+      **THE PIVOT:**
+      The AI MUST decouple from the depleted team. Pivot the Safe Banker to wide goal floors that capitalize on the lack of structure (e.g., 'Over 1.5 Match Goals' or 'BTTS: Yes'), OR back the healthier opponent on a Double Chance (e.g., '1X' for the home team).
+
+    - **RULE 46: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
       The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
 
       **CONDITION A: ORIGINAL PICK UPHELD**:
