@@ -108,9 +108,10 @@ def _run_pipeline(match_id: int, job_id: str) -> dict:
                     odds_data=odds,
                     match_date=match_date if match_date and "1970" not in match_date else None,
                     match_id=match_id,
+                    job_id=job_id,
                 )
                 final_prediction = risk_manager_review(
-                    initial_prediction, match_date=match_date, match_id=match_id
+                    initial_prediction, match_date=match_date, match_id=match_id, job_id=job_id
                 )
                 final_prediction["match_id"] = match_id
                 final_prediction["match_date"] = match_date
@@ -156,6 +157,7 @@ def _run_pipeline(match_id: int, job_id: str) -> dict:
             raise Exception("Job cancelled by user")
 
         odds = fetch_latest_odds(home_team, away_team)
+        if _is_cancelled(job_id): raise Exception("Job cancelled by user")
         initial_prediction = predict_match(
             home_team, away_team,
             match_stats={}, odds_data=odds, h2h_data={},
@@ -164,12 +166,15 @@ def _run_pipeline(match_id: int, job_id: str) -> dict:
             advanced_stats=advanced_stats,
             match_date=match_date,
             match_id=match_id,
+            job_id=job_id,
         )
+        if _is_cancelled(job_id): raise Exception("Job cancelled by user")
         final_prediction = risk_manager_review(
-            initial_prediction, match_date=match_date, match_id=match_id
+            initial_prediction, match_date=match_date, match_id=match_id, job_id=job_id
         )
+        if _is_cancelled(job_id): raise Exception("Job cancelled by user")
         supreme_verdict = supreme_court_judge(
-            advanced_stats, initial_prediction, final_prediction, match_id=match_id
+            advanced_stats, initial_prediction, final_prediction, match_id=match_id, job_id=job_id
         )
         final_prediction["supreme_court"] = supreme_verdict
         final_prediction["home_logo"] = home_logo
@@ -240,14 +245,18 @@ def _run_pipeline(match_id: int, job_id: str) -> dict:
     if _is_cancelled(job_id):
         raise Exception("Job cancelled by user")
 
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
     initial_prediction = predict_match(
         home_team, away_team, stats, odds, h2h_data,
         home_form, away_form, home_standings, away_standings,
         advanced_stats=advanced_stats, match_date=match_date,
+        match_id=match_id, job_id=job_id,
     )
-    final_prediction = risk_manager_review(initial_prediction, match_date=match_date)
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+    final_prediction = risk_manager_review(initial_prediction, match_date=match_date, match_id=match_id, job_id=job_id)
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
     supreme_verdict = supreme_court_judge(
-        advanced_stats or stats, initial_prediction, final_prediction
+        advanced_stats or stats, initial_prediction, final_prediction, match_id=match_id, job_id=job_id
     )
     final_prediction["supreme_court"] = supreme_verdict
     final_prediction["home_logo"] = (
@@ -348,6 +357,7 @@ def _run_audit_pipeline(match_id: int, job_id: str,
 
         odds = fetch_latest_odds(home_team, away_team)
 
+        if _is_cancelled(job_id): raise Exception("Job cancelled by user")
         initial_prediction = predict_match(
             home_team, away_team,
             match_stats={}, odds_data=odds, h2h_data={},
@@ -356,13 +366,16 @@ def _run_audit_pipeline(match_id: int, job_id: str,
             advanced_stats=advanced_stats,
             match_date=match_date,
             match_id=match_id,
+            job_id=job_id,
         )
+        if _is_cancelled(job_id): raise Exception("Job cancelled by user")
         audit_verdict_json = audit_match(
             initial_prediction, user_selected_bet,
-            match_date=match_date, match_id=match_id,
+            match_date=match_date, match_id=match_id, job_id=job_id,
         )
+        if _is_cancelled(job_id): raise Exception("Job cancelled by user")
         supreme_verdict = supreme_court_judge(
-            advanced_stats, initial_prediction, audit_verdict_json, match_id=match_id
+            advanced_stats, initial_prediction, audit_verdict_json, match_id=match_id, job_id=job_id
         )
 
         initial_prediction["audit_verdict"]     = audit_verdict_json.get("audit_verdict")
@@ -423,17 +436,20 @@ def _run_audit_pipeline(match_id: int, job_id: str,
     if _is_cancelled(job_id):
         raise Exception("Job cancelled by user")
 
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
     initial_prediction = predict_match(
         home_team, away_team, stats, odds, h2h_data,
         home_form, away_form, home_standings, away_standings,
-        advanced_stats=advanced_stats, match_date=match_date, match_id=match_id,
+        advanced_stats=advanced_stats, match_date=match_date, match_id=match_id, job_id=job_id,
     )
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
     audit_verdict_json = audit_match(
         initial_prediction, user_selected_bet,
-        match_date=match_date, match_id=match_id,
+        match_date=match_date, match_id=match_id, job_id=job_id,
     )
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
     supreme_verdict = supreme_court_judge(
-        advanced_stats or stats, initial_prediction, audit_verdict_json
+        advanced_stats or stats, initial_prediction, audit_verdict_json, match_id=match_id, job_id=job_id
     )
 
     initial_prediction["audit_verdict"]     = audit_verdict_json.get("audit_verdict")

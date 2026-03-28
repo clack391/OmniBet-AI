@@ -21,6 +21,7 @@ const SettingsTab = () => {
     const [geminiModel, setGeminiModel] = useState('gemini-3-pro-preview');
     const [automationEnabled, setAutomationEnabled] = useState(true);
     const [telegramMode, setTelegramMode] = useState('text');
+    const [killSignalActive, setKillSignalActive] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
@@ -39,6 +40,9 @@ const SettingsTab = () => {
 
                 const modelRes = await api.get('/settings/gemini-model');
                 setGeminiModel(modelRes.data.model);
+
+                const killRes = await api.get('/settings/kill-active-cron');
+                setKillSignalActive(killRes.data.active);
             } catch (err) {
                 console.error("Failed to fetch settings", err);
             } finally {
@@ -158,10 +162,10 @@ const SettingsTab = () => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[
-                                { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', badge: 'Latest',   badgeColor: 'text-blue-400',   desc: 'Newest generation Pro model with the latest reasoning improvements.' },
-                                { value: 'gemini-3-pro-preview',   label: 'Gemini 3 Pro Preview',   badge: 'Default',  badgeColor: 'text-green-400',  desc: 'Current production model. Deep analytical reasoning and Search Grounding support.' },
-                                { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash',          badge: 'Fast',     badgeColor: 'text-yellow-400', desc: 'Faster responses with lower latency. Good for high-volume analysis runs.' },
-                                { value: 'gemini-2.5-flash',       label: 'Gemini 2.5 Flash',        badge: 'Fast',     badgeColor: 'text-yellow-400', desc: 'Previous-gen flash model. Reliable fallback when newer models are unavailable.' },
+                                { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview', badge: 'Latest', badgeColor: 'text-blue-400', desc: 'Newest generation Pro model with the latest reasoning improvements.' },
+                                { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview', badge: 'Default', badgeColor: 'text-green-400', desc: 'Current production model. Deep analytical reasoning and Search Grounding support.' },
+                                { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash', badge: 'Fast', badgeColor: 'text-yellow-400', desc: 'Faster responses with lower latency. Good for high-volume analysis runs.' },
+                                { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badge: 'Fast', badgeColor: 'text-yellow-400', desc: 'Previous-gen flash model. Reliable fallback when newer models are unavailable.' },
                             ].map(opt => (
                                 <label
                                     key={opt.value}
@@ -256,22 +260,44 @@ const SettingsTab = () => {
                                 <span className="text-gray-500 italic">Next run scheduled for 02:00 AM WAT</span>
                             </div>
 
-                            <button
-                                onClick={async () => {
-                                    if (!window.confirm("This will instantly kill any currently running background analysis to save API credits. Continue?")) return;
-                                    try {
-                                        await api.post('/settings/kill-active-cron');
-                                        setMessage({ type: 'success', text: 'Emergency stop signal sent to background processes.' });
-                                    } catch (err) {
-                                        console.error(err);
-                                        setMessage({ type: 'error', text: 'Failed to send kill signal.' });
-                                    }
-                                }}
-                                className="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 group"
-                            >
-                                <ShieldAlert className="w-3.5 h-3.5 group-hover:animate-pulse" />
-                                STOP ACTIVE AUTOMATION
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {killSignalActive && (
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                await api.put('/settings/kill-active-cron', { enabled: false });
+                                                setKillSignalActive(false);
+                                                setMessage({ type: 'success', text: 'Global kill switch reset successfully. Analysis can resume.' });
+                                            } catch (err) {
+                                                console.error(err);
+                                                setMessage({ type: 'error', text: 'Failed to reset kill switch.' });
+                                            }
+                                        }}
+                                        className="bg-green-600/20 hover:bg-green-600 text-green-500 hover:text-white border border-green-500/30 px-3 py-1.5 rounded-md text-xs font-bold transition-all"
+                                    >
+                                        RESET KILL SWITCH
+                                    </button>
+                                )}
+                                <button
+                                    onClick={async () => {
+                                        const action = killSignalActive ? "STOPPED" : "ACTIVE";
+                                        if (!window.confirm(`This will ${killSignalActive ? 'RESET' : 'TRIGGER'} the global kill switch. If triggered, it will instantly kill all active background analysis. Continue?`)) return;
+                                        try {
+                                            const newState = !killSignalActive;
+                                            await api.put('/settings/kill-active-cron', { enabled: newState });
+                                            setKillSignalActive(newState);
+                                            setMessage({ type: 'success', text: newState ? 'Emergency stop signal sent to background processes.' : 'Global kill switch reset.' });
+                                        } catch (err) {
+                                            console.error(err);
+                                            setMessage({ type: 'error', text: 'Failed to update kill signal.' });
+                                        }
+                                    }}
+                                    className={`${killSignalActive ? 'bg-amber-600/20 text-amber-500 border-amber-500/30' : 'bg-red-600/20 text-red-500 border-red-500/30'} hover:bg-opacity-100 hover:text-white border px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 group`}
+                                >
+                                    <ShieldAlert className={`w-3.5 h-3.5 ${killSignalActive ? '' : 'group-hover:animate-pulse'}`} />
+                                    {killSignalActive ? 'KILL SWITCH ACTIVE (STOPPED)' : 'TRIGGER EMERGENCY STOP'}
+                                </button>
+                            </div>
                         </div>
                     </div>
 

@@ -25,9 +25,23 @@ def get_active_model() -> str:
     except Exception:
         return MODEL_NAME
 
-def check_cancelled(match_id: int):
+def check_cancelled(match_id: int = None, job_id: str = None):
     """Checks the global cancellation registry. Raises Exception to kill the thread if cancelled."""
-    # 1. Check in-memory flags (for UI-triggered requests)
+    
+    # 1. Check Redis (for Celery Worker context)
+    if job_id:
+        try:
+            import redis as redis_lib
+            r = redis_lib.Redis(host="localhost", port=6379, db=0, decode_responses=True)
+            if r.exists(f"job:{job_id}:cancel"):
+                print(f"🛑 [KILL SWITCH] Aborting active Gemini task for Job {job_id}")
+                raise Exception("Prediction manually cancelled by user")
+        except Exception as e:
+            if "manually cancelled" in str(e): raise e
+            print(f"⚠️ Redis Check Error: {e}")
+            pass
+
+    # 2. Check in-memory flags (for Sync API context)
     try:
         from src.api.main import CANCELLATION_FLAGS
         if match_id and CANCELLATION_FLAGS.get(match_id):
@@ -36,7 +50,7 @@ def check_cancelled(match_id: int):
     except ImportError:
         pass
 
-    # 2. Check Database for Global/Cron Kill Signal (for background processes)
+    # 3. Check Database for Global/Cron Kill Signal
     try:
         from src.database.db import get_app_setting
         if get_app_setting("cron_kill_signal", "false") == "true":
@@ -46,7 +60,9 @@ def check_cancelled(match_id: int):
         pass
 
 
-def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, advanced_stats: dict = None, match_date: str = None, match_id: int = None):
+def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list = None, h2h_data: dict = None, home_form: dict = None, away_form: dict = None, home_standings: dict = None, away_standings: dict = None, advanced_stats: dict = None, match_date: str = None, match_id: int = None, job_id: str = None):
+
+    check_cancelled(match_id, job_id)
 
     # Check for Stale Data (e.g. API stuck in IN_PLAY for > 4 hours)
     is_stale = False
@@ -349,11 +365,12 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             "alternative_pick": {"tip": "Analysis Failed", "confidence": 0}
         }
 
-def risk_manager_review(initial_prediction_json: dict, match_date: str = None, match_id: int = None) -> dict:
+def risk_manager_review(initial_prediction_json: dict, match_date: str = None, match_id: int = None, job_id: str = None) -> dict:
     """
     Second agent in the Multi-Agent Loop. Acts as a strict Risk Manager to verify 
     the safety of the initial prediction.
     """
+    check_cancelled(match_id, job_id)
     # Harden against list-wrapped JSON from Agent 1
     if isinstance(initial_prediction_json, list) and len(initial_prediction_json) > 0:
         initial_prediction_json = initial_prediction_json[0]
@@ -544,7 +561,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
         
         max_retries = 3
         for attempt in range(max_retries):
-            check_cancelled(match_id)
+            check_cancelled(match_id, job_id)
             try:
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
@@ -659,11 +676,12 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
             "picks": []
         }
 
-def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: str = None, match_id: int = None):
+def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: str = None, match_id: int = None, job_id: str = None):
     """
     The Betslip Auditor Mode (Pipeline B - Dual Agent Phase 2)
     Evaluates the 'user_selected_bet' against Agent 1's full tactical breakdown.
     """
+    check_cancelled(match_id, job_id)
     # Harden against list-wrapped JSON from Agent 1
     if isinstance(initial_prediction, list) and len(initial_prediction) > 0:
         initial_prediction = initial_prediction[0]
@@ -763,7 +781,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         
         max_retries = 3
         for attempt in range(max_retries):
-            check_cancelled(match_id)
+            check_cancelled(match_id, job_id)
             try:
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=180)
                 response.raise_for_status()
@@ -797,12 +815,13 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
             "verdict_reasoning": "Could not extract statistical data to verify bet safety."
         }
 
-def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique: dict, match_id: int = None) -> dict:
+def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique: dict, match_id: int = None, job_id: str = None) -> dict:
     """
     The Final Risk Arbiter (Pipeline B - Phase 3).
     Resolves the debate between Agent 1 (Tactical) and Agent 2 (Risk Manager).
     Applies the OmniBet 17-Market Correlation Matrix for EV calculation.
     """
+    check_cancelled(match_id, job_id)
     # Harden against list-wrapped JSON
     if isinstance(agent_1_pitch, list) and len(agent_1_pitch) > 0:
         agent_1_pitch = agent_1_pitch[0]
@@ -852,7 +871,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     Return your ruling STRICTLY in JSON:
     {{
       "Crucible_Simulation_Warning": "string (Identify the worst-case scenario where the tentative bet dies. Be brutal. If you find a trap, you MUST explain how it kills the original pick.)",
-      "Supreme_Court_Final_Ruling": "string (A detailed, multi-paragraph judicial opinion. Connect tactical data and internal agent debate. Explain EXACTLY how you are downgrading the market to survive the trap identified above.)",
+      "Supreme_Court_Final_Ruling": "string (MANDATORY: MUST start with the dynamic header defined in RULE 45, followed by a detailed, multi-paragraph judicial opinion. Connect tactical data and internal agent debate. Explain EXACTLY how you are downgrading the market to survive the trap identified above.)",
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
       "Arbiter_Safe_Pick": {{
         "market": "string",
@@ -1487,6 +1506,21 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE FORBIDDEN ACTION:** The Supreme Court is STRICTLY FORBIDDEN from selecting ANY 'Under Match Goals' market (Under 2.5, Under 3.5, etc.) as the Safe Banker for these matches. You cannot bet a ceiling on a game that has no defensive floor.
       **THE PIVOT:** You MUST pivot to structural goal floors that survive sloppiness: 'Over 1.5 Match Goals', 'Favorite Over 1.5 Team Goals', or wide Match Control ('1X' ONLY if the favorite has a verifiably elite defense).
 
+    - **RULE 45: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
+      The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
+
+      **CONDITION A: ORIGINAL PICK UPHELD**:
+      If the Supreme Court completely agrees with Agent 1 (The Optimist) and keeps the high-variance/aggressive primary pick exactly as it is.
+      **HEADER MUST READ:** `Supreme Court Final Ruling: ORIGINAL PICK UPHELD`
+
+      **CONDITION B: DOWNGRADE EXECUTED**:
+      If the Supreme Court agrees with Agent 2 (The Risk Manager) and alters the bet to a safer, lower-risk structural floor (e.g., changing 'Away Win' to 'X2', or 'Over 2.5' to 'Over 1.5').
+      **HEADER MUST READ:** `Supreme Court Final Ruling: DOWNGRADE EXECUTED`
+
+      **CONDITION C: SUPREME OVERRIDE**:
+      If the Supreme Court rejects BOTH agents because of a Logic Collision or active Trap (e.g., catching the Exhibition Void or Playoff Paralysis) and creates an entirely new structural floor.
+      **HEADER MUST READ:** `Supreme Court Final Ruling: SUPREME OVERRIDE`
+
         """
 
 
@@ -1545,7 +1579,8 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
         max_retries = 3
         for attempt in range(max_retries):
-            check_cancelled(match_id)
+            # Also check cancelled during retry loops for ultra-responsive STOP button
+            check_cancelled(match_id, job_id)
             try:
                 # Increased timeout to 300s to allow for deep reasoning + search
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=300)

@@ -567,41 +567,19 @@ const Dashboard = () => {
         // Wait for a single job to reach COMPLETED or FAILED before continuing.
         // Registers a cancel resolver so handleStopAnalysis can unblock it instantly.
         const waitForJob = (matchId, jobId) => new Promise((resolve) => {
+            // Redundancy Check: startPolling already has an interval running.
+            // We just need to wait for it to finish and remove itself from the ref.
+            const checkDone = setInterval(() => {
+                if (!pollingTimersRef.current[jobId] || cancelRequestedRef.current) {
+                    clearInterval(checkDone);
+                    resolve(null);
+                }
+            }, 1000);
+
             waitForJobCancelRef.current = () => {
-                clearInterval(intervalId);
-                delete pollingTimersRef.current[jobId];
-                advanceTerminalJob(jobId);
+                clearInterval(checkDone);
                 resolve(null);
             };
-            const intervalId = setInterval(async () => {
-                try {
-                    const res = await api.get(`/jobs/${jobId}`);
-                    const job = res.data;
-                    if (job.status === 'COMPLETED' && job.result) {
-                        clearInterval(intervalId);
-                        delete pollingTimersRef.current[jobId];
-                        advanceTerminalJob(jobId);
-                        waitForJobCancelRef.current = null;
-                        setPredictions(prev => {
-                            const alreadyPresent = prev.some(p => p.match_id === job.result.match_id);
-                            return alreadyPresent ? prev : [...prev, job.result];
-                        });
-                        removePendingJob(matchId);
-                        resolve(job.result);
-                    } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
-                        clearInterval(intervalId);
-                        delete pollingTimersRef.current[jobId];
-                        advanceTerminalJob(jobId);
-                        waitForJobCancelRef.current = null;
-                        removePendingJob(matchId);
-                        setError(`Job for match ${matchId} ${job.status.toLowerCase()}: ${job.error_msg || ''}`);
-                        resolve(null);
-                    }
-                } catch {
-                    // Network blip — keep polling
-                }
-            }, 3000);
-            pollingTimersRef.current[jobId] = intervalId;
         });
 
         try {

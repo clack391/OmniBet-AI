@@ -556,9 +556,23 @@ def api_set_automation(req: AutomationSettingRequest, current_user: dict = Depen
         raise HTTPException(status_code=500, detail="Failed to update automation setting")
     return {"status": "success", "enabled": req.enabled}
 
+@app.get("/settings/kill-active-cron")
+def api_get_kill_signal(current_user: dict = Depends(get_admin_user)):
+    """Returns the current status of the global kill switch."""
+    active = get_app_setting("cron_kill_signal", "false") == "true"
+    return {"active": active}
+
+@app.put("/settings/kill-active-cron")
+def api_set_kill_signal(req: AutomationSettingRequest, current_user: dict = Depends(get_admin_user)):
+    """Sets or resets the global kill switch."""
+    success = set_app_setting("cron_kill_signal", "true" if req.enabled else "false")
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update kill signal")
+    return {"status": "success", "active": req.enabled}
+
 @app.post("/settings/kill-active-cron")
 def api_kill_active_cron(current_user: dict = Depends(get_admin_user)):
-    """Sets a global flag to stop any currently running background cron analysis."""
+    """Legacy endpoint: Sets a global flag to stop any currently running background cron analysis."""
     success = set_app_setting("cron_kill_signal", "true")
     if not success:
         raise HTTPException(status_code=500, detail="Failed to set kill signal")
@@ -1182,6 +1196,7 @@ def cancel_job_endpoint(job_id: str, current_user: dict = Depends(get_admin_user
     try:
         r = redis_lib.Redis(host="localhost", port=6379, db=0)
         r.setex(f"job:{job_id}:cancel", 3600, "1")
+        print(f"📡 [API] Published CANCEL signal to Redis for Job {job_id}")
     except Exception as e:
         logger.warning(f"Redis unavailable for job cancellation: {e}")
 
