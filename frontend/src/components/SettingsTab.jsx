@@ -21,7 +21,8 @@ const SettingsTab = () => {
     const [geminiModel, setGeminiModel] = useState('gemini-3-pro-preview');
     const [automationEnabled, setAutomationEnabled] = useState(true);
     const [telegramMode, setTelegramMode] = useState('text');
-    const [killSignalActive, setKillSignalActive] = useState(false);
+    const [cronKillSignalActive, setCronKillSignalActive] = useState(false);
+    const [analysisKillSignalActive, setAnalysisKillSignalActive] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState(null);
@@ -42,7 +43,10 @@ const SettingsTab = () => {
                 setGeminiModel(modelRes.data.model);
 
                 const killRes = await api.get('/settings/kill-active-cron');
-                setKillSignalActive(killRes.data.active);
+                setCronKillSignalActive(killRes.data.kill_signal === "1");
+
+                const analysisKillRes = await api.get('/settings/kill-active-analysis');
+                setAnalysisKillSignalActive(analysisKillRes.data.kill_signal === "1");
             } catch (err) {
                 console.error("Failed to fetch settings", err);
             } finally {
@@ -260,43 +264,54 @@ const SettingsTab = () => {
                                 <span className="text-gray-500 italic">Next run scheduled for 02:00 AM WAT</span>
                             </div>
 
-                            <div className="flex items-center gap-3">
-                                {killSignalActive && (
+                            <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full">
+                                {/* Cron Kill Switch */}
+                                <div className="flex items-center gap-3 bg-gray-900/40 p-3 rounded-lg border border-gray-700/50 flex-1 w-full justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${cronKillSignalActive ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                                        <span className="text-sm font-semibold text-gray-300">Cron Kill Switch</span>
+                                    </div>
                                     <button
                                         onClick={async () => {
+                                            const newState = !cronKillSignalActive;
+                                            if (newState && !window.confirm("Trigger Global Cron Kill Switch? This stops all automated 2AM runs.")) return;
                                             try {
-                                                await api.put('/settings/kill-active-cron', { enabled: false });
-                                                setKillSignalActive(false);
-                                                setMessage({ type: 'success', text: 'Global kill switch reset successfully. Analysis can resume.' });
+                                                await api.put('/settings/kill-active-cron', { enabled: newState });
+                                                setCronKillSignalActive(newState);
+                                                setMessage({ type: 'success', text: newState ? 'Cron kill switch activated.' : 'Cron kill switch reset.' });
                                             } catch (err) {
                                                 console.error(err);
-                                                setMessage({ type: 'error', text: 'Failed to reset kill switch.' });
                                             }
                                         }}
-                                        className="bg-green-600/20 hover:bg-green-600 text-green-500 hover:text-white border border-green-500/30 px-3 py-1.5 rounded-md text-xs font-bold transition-all"
+                                        className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${cronKillSignalActive ? 'bg-green-600/20 text-green-500 border border-green-500/30' : 'bg-red-600/20 text-red-500 border border-red-500/30'}`}
                                     >
-                                        RESET KILL SWITCH
+                                        {cronKillSignalActive ? 'RESET CRON' : 'KILL CRON'}
                                     </button>
-                                )}
-                                <button
-                                    onClick={async () => {
-                                        const action = killSignalActive ? "STOPPED" : "ACTIVE";
-                                        if (!window.confirm(`This will ${killSignalActive ? 'RESET' : 'TRIGGER'} the global kill switch. If triggered, it will instantly kill all active background analysis. Continue?`)) return;
-                                        try {
-                                            const newState = !killSignalActive;
-                                            await api.put('/settings/kill-active-cron', { enabled: newState });
-                                            setKillSignalActive(newState);
-                                            setMessage({ type: 'success', text: newState ? 'Emergency stop signal sent to background processes.' : 'Global kill switch reset.' });
-                                        } catch (err) {
-                                            console.error(err);
-                                            setMessage({ type: 'error', text: 'Failed to update kill signal.' });
-                                        }
-                                    }}
-                                    className={`${killSignalActive ? 'bg-amber-600/20 text-amber-500 border-amber-500/30' : 'bg-red-600/20 text-red-500 border-red-500/30'} hover:bg-opacity-100 hover:text-white border px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 group`}
-                                >
-                                    <ShieldAlert className={`w-3.5 h-3.5 ${killSignalActive ? '' : 'group-hover:animate-pulse'}`} />
-                                    {killSignalActive ? 'KILL SWITCH ACTIVE (STOPPED)' : 'TRIGGER EMERGENCY STOP'}
-                                </button>
+                                </div>
+
+                                {/* Analysis Kill Switch */}
+                                <div className="flex items-center gap-3 bg-gray-900/40 p-3 rounded-lg border border-gray-700/50 flex-1 w-full justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${analysisKillSignalActive ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+                                        <span className="text-sm font-semibold text-gray-300">Analysis Kill Switch</span>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            const newState = !analysisKillSignalActive;
+                                            if (newState && !window.confirm("Trigger Global Analysis Stop? This will instantly kill all active and queued match analyses.")) return;
+                                            try {
+                                                await api.put('/settings/kill-active-analysis', { enabled: newState });
+                                                setAnalysisKillSignalActive(newState);
+                                                setMessage({ type: 'success', text: newState ? 'Active analysis terminated globally.' : 'Analysis system reset.' });
+                                            } catch (err) {
+                                                console.error(err);
+                                            }
+                                        }}
+                                        className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${analysisKillSignalActive ? 'bg-green-600/20 text-green-500 border border-green-500/30' : 'bg-red-600/20 text-red-500 border border-red-500/30'}`}
+                                    >
+                                        {analysisKillSignalActive ? 'RESET ANALYSIS' : 'KILL ANALYSIS'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

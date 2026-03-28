@@ -46,20 +46,28 @@ const Dashboard = () => {
         Object.values(pollingTimersRef.current).forEach(clearInterval);
         pollingTimersRef.current = {};
 
-        // 3. Cancel all pending background jobs via the new endpoint
+        // 3. Trigger Global Kill Switch (new)
+        try {
+            await api.put('/settings/kill-active-analysis', { enabled: true });
+            console.log("📡 [Frontend] Global analysis kill switch triggered.");
+        } catch (err) {
+            console.error("Failed to trigger global kill switch", err);
+        }
+
+        // 4. Cancel all individual pending background jobs via the new endpoint
         const saved = JSON.parse(localStorage.getItem('omnibetPendingJobs') || '{}');
         Object.entries(saved).forEach(([matchId, jobId]) => {
             api.post(`/jobs/${jobId}/cancel`).catch(() => { });
             removePendingJob(matchId);
         });
 
-        // 4. Immediately resolve any in-progress waitForJob promise
+        // 5. Immediately resolve any in-progress waitForJob promise
         if (waitForJobCancelRef.current) {
             waitForJobCancelRef.current();
             waitForJobCancelRef.current = null;
         }
 
-        // 5. Clear state
+        // 6. Clear state
         setAnalyzing(false);
         setProgressInfo({ current: 0, total: 0, matchName: '' });
         setTerminalJobId(null);
@@ -246,6 +254,10 @@ const Dashboard = () => {
 
     const startPolling = (matchId, jobId) => {
         if (pollingTimersRef.current[jobId]) return; // already polling
+
+        // Ensure analyzing is TRUE if we are polling
+        setAnalyzing(true);
+
         const intervalId = setInterval(async () => {
             try {
                 const res = await api.get(`/jobs/${jobId}`);
@@ -259,10 +271,10 @@ const Dashboard = () => {
                         return alreadyPresent ? prev : [...prev, job.result];
                     });
                     removePendingJob(matchId);
-                    setAnalyzing(prev => {
+                    setAnalyzing(_ => {
                         // Only turn off spinner when all jobs are done
                         const remaining = Object.keys(pollingTimersRef.current).length;
-                        return remaining > 0 ? prev : false;
+                        return remaining > 0;
                     });
                 } else if (job.status === 'FAILED' || job.status === 'CANCELLED') {
                     clearInterval(pollingTimersRef.current[jobId]);
@@ -270,6 +282,10 @@ const Dashboard = () => {
                     advanceTerminalJob(jobId);
                     removePendingJob(matchId);
                     setError(`Job for match ${matchId} ${job.status.toLowerCase()}: ${job.error_msg || ''}`);
+                    setAnalyzing(_ => {
+                        const remaining = Object.keys(pollingTimersRef.current).length;
+                        return remaining > 0;
+                    });
                 }
             } catch {
                 // Network blip — keep polling
@@ -586,34 +602,39 @@ const Dashboard = () => {
             // Process matches rapidly: submit all to the backend queue immediately
             const queuedJobs = [];
 
-            for (let i = 0; i < total; i++) {
-                if (cancelRequestedRef.current) break;
+            // Rapidly submit all matches to the backend in one Batch Call
+            // This ensures they are processed SEQUENTIALLY on the worker.
+            const matchIds = selectedMatches.map(m => m.id);
+            try {
+                const res = await api.post('/predict-async', { match_ids: matchIds });
+                const jobs = res.data; // Array of { job_id, match_id, status }
 
-                const match = selectedMatches[i];
-                const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: `Queuing: ${matchLabel}` });
-
-                try {
-                    const res = await api.post('/predict-async', { match_ids: [match.id] });
-                    const jobInfo = res.data[0]; // { job_id, match_id, status }
-                    savePendingJob(match.id, jobInfo.job_id);
+                jobs.forEach(jobInfo => {
+                    savePendingJob(jobInfo.match_id, jobInfo.job_id);
                     setTerminalJobId(prev => prev || jobInfo.job_id);
-                    startPolling(match.id, jobInfo.job_id);
-                    queuedJobs.push({ matchId: match.id, jobId: jobInfo.job_id });
-                } catch (err) {
-                    console.error(`Failed to enqueue ${matchLabel}:`, err);
+                    startPolling(jobInfo.match_id, jobInfo.job_id);
+                });
+
+                let completed = 0;
+                setProgressInfo({ current: 0, total, matchName: '📡 Batch submitted to background...' });
+
+                // Wait for each job in the chain to finish and update progress
+                for (const jobInfo of jobs) {
+                    if (cancelRequestedRef.current) break;
+                    await waitForJob(jobInfo.match_id, jobInfo.job_id);
+                    completed++;
+                    setProgressInfo({
+                        current: completed,
+                        total,
+                        matchName: completed === total ? '✅ Analysis complete!' : `Processing sequential batch (${completed}/${total})...`
+                    });
                 }
+            } catch (err) {
+                console.error(`Failed to enqueue batch:`, err);
+                throw err;
+            } finally {
+                setAnalyzing(false);
             }
-
-            setProgressInfo({ current: total, total, matchName: '⏳ Analyzing in background…' });
-
-            // Wait for all queued jobs to finish before clearing the UI state
-            for (const { matchId, jobId } of queuedJobs) {
-                if (cancelRequestedRef.current) break;
-                await waitForJob(matchId, jobId);
-            }
-
-            setProgressInfo({ current: total, total, matchName: '✅ All matches analyzed.' });
         } catch (err) {
             if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
                 console.log("Analysis aborted by user.");
@@ -622,8 +643,6 @@ const Dashboard = () => {
             console.error(err);
             setError("Failed to analyze matches. Please try again.");
             setProgressInfo({ current: 0, total: 0, matchName: '' });
-        } finally {
-            setAnalyzing(false);
         }
     };
 
@@ -693,22 +712,35 @@ const Dashboard = () => {
         };
 
         try {
-            for (let i = 0; i < total; i++) {
-                if (cancelRequestedRef.current) break;
-                const match = selectedMatches[i];
-                const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: `Queuing: ${matchLabel}` });
-                try {
-                    const res = await api.post('/predict-async', { match_ids: [match.id] });
-                    const jobInfo = res.data[0];
-                    savePendingJob(match.id, jobInfo.job_id);
+            // submit all to the backend in one Batch Call
+            const matchIds = selectedMatches.map(m => m.id);
+            try {
+                const res = await api.post('/predict-async', { match_ids: matchIds });
+                const jobs = res.data;
+
+                jobs.forEach(jobInfo => {
+                    savePendingJob(jobInfo.match_id, jobInfo.job_id);
                     setTerminalJobId(prev => prev || jobInfo.job_id);
-                    startAutoGeneratePolling(match.id, jobInfo.job_id);
-                } catch (err) {
-                    console.error(`Failed to queue ${matchLabel}:`, err);
+                    startAutoGeneratePolling(jobInfo.match_id, jobInfo.job_id);
+                });
+
+                let completed = 0;
+                setProgressInfo({ current: 0, total, matchName: '🚀 Sequential Auto-Generate queued...' });
+
+                for (const jobInfo of jobs) {
+                    if (cancelRequestedRef.current) break;
+                    await waitForJob(jobInfo.match_id, jobInfo.job_id);
+                    completed++;
+                    setProgressInfo({
+                        current: completed,
+                        total,
+                        matchName: completed === total ? '✅ Auto-Generate finished!' : `Working through entries (${completed}/${total})...`
+                    });
                 }
+            } catch (err) {
+                console.error(`Failed to queue auto-generate batch:`, err);
+                throw err;
             }
-            setProgressInfo({ current: total, total, matchName: '⏳ Analyzing in background…' });
         } catch (err) {
             if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
                 console.log("Auto-Generate aborted by user.");
@@ -731,30 +763,44 @@ const Dashboard = () => {
         const total = selectedMatches.length;
 
         try {
-            for (let i = 0; i < total; i++) {
-                if (cancelRequestedRef.current) break;
+            // Submit all items in one Batch Call
+            const auditItems = selectedMatches.map(match => ({
+                match_id: match.id || match.match_id,
+                user_selected_bet: match._user_selected_bet || match.selection || "Unknown Bet"
+            }));
 
-                const match = selectedMatches[i];
-                const matchLabel = `${match.homeTeam?.name || 'Team'} vs ${match.awayTeam?.name || 'Team'}`;
-                setProgressInfo({ current: i + 1, total, matchName: `Queuing audit: ${matchLabel}` });
+            try {
+                const res = await api.post('/audit-async', {
+                    booking_code: activeBookingCode || null,
+                    items: auditItems
+                });
+                const jobs = res.data;
 
-                try {
-                    const res = await api.post('/audit-async', {
-                        booking_code: activeBookingCode || null,
-                        items: [{
-                            match_id: match.id || match.match_id,
-                            user_selected_bet: match._user_selected_bet || match.selection || "Unknown Bet"
-                        }]
-                    });
-                    const jobInfo = res.data[0]; // { job_id, match_id, status }
-                    savePendingJob(match.id || match.match_id, jobInfo.job_id);
+                jobs.forEach(jobInfo => {
+                    savePendingJob(jobInfo.match_id, jobInfo.job_id);
                     setTerminalJobId(prev => prev || jobInfo.job_id);
-                    startPolling(match.id || match.match_id, jobInfo.job_id);
-                } catch (err) {
-                    console.error(`Failed to queue audit for ${matchLabel}:`, err);
+                    startPolling(jobInfo.match_id, jobInfo.job_id);
+                });
+
+                let completed = 0;
+                setProgressInfo({ current: 0, total, matchName: '📡 Sequential Audit batch initialized...' });
+
+                for (const jobInfo of jobs) {
+                    if (cancelRequestedRef.current) break;
+                    await waitForJob(jobInfo.match_id, jobInfo.job_id);
+                    completed++;
+                    setProgressInfo({
+                        current: completed,
+                        total,
+                        matchName: completed === total ? '✅ Audit finished!' : `Auditing match ${completed} of ${total}...`
+                    });
                 }
+            } catch (err) {
+                console.error(`Failed to queue audit batch:`, err);
+                throw err;
+            } finally {
+                setAnalyzing(false);
             }
-            setProgressInfo({ current: total, total, matchName: '⏳ Auditing in background…' });
         } catch (err) {
             if (axios.isCancel(err) || err.name === 'AbortError' || cancelRequestedRef.current) {
                 console.log("Audit aborted by user.");

@@ -10,6 +10,7 @@ import uuid
 import requests
 import logging
 import redis as redis_lib
+from celery import chain
 from contextlib import asynccontextmanager
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -555,6 +556,16 @@ def api_set_automation(req: AutomationSettingRequest, current_user: dict = Depen
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update automation setting")
     return {"status": "success", "enabled": req.enabled}
+
+@app.get("/settings/kill-active-analysis")
+def get_kill_analysis_status(current_user: dict = Depends(get_admin_user)):
+    return {"kill_signal": get_app_setting("analysis_kill_signal", "0")}
+
+@app.put("/settings/kill-active-analysis")
+def set_kill_analysis_status(req: AutomationSettingRequest, current_user: dict = Depends(get_admin_user)):
+    val = "1" if req.enabled else "0"
+    set_app_setting("analysis_kill_signal", val)
+    return {"message": f"Global analysis kill signal set to {val}"}
 
 @app.get("/settings/kill-active-cron")
 def api_get_kill_signal(current_user: dict = Depends(get_admin_user)):
@@ -1151,33 +1162,53 @@ def predict_audit(request: AuditBatchRequest, current_user: dict = Depends(get_a
 @app.post("/predict-async", status_code=202)
 def predict_async(request: MatchBatchRequest, current_user: dict = Depends(get_admin_user)):
     """
-    Submit one or more match IDs for async background analysis.
-    Returns immediately with a job_id per match.
-    The frontend polls GET /jobs/{job_id} to retrieve results.
+    Submit one or more match IDs for SEQUENTIAL background analysis.
+    Uses Celery chains to ensure matches are processed one-by-one.
     """
     from src.worker.tasks import analyze_match
+    
+    # Auto-reset the kill switch when starting a new batch
+    set_app_setting("analysis_kill_signal", "0")
+    print("📡 [API] Resetting analysis_kill_signal for new batch.")
 
     results = []
+    task_chain = []
+    
     for match_id in request.match_ids:
         job_id = str(uuid.uuid4())
         create_job(job_id, match_id)
-        analyze_match.delay(match_id, job_id)
+        # Use .si() for immutable signatures in the chain
+        task_chain.append(analyze_match.si(match_id, job_id))
         results.append({"job_id": job_id, "match_id": match_id, "status": "PENDING"})
+    
+    if task_chain:
+        chain(*task_chain).apply_async()
+        
     return results
 
 
 @app.post("/audit-async", status_code=202)
 def audit_async(request: AuditBatchRequest, current_user: dict = Depends(get_admin_user)):
-    """Submit betslip audit jobs to Celery. Returns a job_id per item immediately."""
+    """Submit betslip audit jobs to Celery in a SEQUENTIAL chain."""
     from src.worker.tasks import analyze_audit
+    
+    # Auto-reset the kill switch
+    set_app_setting("analysis_kill_signal", "0")
+    print("📡 [API] Resetting analysis_kill_signal for new audit batch.")
 
     results = []
+    task_chain = []
     booking_code = request.booking_code
+    
     for item in request.items:
         job_id = str(uuid.uuid4())
         create_job(job_id, item.match_id)
-        analyze_audit.delay(item.match_id, job_id, item.user_selected_bet, booking_code)
+        task_chain.append(analyze_audit.si(item.match_id, job_id, item.user_selected_bet, booking_code))
         results.append({"job_id": job_id, "match_id": item.match_id, "status": "PENDING"})
+        
+    if task_chain:
+        chain(*task_chain).apply_async()
+        
     return results
 
 

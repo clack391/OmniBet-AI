@@ -31,12 +31,21 @@ from src.services.sports_api import (
 
 
 def _is_cancelled(job_id: str) -> bool:
-    """Check Redis for a per-job cancellation flag."""
+    """Check Redis for a per-job cancellation flag AND the global analysis kill switch."""
     try:
+        # 1. Global Kill Switch Check
+        from src.database.db import get_app_setting
+        global_kill = get_app_setting("analysis_kill_signal", "0")
+        if global_kill == "1":
+            print(f"🛑 [WORKER] Global Analysis Kill Switch is ACTIVE. Aborting Job {job_id}.")
+            return True
+
+        # 2. Per-Job Redis Check
         import redis as redis_lib
         r = redis_lib.Redis(host="localhost", port=6379, db=0, decode_responses=True)
         return r.exists(f"job:{job_id}:cancel") == 1
-    except Exception:
+    except Exception as e:
+        print(f"⚠️ [WORKER] Error checking cancellation for {job_id}: {e}")
         return False
 
 
