@@ -1548,6 +1548,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       Pivot the Safe Banker to wide structural Unders ('Under 3.5 Goals' or '1st Half Under 1.5 Goals').
 
+    - **RULE 52: THE CHAOS MULTIPLIER (THE STERILE CEILING FALLACY)**:
+      **THE TRIGGER:**
+      If the AI predicts a game script where a 'Sterile Offense' (Rule 16) will be forced to 'abandon their low block' or 'chase the game' against an opponent that does NOT have an elite defense (conceding > 1.0 goals per game).
+      **THE TACTICAL REALITY (UNPARKING THE BUS):**
+      When a defensive, low-scoring team is forced to abandon its structure to chase a deficit, their historical offensive averages (e.g., 0.8 GF/game) become mathematically void. The match devolves into transition chaos. The sterile team is highly capable of scoring 2+ goals against a mediocre defense in this chaotic state, pushing the match into 2-2 or 3-2 territory.
+      **THE FORBIDDEN ACTION:**
+      The AI is strictly FORBIDDEN from using 'Under 2.5' or 'Under 3.5 Goals' as a Safe Banker if the Crucible Simulation explicitly projects the game state 'opening up' or the low block being 'abandoned'. You cannot place a mathematical ceiling on structural chaos.
+      **THE PIVOT:**
+      If the game state is projected to break open, the AI MUST pivot the Safe Banker to a structural floor that survives the chaos, specifically 'Over 1.5 Match Goals' or backing the structurally superior team on a Double Chance.
+
     - **RULE 46: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
       The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
 
