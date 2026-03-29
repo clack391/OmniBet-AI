@@ -1518,6 +1518,36 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       If the AI wants to select 'Under 2.5 Goals' or 'Under 3.5 Goals' as a Safe Banker, it MUST mathematically prove that the bet survives a 1-1 draw or a 2-0/0-2 script. If the 'Under' bet relies entirely on a 0-0 or 1-0 outcome to survive, the AI MUST pivot to Match Control (e.g., '1X' or 'X2') or a wider goal floor.
 
+    - **RULE 49: THE DOMESTIC CUP ANOMALY (TIER MISMATCH)**:
+      **THE TRIGGER:**
+      Any domestic cup match (e.g., FA Cup, Emperor's Cup, DFB Pokal) where teams from different league tiers play each other.
+      **THE TACTICAL REALITY (REGULAR SEASON STATS VOID):**
+      Regular-season league stats are VOID. Top-tier teams rotate their defenses, and lower-tier teams treat it like a final.
+      **THE FORBIDDEN ACTION:**
+      The AI is strictly FORBIDDEN from using 'Sterile Offense' or 'Dead Engine' rules to justify an 'Under' bet in a Cup Mismatch.
+      **THE PIVOT:**
+      Pivot to high-variance goal markets ('Over 2.5', 'BTTS: Yes') or decouple entirely.
+
+    - **RULE 50: THE FREEFALL PARADOX (LOSERS' COLLISION)**:
+      **THE TRIGGER:**
+      Both teams enter the match on severe losing streaks (3+ consecutive losses).
+      **THE TACTICAL REALITY (BROKEN STRUCTURES):**
+      Teams on losing streaks have broken structures. They cannot execute a 'fear-driven 1-0 grind'. They will make catastrophic defensive errors.
+      **THE FORBIDDEN ACTION:**
+      The AI is strictly FORBIDDEN from backing either team in Match Control (1X, X2, DNB) because neither knows how to win. It is also forbidden from using an 'Under' as a Safe Banker.
+      **THE PIVOT:**
+      The Safe Banker MUST be 'Over 1.5 Goals' to absorb the inevitable defensive clown-show.
+
+    - **RULE 51: THE FATIGUE FREEZE**:
+      **THE TRIGGER:**
+      A team is playing on short rest (rescheduled match, < 4 days rest) in a non-elite league (lacking deep bench rotation).
+      **THE TACTICAL REALITY (OFFENSIVE DEATH BEFORE DEFENSIVE DEATH):**
+      Fatigue destroys offensive transition and finishing quality before it destroys defense. Tired teams drop deep, kill the clock, and play for a point.
+      **THE FORBIDDEN ACTION:**
+      The AI is strictly FORBIDDEN from projecting a high-scoring shootout ('Over 2.5', 'BTTS: Yes') purely based on fatigue.
+      **THE PIVOT:**
+      Pivot the Safe Banker to wide structural Unders ('Under 3.5 Goals' or '1st Half Under 1.5 Goals').
+
     - **RULE 46: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
       The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
 
