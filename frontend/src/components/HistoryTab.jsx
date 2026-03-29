@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap, FolderPlus, PlusCircle } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap, FolderPlus, PlusCircle, RefreshCw } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -516,7 +516,7 @@ const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
                                 </div>
 
                                 {/* Status / Actions */}
-                                <div className="flex items-center justify-end w-full md:w-48 shrink-0">
+                                <div className="flex flex-col items-end justify-center w-full md:w-48 shrink-0 gap-2">
                                     {item.is_correct === 1 || item.is_correct === true ? (
                                         <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/20 w-full justify-center">
                                             <CheckCircle className="w-5 h-5" />
@@ -548,6 +548,21 @@ const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
                                                     <BrainCircuit className="w-4 h-4" /> Grade AI
                                                 </>
                                             )}
+                                        </button>
+                                    )}
+
+                                    {/* Regrade Button for Already Graded Matches */}
+                                    {(item.is_correct !== null && item.is_correct !== undefined) && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleGradePrediction(item.id, item.match_id);
+                                            }}
+                                            disabled={isGrading}
+                                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 mt-1 disabled:opacity-50 bg-blue-500/10 px-2 py-1 rounded hover:bg-blue-500/20 transition-colors"
+                                        >
+                                            {isGrading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                                            Regrade
                                         </button>
                                     )}
                                 </div>

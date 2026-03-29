@@ -1506,6 +1506,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       The AI MUST decouple from the depleted team. Pivot the Safe Banker to wide goal floors that capitalize on the lack of structure (e.g., 'Over 1.5 Match Goals' or 'BTTS: Yes'), OR back the healthier opponent on a Double Chance (e.g., '1X' for the home team).
 
+    - **RULE 47: THE FORTRESS EXCEPTION (SYSTEM OVER PERSONNEL)**:
+      **THE TRIGGER:**
+      If Rule 10 (Defensive Collapse) or Rule 33 (Mutual Collapse) is triggered because a team is missing a starting defender/goalkeeper, BUT that team possesses an Elite Defensive Record (conceding < 0.8 goals/game, high clean sheet ratio), AND the opposing team has a weak or depleted offense.
+      **THE TACTICAL REALITY (THE PROTECTIVE BUNKER):**
+      Elite defensive teams rely on systemic structure, not just individual players. When a top defensive team misses a key player, the manager will overcompensate by dropping the team into a rigid, protective low-block. They do not engage in shootouts; they kill the game. Furthermore, if the opposing offense is weak or depleted, they completely lack the quality to break this bunker down. This results in a 0-0 or 0-1 sterile grind.
+      **THE FORBIDDEN ACTION:**
+      If the Fortress Exception is active, the AI is strictly FORBIDDEN from using Rule 10 or Rule 33 to force an 'Over' goals market (Over 1.5, Over 2.5) or 'BTTS: Yes'. You cannot bet on a shootout against an elite defensive structure.
+      **THE PIVOT:**
+      The AI MUST completely VETO the 'Mutual Collapse' narrative. Pivot the Safe Banker to wide structural Unders (e.g., 'Under 3.5 Goals') or Match Control for the defensively elite team (e.g., 'X2' or 'Draw No Bet'). Respect the system.
+
     - **RULE 46: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
       The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
 
