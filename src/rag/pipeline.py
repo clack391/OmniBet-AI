@@ -1,6 +1,5 @@
 import os
 import json
-import time
 import re
 import requests
 import google.generativeai as genai
@@ -272,10 +271,6 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
         "reasoning": ["point 1", "point 2", "point 3"]
     }}
     """
-    import time
-    print(f"⏳ [Auditor] Pausing 5 seconds to clear Gemini API Rate Limits...")
-    time.sleep(5)
-
     try:
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -316,9 +311,6 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             print(f"🔍 [Agent 1] Blind Backtest Mode: Search enabled with before:{before_date} date constraints for {team_a} vs {team_b}")
 
         print(f"🧠 [Agent 1] Generating analysis for {team_a} vs {team_b} (Searching web if future match)...")
-        print(f"⏳ [Agent 1] Pausing 5 seconds to clear Gemini API Rate Limits...")
-        time.sleep(5)
-
         request_start = get_now_wat()
         
         max_retries = 3
@@ -646,8 +638,6 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     
     try:
         print(f"🏆 [Risk Officer] Building the safest master accumulator. Please wait...")
-        print(f"⏳ [Risk Officer] Pausing 5 seconds to clear Gemini API Rate Limits...")
-        time.sleep(5)
         master_start = get_now_wat()
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -764,8 +754,6 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     
     try:
         team_a_name = initial_prediction.get('home_team') or "the Match"
-        print(f"⏳ [Auditor] Pausing 5 seconds to clear Gemini API Rate Limits...")
-        time.sleep(5)
         print(f"⚖️ [Auditor] Evaluating {user_selected_bet} against Agent 1 report for {team_a_name}...")
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
@@ -1582,9 +1570,6 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
         payload["tools"] = [{"google_search": {}}]
 
-        print(f"⏳ [Supreme Court] Pausing 5 seconds to clear Gemini API Rate Limits...")
-        time.sleep(5)
-        
         max_retries = 3
         for attempt in range(max_retries):
             # Also check cancelled during retry loops for ultra-responsive STOP button
