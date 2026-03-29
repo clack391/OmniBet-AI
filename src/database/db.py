@@ -216,12 +216,12 @@ def get_accuracy_stats():
     cursor = conn.cursor()
     
     try:
-        # Total predictions with a known outcome
-        cursor.execute('SELECT COUNT(*) FROM predictions WHERE is_correct IS NOT NULL')
+        # Total predictions with a known outcome (ignoring refunds)
+        cursor.execute('SELECT COUNT(*) FROM predictions WHERE is_correct IS NOT NULL AND is_correct != "refund"')
         total_resolved = cursor.fetchone()[0]
         
         # Total correct predictions
-        cursor.execute('SELECT COUNT(*) FROM predictions WHERE is_correct = 1')
+        cursor.execute('SELECT COUNT(*) FROM predictions WHERE is_correct = 1 OR is_correct = "true"')
         total_correct = cursor.fetchone()[0]
         
         win_rate = 0

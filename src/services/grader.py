@@ -57,14 +57,14 @@ def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, saf
     ### Rules
     1. If the match has not started yet or was postponed, set `status` to "Scheduled" and `is_correct` to null.
     2. If the match is currently playing, set `status` to "Live" and evaluate `is_correct` IF the bet has already won or lost (e.g. "Over 2.5 goals" and the score is already 2-1). Otherwise, set `is_correct` to null.
-    3. If the match is finished, set `status` to "Finished" and firmly evaluate `is_correct` as true or false.
+    3. If the match is finished, set `status` to "Finished" and firmly evaluate `is_correct` as true, false, or "refund" (e.g., if it's a DNB and the match is a draw).
 
     ### Output Format
     Return ONLY valid JSON matching this exact structure:
     {{
         "actual_score": "e.g., Chelsea 2 - 0 Burnley",
         "status": "e.g., Finished, Live, or Scheduled",
-        "is_correct": true, false, or null
+        "is_correct": true, false, "refund", or null
     }}
     """
     
@@ -137,8 +137,9 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
     Evaluate if `{safe_bet_tip}` won, lost, or is still pending. You have access to the full match statistics, period scores, incident timeline, and player-level data.
 
     #### Market Grading Guide:
-    1. **1X2 / Double Chance / DNB**: Use `score_summary`.
-    2. **Over/Under Goals / BTTS**: Use `score_summary`.
+    1. **1X2 / Double Chance**: Use `score_summary`. If win, return true. If lose, return false.
+    2. **Draw No Bet (DNB)**: Use `score_summary`. If the pick wins, return true. If the pick loses, return false. If the match ends in a draw, return "refund".
+    3. **Over/Under Goals / BTTS**: Use `score_summary`.
     3. **HT/FT & Highest Scoring Half**: Compare `period_scores['period1']` vs `score_summary`.
     4. **Player Props (e.g. Shots/Goals/Cards)**: Locate the player in `player_statistics`. Look for fields like 'shotsOnTarget', 'goals', 'yellowCards'.
     5. **10/15/30 Minute Markets**: Inspect `incidents`. If a goal occurs at minute X, and the market is "No goal before X", it is a LOSS. 
@@ -152,8 +153,8 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
     {{
         "actual_score": "{actual_score_str}",
         "status": "Finished, Live, or Scheduled",
-        "is_correct": true, false, or null,
-        "reasoning": "Forensic breakdown: e.g., 'Player X had 2 shots on target', 'Goal at 7 min broke 10 min draw'"
+        "is_correct": true, false, "refund", or null,
+        "reasoning": "... e.g., 'Goal at 7 min broke 10 min draw. Match ended in draw, giving a DNB refund.'"
     }}
     """
     

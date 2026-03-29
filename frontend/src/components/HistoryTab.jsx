@@ -216,8 +216,8 @@ const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
 
     const maxSafeStats = React.useMemo(() => {
         if (!history || history.length === 0) return { odds: 0, count: 0 };
-        // We only want to multiply odds for matches that haven't explicitly lost
-        const eligible = history.filter(item => item.is_correct !== 0 && item.is_correct !== false);
+        // We only want to multiply odds for matches that haven't explicitly lost or been refunded
+        const eligible = history.filter(item => item.is_correct !== 0 && item.is_correct !== false && item.is_correct !== 'refund');
         let total = 1.0;
         let count = 0;
         eligible.forEach(item => {
@@ -526,6 +526,11 @@ const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
                                         <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-500/10 text-red-500 border border-red-500/20 w-full justify-center">
                                             <XCircle className="w-5 h-5" />
                                             <span className="font-bold">LOSS</span>
+                                        </div>
+                                    ) : item.is_correct === 'refund' ? (
+                                        <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 w-full justify-center">
+                                            <CheckCircle className="w-5 h-5" />
+                                            <span className="font-bold">REFUND</span>
                                         </div>
                                     ) : (
                                         <button
