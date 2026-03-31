@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target, Flag, AlertTriangle, User, Scale, Gavel, Share2, MapPin, Loader2, Info, CheckCircle2, XCircle, Shield } from 'lucide-react';
+import { Bolt, Check, Plus, Trophy, TrendingUp, Users, DollarSign, Activity, Brain, X, Maximize2, ChevronDown, ChevronUp, ShieldCheck, ShieldAlert, Clock, Target, Flag, AlertTriangle, User, Scale, Gavel, Share2, MapPin, Loader2, Info, CheckCircle2, XCircle, Shield, BarChart2 } from 'lucide-react';
 import SupremeCourtCard from './SupremeCourtCard';
 import { useBetSlip } from '../context/BetSlipContext';
 
@@ -391,6 +391,33 @@ const PredictionCard = ({ prediction }) => {
                             <Target className="w-4 h-4 text-orange-400" />
                             Game State Simulation
                         </h4>
+
+                        {prediction.supreme_court?.simulation_data && (
+                            <div className="mb-5 p-4 bg-slate-950/40 rounded-lg border border-amber-500/20">
+                                <h5 className="text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <BarChart2 className="w-3 h-3" /> 10,000 Monte Carlo Variations (Goal Distribution)
+                                </h5>
+                                <div className="flex items-end gap-2 h-20 w-full mt-2 relative">
+                                    {Object.entries(prediction.supreme_court.simulation_data).map(([goals, count]) => {
+                                        const height = Math.max(5, (count / 10000) * 100);
+                                        return (
+                                            <div key={goals} className="flex-1 h-full flex flex-col items-center justify-end group py-px relative">
+                                                <span className="text-[9px] text-amber-300 font-mono opacity-0 group-hover:opacity-100 transition-opacity font-bold absolute -top-5">
+                                                    {((count / 10000) * 100).toFixed(1)}%
+                                                </span>
+                                                <div
+                                                    className="w-full bg-gradient-to-t from-orange-600/60 to-amber-400 rounded-t-sm transition-all duration-500 ease-out border-b border-amber-500/30 hover:brightness-125"
+                                                    style={{ height: `${height}%` }}
+                                                ></div>
+                                                <span className="text-[10px] font-black text-slate-400 mt-2">{goals}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="text-[9px] text-center text-slate-500 font-black mt-2 uppercase tracking-wide">Total Match Goals</div>
+                            </div>
+                        )}
+
                         <div className="space-y-4">
                             <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
                                 <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario A: The Expected Script</h5>

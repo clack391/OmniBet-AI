@@ -1671,17 +1671,37 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             
         try:
             from src.rag.simulator import run_crucible_simulation
+            
+            # Robust extraction of xG stats to prevent float(None) crashes
+            raw_home_xg = parsed.get("home_xG")
+            raw_away_xg = parsed.get("away_xG")
+            raw_var = parsed.get("variance_multiplier")
+            
+            h_xg = float(raw_home_xg) if raw_home_xg is not None else 1.0
+            a_xg = float(raw_away_xg) if raw_away_xg is not None else 1.0
+            v_mult = float(raw_var) if raw_var is not None else 1.0
+
+            # Robust extraction of Agent 2's pick (handling fallback to Agent 1's safe_bet_tip)
+            primary_obj = agent_2_critique.get("primary_pick", {})
+            a2_pick = "N/A"
+            if isinstance(primary_obj, dict):
+                a2_pick = primary_obj.get("tip", agent_2_critique.get("safe_bet_tip", "N/A"))
+            elif isinstance(primary_obj, str):
+                a2_pick = primary_obj
+
             sim_res = run_crucible_simulation(
-                home_xG=float(parsed.get("home_xG", 1.0)),
-                away_xG=float(parsed.get("away_xG", 1.0)),
-                variance_multiplier=float(parsed.get("variance_multiplier", 1.0)),
-                agent_2_pick=agent_2_critique.get("primary_pick", "N/A"),
+                home_xG=h_xg,
+                away_xG=a_xg,
+                variance_multiplier=v_mult,
+                agent_2_pick=a2_pick,
                 supreme_court_pick=parsed.get("Arbiter_Safe_Pick", {}).get("tip", "N/A")
             )
             parsed["simulation_audit"] = sim_res["audit_string"]
+            parsed["simulation_data"] = sim_res["distribution"]
         except Exception as sim_e:
             print(f"Crucible Simulator Execution Failed: {sim_e}")
             parsed["simulation_audit"] = "[SIMULATION AUDIT: Failed to run mathematical simulation.]"
+            parsed["simulation_data"] = {}
 
         return parsed
 

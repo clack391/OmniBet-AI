@@ -456,6 +456,16 @@ def create_best_picks(req: BestPicksRequest = None, current_user: dict = Depends
     # 4. Call the Gemini Chief Risk Officer Agent
     best_picks_json = generate_best_picks(saved_predictions, target_odds=target_odds)
 
+    # Inject the exact Goal Distributions from the Python backend
+    for pick in best_picks_json.get("picks", []):
+        match_id = pick.get("match_id")
+        for stored in saved_predictions:
+            if stored.get("match_id") == match_id and "supreme_court" in stored:
+                sim_data = stored["supreme_court"].get("simulation_data")
+                if sim_data:
+                    pick["simulation_data"] = sim_data
+                break
+
     # 5. Save to DB
     save_best_picks(best_picks_json)
 

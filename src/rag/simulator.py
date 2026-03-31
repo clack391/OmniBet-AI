@@ -88,8 +88,20 @@ def run_crucible_simulation(home_xG: float, away_xG: float, variance_multiplier:
 
     audit_string = f"[SIMULATION AUDIT: 10,000 Monte Carlo iterations completed. Agent 2 Pick ({agent_2_pick}) Survival: {a2_win_rate:.1f}%. Supreme Court Pick ({supreme_court_pick}) Survival: {sc_win_rate:.1f}%.]"
 
+    # 4. Generate the Heatmap Distributions
+    distribution = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5+": 0}
+    for i in range(10000):
+        total = home_goals[i] + away_goals[i]
+        if total == 0: distribution["0"] += 1
+        elif total == 1: distribution["1"] += 1
+        elif total == 2: distribution["2"] += 1
+        elif total == 3: distribution["3"] += 1
+        elif total == 4: distribution["4"] += 1
+        else: distribution["5+"] += 1
+
     return {
         "audit_string": audit_string,
         "agent_2_win_rate": a2_win_rate,
-        "supreme_court_win_rate": sc_win_rate
+        "supreme_court_win_rate": sc_win_rate,
+        "distribution": distribution
     }

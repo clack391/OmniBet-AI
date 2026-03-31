@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap, FolderPlus, PlusCircle, RefreshCw } from 'lucide-react';
+import { Loader2, Trash2, CheckCircle, XCircle, BrainCircuit, Zap, BarChart2, FolderPlus, PlusCircle, RefreshCw } from 'lucide-react';
 import { useBetSlip } from '../context/BetSlipContext';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -393,6 +393,33 @@ const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
                                             </li>
                                         ))}
                                     </ul>
+                                    {pick.simulation_data && (
+                                        <div className="mt-4 pt-3 border-t border-gray-800/50">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <span className="text-[10px] font-bold text-amber-500/70 tracking-widest uppercase flex items-center gap-1">
+                                                    <BarChart2 className="w-3 h-3" /> 10k Monte Carlo Distribution
+                                                </span>
+                                            </div>
+                                            <div className="flex items-end gap-1 h-12 w-full opacity-80 hover:opacity-100 transition-opacity relative">
+                                                {Object.entries(pick.simulation_data).map(([goals, count]) => {
+                                                    const height = Math.max(5, (count / 10000) * 100);
+                                                    return (
+                                                        <div key={goals} className="flex-1 h-full flex flex-col items-center justify-end group relative">
+                                                            <span className="text-[8px] text-amber-300 font-mono absolute -top-4 opacity-0 group-hover:opacity-100 transition-opacity font-bold">
+                                                                {((count / 10000) * 100).toFixed(1)}%
+                                                            </span>
+                                                            <div
+                                                                className="w-full bg-gradient-to-t from-orange-600/60 to-amber-400 rounded-t-sm transition-all duration-500 ease-out border-b border-amber-500/30 hover:brightness-125"
+                                                                style={{ height: `${height}%` }}
+                                                            ></div>
+                                                            <span className="text-[9px] font-bold text-gray-500 mt-1">{goals}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div className="text-[8px] text-center text-gray-600 mt-1 uppercase tracking-wider font-bold">Total Match Goals</div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
