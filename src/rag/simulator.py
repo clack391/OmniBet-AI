@@ -1,4 +1,5 @@
 import numpy as np
+import re
 
 def run_crucible_simulation(home_xG: float, away_xG: float, variance_multiplier: float, agent_2_pick: str, supreme_court_pick: str) -> dict:
     """
@@ -62,7 +63,16 @@ def run_crucible_simulation(home_xG: float, away_xG: float, variance_multiplier:
             return home_score >= away_score # Refund is mathematically a parlay survival, not a loss
         elif "draw no bet: away" in pick or "dnb: away" in pick or "dnb 2" in pick:
             return away_score >= home_score 
-            
+        # Asian Handicap
+        if "asian handicap" in pick or "ah " in pick or "+" in pick or "-" in pick:
+            match = re.search(r'([+-]\d+\.\d+)', pick)
+            if match:
+                handicap = float(match.group(1))
+                if "home" in pick or " 1 " in pick or pick.endswith("1"):
+                    return (home_score + handicap) >= away_score # Re-fund tie survives parlay
+                elif "away" in pick or " 2 " in pick or pick.endswith("2"):
+                    return (away_score + handicap) >= home_score
+
         # Default fallback for corners/cards markets we cannot simulate with xG
         return True
 

@@ -615,7 +615,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     CRITICAL: Ensure your JSON structure is perfectly valid and contains ZERO trailing commas at the end of objects or lists.
     Return ONLY valid JSON matching this exact structure:
     {{
-        "master_reasoning": "Explain the overarching theme of why these specific matches and specific tips were chosen.",
+        "master_reasoning": "Explain the overarching theme of the accumulator. You MUST explicitly state that the parlay was mathematically vetted against a 10,000-iteration Monte Carlo engine using Poisson distributions, and explicitly cite the average mathematical survival rate of the picks you selected to prove their absolute safety.",
         "total_accumulator_odds": 5.45,
         "picks": [
             {{
