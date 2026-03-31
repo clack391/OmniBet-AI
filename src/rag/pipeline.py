@@ -1574,6 +1574,28 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       If both defenses are leaky, the AI MUST abandon 'Under' markets and pivot to 'Over 1.5 Goals', 'BTTS: Yes', or Wide Asian Handicaps.
 
+    - **RULE 55: THE HIGH-VARIANCE CONTAGION (THE CEILING BAN)**:
+      **THE TRIGGER:**
+      If either team in the matchup has a Total Match Goals average of > 3.0 (e.g., scoring 1.8 and conceding 1.6).
+      **THE TACTICAL REALITY (CHAOS IS CONTAGIOUS):**
+      Chaos is contagious. A high-variance team will force a boring, 'sterile' opponent to play at a chaotic pace. They drag the opponent into a shootout.
+      **THE FORBIDDEN ACTION:**
+      If the High-Variance Contagion is active, the Supreme Court is strictly FORBIDDEN from using 'Under 2.5' or 'Under 3.5 Goals' as a Safe Banker, regardless of how sterile the opposing team is.
+      **THE PIVOT:**
+      You must pivot to 'Over 1.5 Goals', 'BTTS: Yes', or Match Control for the superior team. Do not cap the chaos.
+
+    - **RULE 56: BIOLOGICAL SUPREMACY (FATIGUE HIERARCHY)**:
+      **THE TRIGGER:**
+      Teams are playing on severe short rest (e.g., a tournament setting with 3 games in 6 days, or < 3 days rest).
+      **THE TACTICAL REALITY (DEAD LEGS EQUAL DEAD GAMES):**
+      Biological exhaustion destroys offensive transitions and clinical finishing. 
+      **THE HIERARCHY OVERRIDE:**
+      Rule 51 (The Fatigue Freeze) holds ABSOLUTE SUPREMACY over Rule 18 (Youth Variance) and Rule 43 (The Exhibition Void). 
+      **THE FORBIDDEN ACTION:**
+      If severe fatigue is detected, the AI is strictly FORBIDDEN from projecting a shootout. It cannot bet 'Over 1.5' or 'BTTS: Yes' based on the fact that it is a 'Friendly' or a 'Youth Match'. Fatigue nullifies the chaos.
+      **THE PIVOT:**
+      The Safe Banker MUST pivot to 'Under 3.5 Goals' or '1st Half Under 1.5 Goals' to absorb the dead-legs grind.
+
     - **RULE 46: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
       The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
 
