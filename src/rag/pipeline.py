@@ -309,7 +309,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             try:
                 # Add timeout and retry logic to gracefully handle RemoteDisconnected drops
                 # Increased to 300s for heavy Google Search grounding
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=300)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -559,7 +559,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
             check_cancelled(match_id, job_id)
             try:
                 # Increased to 300s for Risk Manager deep fact-checking
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=300)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -599,7 +599,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     Review the following JSON list of analyzed matches. Each match now contains a `primary_pick`, an `alternative_pick`, a `scenario_analysis`, and often a `supreme_court` ruling.
     Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip that balances supreme safety with reasonable accumulator odds.
     - **RULE 54: THE CONSENSUS AUDIT (THE ENSEMBLE PIPELINE)**:
-      After the Supreme Court generates its final ruling, you MUST compare Agent 2's `primary_pick` with Agent 3's `supreme_court.Arbiter_Safe_Pick` and categorize the match into one of three statuses. This status must dictate your final action:
+      After the Supreme Court generates its final ruling, you MUST actively read the `simulation_audit` string attached to the match to see the mathematical survival rate of the picks across 10,000 Monte Carlo iterations. You MUST use this hard math to justify your final categorization:
       - **CONDITION GREEN (THE LOCK - ABSOLUTE HARMONY)**: Both agents arrive at the EXACT same Safe Banker (e.g., both select 'Over 1.5' or '1X'). Action: Accept the pick. Multiply confidence. Output tag: [CONSENSUS VERIFIED: GREEN LOCK].
       - **CONDITION YELLOW (THE DOWNGRADE - LOGICAL ALIGNMENT)**: Agent 2 specifies an aggressive market, and Agent 3 downgrades it to a safer structural floor in the same logic family. Action: Accept the Supreme Court's safer floor ONLY IF IT COMPLETELY NEUTRALIZES THE RISK AGENT 2 MISSED. If the match is inherently too chaotic or high-variance even with the downgrade, you MUST upgrade the match to CONDITION RED and purge it. Output tag: [CONSENSUS DOWNGRADE: YELLOW SHIELD].
       - **CONDITION RED (THE TOXIC CONTRADICTION - SYSTEMIC CONFLICT)**: Agent 2 and Agent 3 are in fundamental mathematical opposition. Action: Fatal logic collision. The system is strictly FORBIDDEN from generating a Safe Banker for this match. You MUST completely purge the match from the accumulator. Output tag: [CONSENSUS FAILURE: RED PURGE - MATCH DISCARDED DUE TO LOGIC COLLISION].
@@ -653,7 +653,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         for attempt in range(max_retries):
             try:
                 # Increased to 300s for Accumulator generation
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=300)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -786,7 +786,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
             check_cancelled(match_id, job_id)
             try:
                 # Increased to 300s for Betslip Auditor
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=300)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -869,12 +869,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     You MUST generate the JSON fields in this exact order to ensure your reasoning precedes your selection:
     1. Crucible_Simulation_Warning: Identify the exact nightmare trap/variance first.
     2. Supreme_Court_Final_Ruling: Explain how you are dodging that trap.
-    3. Arbiter_Safe_Pick: The indestructible selection after downgrading.
+    3. home_xG, away_xG, variance_multiplier: Extract the statistical parameters for the Python Monte Carlo Simulator.
+    4. Arbiter_Safe_Pick: The indestructible selection after downgrading.
 
     Return your ruling STRICTLY in JSON:
     {{
       "Crucible_Simulation_Warning": "string (Identify the worst-case scenario where the tentative bet dies. Be brutal. If you find a trap, you MUST explain how it kills the original pick.)",
       "Supreme_Court_Final_Ruling": "string (MANDATORY: MUST start with the dynamic header defined in RULE 45, followed by a detailed, multi-paragraph judicial opinion. Connect tactical data and internal agent debate. Explain EXACTLY how you are downgrading the market to survive the trap identified above.)",
+      "home_xG": 1.5,
+      "away_xG": 1.1,
+      "variance_multiplier": 1.0,
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
       "Arbiter_Safe_Pick": {{
         "market": "string",
@@ -1647,7 +1651,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             check_cancelled(match_id, job_id)
             try:
                 # Increased timeout to 300s to allow for deep reasoning + search
-                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=300)
+                response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
             except requests.exceptions.RequestException as e:
@@ -1663,7 +1667,22 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
         parsed = json.loads(raw_text)
         if isinstance(parsed, list) and len(parsed) > 0:
-            return parsed[0]
+            parsed = parsed[0]
+            
+        try:
+            from src.rag.simulator import run_crucible_simulation
+            sim_res = run_crucible_simulation(
+                home_xG=float(parsed.get("home_xG", 1.0)),
+                away_xG=float(parsed.get("away_xG", 1.0)),
+                variance_multiplier=float(parsed.get("variance_multiplier", 1.0)),
+                agent_2_pick=agent_2_critique.get("primary_pick", "N/A"),
+                supreme_court_pick=parsed.get("Arbiter_Safe_Pick", {}).get("tip", "N/A")
+            )
+            parsed["simulation_audit"] = sim_res["audit_string"]
+        except Exception as sim_e:
+            print(f"Crucible Simulator Execution Failed: {sim_e}")
+            parsed["simulation_audit"] = "[SIMULATION AUDIT: Failed to run mathematical simulation.]"
+
         return parsed
 
     except Exception as e:
