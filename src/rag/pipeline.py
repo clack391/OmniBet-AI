@@ -598,7 +598,12 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     ### Task
     Review the following JSON list of analyzed matches. Each match now contains a `primary_pick`, an `alternative_pick`, a `scenario_analysis`, and often a `supreme_court` ruling.
     Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip that balances supreme safety with reasonable accumulator odds.
-    - **JUDICIAL OVERRIDE**: If a match contains a `supreme_court` object, you MUST prioritize its verdict. If the court overturned the original pick, you MUST NOT use the overturned pick. Use the `Arbiter_Safe_Pick` from the supreme court ruling instead.
+    - **RULE 54: THE CONSENSUS AUDIT (THE ENSEMBLE PIPELINE)**:
+      After the Supreme Court generates its final ruling, you MUST compare Agent 2's `primary_pick` with Agent 3's `supreme_court.Arbiter_Safe_Pick` and categorize the match into one of three statuses. This status must dictate your final action:
+      - **CONDITION GREEN (THE LOCK - ABSOLUTE HARMONY)**: Both agents arrive at the EXACT same Safe Banker (e.g., both select 'Over 1.5' or '1X'). Action: Accept the pick. Output tag: [CONSENSUS VERIFIED: GREEN LOCK].
+      - **CONDITION YELLOW (THE DOWNGRADE - LOGICAL ALIGNMENT)**: Agent 2 specifies an aggressive market, and Agent 3 downgrades it to a safer structural floor in the same logic family. Action: Accept the Supreme Court's safer floor. Output tag: [CONSENSUS DOWNGRADE: YELLOW SHIELD].
+      - **CONDITION RED (THE TOXIC CONTRADICTION - SYSTEMIC CONFLICT)**: Agent 2 and Agent 3 are in fundamental mathematical opposition. Action: Fatal logic collision. The system is strictly FORBIDDEN from generating a Safe Banker for this match. You MUST completely purge the match from the accumulator. Output tag: [CONSENSUS FAILURE: RED PURGE - MATCH DISCARDED DUE TO LOGIC COLLISION].
+      - **THE HALLUCINATION EXEMPTION (CONDITION BLUE)**: If Agent 3 explicitly flags Agent 2 for a Data Hallucination, this is a verified correction, not a toxic contradiction. Action: Bypass Condition Red. Accept Agent 3's corrected Safe Banker. Output tag: [CONSENSUS OVERRIDE: BLUE SHIELD - AGENT 2 HALLUCINATION PURGED].
     - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive Scenarios A, B, AND C, you must throw the match out. A safe parlay choice MUST be resilient to an early red card or an underdog goal.
     {target_instruction}
     Return ONLY the absolute safest, highest-confidence matches for the master parlay.
@@ -617,7 +622,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
                 "match_id": 12345,
                 "teams": "Home vs Away",
                 "match_date": "YYYY-MM-DDTHH:MM:SSZ",
-                "chosen_tip": "The singular tip you selected from either the primary or alternative options (Priority: Arbiter_Safe_Pick if present)",
+                "chosen_tip": "[INSERT EXACT RULE 54 TAG HERE] The singular safest tip you selected",
                 "odds": 1.45,
                 "confidence": 95,
                 "home_logo": "url_if_exists",
@@ -1463,20 +1468,17 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **RECOGNITION TRIGGERS:**
       Activate Rule 42 if: (a) Heavy Favorite with implied win probability >65%; (b) that team has Rule 10 (Defensive Collapse) active — verified missing 2+ key defenders OR starting GK; (c) the Underdog averages >= 0.8 goals per game OR creates >= 1.5 Big Chances per game.
 
-    - **RULE 43: THE EXHIBITION VOID (THE FRIENDLY MATCH TRAP)**:
+    - **RULE 43: THE EXHIBITION GOAL INVERSION**:
       **THE TRIGGER:**
       If the AI identifies the match as a Non-Competitive Fixture: Club Friendlies, U21/U19 International Friendlies, or pre-season exhibitions.
-      **THE TACTICAL REALITY (NO MATCH CONTROL):**
-      In friendly matches, 'Home Advantage' is a mirage (empty stadiums, no crowd pressure). Furthermore, managers prioritize player evaluation over winning, leading to mass substitutions (6+ changes) in the second half. This completely destroys tactical structure and makes Match Control entirely unpredictable. A superior team will easily lose 0-1 to a late fluke goal from a reserve player.
+      **THE TACTICAL REALITY (TRANSITION CHAOS):**
+      International Friendlies and non-competitive exhibitions feature mass substitutions, zero tactical discipline, and zero fear of losing. This creates transition chaos and high-scoring second halves.
       **THE GENERAL RULE VETO:**
-      This rule strictly VETOES Rule 17 and Rule 32 (Home Buzzsaw). Home and Away splits are mathematically invalid in friendly exhibitions.
+      This rule strictly VETOES Rule 17, Rule 32 (Home Buzzsaw), and Rule 35 (Dead Engine/Sterile Offense).
       **THE FORBIDDEN ACTION:**
-      If the Exhibition Void trigger is active, the AI is strictly FORBIDDEN from using Match Control markets (1X2, Double Chance, Draw No Bet, Asian Handicaps) as the Safe Banker. You cannot trust a team to win or draw a match they do not care about winning.
+      The AI is strictly FORBIDDEN from using Match Control markets (1X2, Double Chance, DNB) as the Safe Banker. Furthermore, the Supreme Court is strictly FORBIDDEN from projecting a 'sterile 0-0 grind' in Friendlies. You cannot use Rule 35 to force an Under in a friendly.
       **THE PIVOT:**
-      The AI MUST decouple the Safe Banker from the Match Winner entirely. Pivot to purely structural goal floors that survive disjointed, sloppy football: 'Under 3.5 Goals', '1st Half Under 1.5 Goals', or if both teams have elite offensive depth, 'Over 1.5 Match Goals'.
-
-      **RECOGNITION TRIGGERS:**
-      Activate Rule 43 if the tournament/round is: International Friendly, Club Friendly, Pre-Season Tour, U21 Friendly, or U19 Friendly.
+      The Safe Banker MUST pivot to structural goal floors like 'Over 1.5 Match Goals' to absorb the inevitable second-half defensive collapse.
 
       You cannot trust competitive match control markets in a match where winning is irrelevant to both managers. Bet the scoreline structure, not the result.
 
@@ -1557,6 +1559,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       The AI is strictly FORBIDDEN from using 'Under 2.5' or 'Under 3.5 Goals' as a Safe Banker if the Crucible Simulation explicitly projects the game state 'opening up' or the low block being 'abandoned'. You cannot place a mathematical ceiling on structural chaos.
       **THE PIVOT:**
       If the game state is projected to break open, the AI MUST pivot the Safe Banker to a structural floor that survives the chaos, specifically 'Over 1.5 Match Goals' or backing the structurally superior team on a Double Chance.
+
+    - **RULE 53: THE DEFENSIVE CLOWN SHOW (THE UNDER PANIC BAN)**:
+      **THE TRIGGER:**
+      The AI identifies a team as a 'Dead Engine' or 'Sterile Offense', BUT both teams in the fixture have poor defensive metrics (conceding > 1.1 goals per game / Combined GA > 2.2).
+      **THE TACTICAL REALITY (AWAKENING THE DEAD):**
+      A bad offense will magically wake up when playing against a bad defense. Two leaky defenses playing each other guarantees defensive errors, penalties, and chaotic transitions.
+      **THE FORBIDDEN ACTION:**
+      The Supreme Court is strictly FORBIDDEN from using 'Under 2.5' or 'Under 3.5 Goals' as a Safe Banker simply because it cannot predict a Match Winner. You cannot put a mathematical ceiling on two terrible defenses.
+      **THE PIVOT:**
+      If both defenses are leaky, the AI MUST abandon 'Under' markets and pivot to 'Over 1.5 Goals', 'BTTS: Yes', or Wide Asian Handicaps.
 
     - **RULE 46: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
       The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
