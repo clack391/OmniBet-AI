@@ -19,7 +19,7 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
+const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
     const getLogoUrl = (logoPath) => {
         if (!logoPath) return null;
         if (logoPath.startsWith('http') || logoPath.startsWith(API_URL)) return logoPath;
@@ -55,6 +55,13 @@ const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
             fetchHistorySilent();
         }
     }, [isActive]);
+
+    // Auto-refresh when a background job finishes in the Dashboard
+    useEffect(() => {
+        if (latestPredictions && latestPredictions.length > 0) {
+            fetchHistorySilent();
+        }
+    }, [latestPredictions]);
 
     const fetchHistory = async () => {
         setLoading(true);
