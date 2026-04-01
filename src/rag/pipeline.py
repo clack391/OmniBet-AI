@@ -1596,6 +1596,27 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       The Safe Banker MUST pivot to 'Under 3.5 Goals' or '1st Half Under 1.5 Goals' to absorb the dead-legs grind.
 
+    - **RULE 57: THE STERILITY SUPREMACY MANDATE (RULE 48 / RULE 53 ARE ABSOLUTE)**:
+      Rule 48 (0-0 Anchor Ban) and Rule 53 (Defensive Clown Show) are ABSOLUTE VETOES with ZERO exceptions.
+      No other rule in the Supreme Court matrix — including Rule 40 (Desperation Grind), Rule 23 (Playoff Paralysis), or Rule 16 (Sterile Offense) — can override them.
+      **THE FORBIDDEN ACTION:**
+      If you are about to select an 'Under' bet that relies on a 0-0 to survive, STOP. You are in VIOLATION of Rule 48. If both teams concede > 1.1 goals per game, you are in VIOLATION of Rule 53. Violations are ABSOLUTE FAILURES. No rationalization is permitted.
+      **THE PIVOT:**
+      Obey Rule 48 and Rule 53 without question. Pivot immediately to 'Over 1.5 Goals', 'BTTS: Yes', or Match Control markets.
+
+    - **RULE 58: THE RATIONALIZATION VETO (MATH IS IMMUTABLE)**:
+      **THE TRIGGER:**
+      A team's Goals Against (GA) average is > 1.2 per game, but the sample size is small (e.g., Matchday 2 or 3 of a competition).
+      **THE STATISTICAL REALITY:**
+      A bad defense is a bad defense. You CANNOT assume a leaky defense will suddenly secure a clean sheet merely because of a small sample, nor because they face a supposedly weak opponent. Defensive errors, individual mistakes, and structural collapses are opponent-agnostic. They happen regardless of who is on the other side.
+      **THE FORBIDDEN ACTION:**
+      The Supreme Court is STRICTLY FORBIDDEN from:
+      1. Dismissing high GA averages (> 1.2) as 'statistical noise', a 'mirage', or 'too small a sample to be meaningful'.
+      2. Artificially lowering the `home_xG` or `away_xG` values fed into the Monte Carlo Simulator to manufacture an 'Under' bet.
+      3. Projecting a clean sheet for a team conceding > 1.2 goals per game based purely on the quality of the opposing attack.
+      **THE PIVOT:**
+      If BOTH teams have GA > 1.2, Rule 53 (Defensive Clown Show) is automatically triggered and you MUST pivot to `Over 1.5 Goals` or `BTTS: Yes`. You must let the chaos happen. The math is immutable.
+
     - **RULE 46: SUPREME COURT HEADER DYNAMICS (DYNAMIC VERDICT TITLES)**:
       The Supreme Court MUST dynamically adjust the header of the `Supreme_Court_Final_Ruling` based entirely on the action taken against the primary (Agent 1) pick.
 
@@ -1690,6 +1711,19 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         parsed = json.loads(raw_text)
         if isinstance(parsed, list) and len(parsed) > 0:
             parsed = parsed[0]
+
+        # ===== PHYSICAL EXECUTION LOCK: RULE 48 / RULE 53 ENFORCEMENT =====
+        # If the Supreme Court's ruling contains the phrase 'anchor to 0-0' (in any case),
+        # it has committed an absolute violation of Rule 48 (0-0 Anchor Ban).
+        # This is a hard failure — we raise an exception to force the retry loop to regenerate.
+        ruling_text = ""
+        if isinstance(parsed, dict):
+            ruling_text = str(parsed.get("Supreme_Court_Final_Ruling", "")).lower()
+            ruling_text += str(parsed.get("supreme_court", {}).get("Supreme_Court_Final_Ruling", "")).lower()
+        if "anchor to 0-0" in ruling_text or "anchored to 0-0" in ruling_text or "0-0 anchor" in ruling_text:
+            print(f"🚨 [RULE 48 VIOLATION DETECTED] Supreme Court attempted a 0-0 Anchor. Forcing regeneration (attempt {attempt+1}/{max_retries})...")
+            raise ValueError("RULE_48_VIOLATION: '0-0 Anchor' detected in Supreme Court output. This is an absolute forbidden action. Regenerating.")
+        # ===== END EXECUTION LOCK =====
             
         try:
             from src.rag.simulator import run_crucible_simulation
