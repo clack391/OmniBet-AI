@@ -415,6 +415,19 @@ const PredictionCard = ({ prediction }) => {
                                     })}
                                 </div>
                                 <div className="text-[9px] text-center text-slate-500 font-black mt-2 uppercase tracking-wide">Total Match Goals</div>
+                                {prediction.supreme_court?.top_scorelines && prediction.supreme_court.top_scorelines.length > 0 && (
+                                    <div className="mt-4 border-t border-amber-500/20 pt-3">
+                                        <div className="text-[9px] text-amber-500/70 uppercase tracking-widest font-bold mb-2 text-center">Top 5 Exact Scorelines</div>
+                                        <div className="flex flex-wrap gap-2 justify-center">
+                                            {prediction.supreme_court.top_scorelines.map((scoreObj, idx) => (
+                                                <div key={idx} className="flex flex-col items-center bg-black/40 border border-amber-500/20 rounded px-2 py-1">
+                                                    <span className="text-[10px] font-mono text-white font-bold">{scoreObj.score}</span>
+                                                    <span className="text-[8px] text-amber-400 font-bold">{scoreObj.probability.toFixed(1)}%</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 

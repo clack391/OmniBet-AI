@@ -1720,10 +1720,12 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             )
             parsed["simulation_audit"] = sim_res["audit_string"]
             parsed["simulation_data"] = sim_res["distribution"]
+            parsed["top_scorelines"] = sim_res["top_scorelines"]
         except Exception as sim_e:
             print(f"Crucible Simulator Execution Failed: {sim_e}")
             parsed["simulation_audit"] = "[SIMULATION AUDIT: Failed to run mathematical simulation.]"
             parsed["simulation_data"] = {}
+            parsed["top_scorelines"] = []
 
         return parsed
 

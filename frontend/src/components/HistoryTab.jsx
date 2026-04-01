@@ -418,6 +418,19 @@ const HistoryTab = ({ onSelectHistoryItem, isActive }) => {
                                                 })}
                                             </div>
                                             <div className="text-[8px] text-center text-gray-600 mt-1 uppercase tracking-wider font-bold">Total Match Goals</div>
+                                            {pick.top_scorelines && pick.top_scorelines.length > 0 && (
+                                                <div className="mt-3 border-t border-amber-500/20 pt-2">
+                                                    <div className="text-[8px] text-amber-500/70 uppercase tracking-widest font-bold mb-1.5 text-center">Top 5 Exact Scorelines</div>
+                                                    <div className="flex flex-wrap gap-1.5 justify-center">
+                                                        {pick.top_scorelines.map((scoreObj, idx) => (
+                                                            <div key={idx} className="flex flex-col items-center bg-black/40 border border-amber-500/20 rounded px-1.5 py-0.5">
+                                                                <span className="text-[9px] font-mono text-white font-bold">{scoreObj.score}</span>
+                                                                <span className="text-[7px] text-amber-400 font-bold">{scoreObj.probability.toFixed(1)}%</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
