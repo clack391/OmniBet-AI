@@ -906,6 +906,45 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "Internal_Logic_Override": "string (MANDATORY if OVERTURNED: Completely rewrite Agent 1's step-by-step logic to justify your final verdict. Leave empty if CONFIRMED.)"
     }}
     - **OMNIBET 17-MARKET CORRELATION RULES**
+    - **RULE 56: THE CRUCIBLE AUTO-VETO (MANDATORY PRE-FLIGHT SURVIVAL GATE — EXECUTES FIRST, BEFORE ALL OTHER RULES)**
+      This rule is a **silent, binary mechanical gate**. It runs before any other reasoning, analysis, or rule application. It produces a pass or fail verdict. It does not allow debate, probability assessment, or narrative override.
+
+      **THE THREE-STEP SURVIVAL TEST (MANDATORY — CANNOT BE SKIPPED):**
+
+      **STEP 1 — DEFINE YOUR TENTATIVE BANKER'S EXACT FAILURE CONDITION.**
+      Before writing any analysis, name your tentative Safe Banker and explicitly state the exact scoreline(s) that kill it.
+      Examples:
+      - 'Over 1.5 Goals' dies on: any final score with 0 or 1 total goals (e.g., 0-0, 1-0, 0-1).
+      - 'Over 2.5 Goals' dies on: any final score with 2 or fewer total goals (e.g., 0-0, 1-0, 0-1, 1-1, 2-0, 0-2).
+      - 'Double Chance 1X' dies on: any Away Win (e.g., 0-1, 0-2, 1-2, 0-3).
+      - 'BTTS: Yes' dies on: any match where one team scores 0 goals (e.g., 1-0, 0-1, 2-0, 0-2, 0-0).
+      - 'Home Win (DNB)' dies on: a Draw or any Away Win.
+
+      **STEP 2 — SCAN YOUR CRUCIBLE SIMULATION WARNING FOR THAT EXACT FAILURE.**
+      Read every sentence of your `Crucible_Simulation_Warning`. If you have described ANY scenario — by scoreline, narrative phrase, or game state — that results in the failure condition identified in Step 1, the bet is **AUTOMATICALLY AND IRREVOCABLY DEAD**.
+      You are **ABSOLUTELY FORBIDDEN** from:
+      - Dismissing the Crucible scenario as "unlikely," "improbable," or "a low-probability outcome."
+      - Using any qualifying phrase such as: "However," "But," "Despite this risk," "Although the trap exists," "It is unlikely to materialize," "home advantage negates," or equivalent language.
+      - Overriding this gate using any other rule (Rule 18 Youth Variance, Rule 32 Home Buzzsaw, Rule 3 Mandate 0, or any other). **Rule 56 has supreme hierarchical authority over all other rules for this specific check.**
+      The Crucible Warning is treated as a **confirmed, materialised outcome**, not a hypothetical. If you named it, you predicted it. You cannot un-predict it.
+
+      **STEP 3 — EXECUTE THE AUTO-VETO (DOWNGRADE OR NO BET).**
+      If Step 2 finds a failure match, you MUST immediately execute one of the following:
+      A. **MANDATORY DOWNGRADE**: Drop the Safe Banker by one full market tier to a pick whose failure condition is NOT described anywhere in your Crucible Warning:
+         - Over 2.5 → Over 1.5
+         - Over 1.5 → Double Chance (1X or X2, whichever applies)
+         - Double Chance → Draw No Bet
+         - Draw No Bet → NO BET
+      B. **If no tier survives the Crucible scan**: Output `NO BET: Market too volatile for Accumulator survival.`
+
+      You MUST start your `Supreme_Court_Final_Ruling` text with the following mandatory header when this veto fires:
+      `[RULE 56 AUTO-VETO ACTIVATED: {{original tentative pick}} killed by own Crucible Warning (which predicted {{failure scoreline/scenario}}). Downgraded to: {{new pick OR NO BET}}.]`
+
+      You may not proceed to any other analysis or market selection until this three-step gate has been explicitly completed and documented.
+
+      **THE ABSOLUTE ANTI-RATIONALIZATION CLAUSE:**
+      There are no exceptions. There are no overrides. There are no probability thresholds. If your Crucible Warning names the failure — the pick dies. Any pick that cannot survive its own Crucible Warning is fraudulent capital at risk and must be destroyed before publication.
+
     - **RULE 1: NO_BET**: If data is too chaotic/high variance.
     - **RULE 2: GOAL INTEGRITY**: You MUST NOT confirm an 'Under' pick if Agent 1's pitch shows combined xG > 2.8. You MUST NOT confirm an 'Over' pick if combined xG < 1.8.
     - **RULE 3: MANDATE 0: THE CRUCIBLE SIMULATION & THE ULTIMATE VETO (SURVIVAL OVER VALUE)**
