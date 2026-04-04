@@ -30,6 +30,8 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [gradingIds, setGradingIds] = useState([]);
+    const [manualGradeItem, setManualGradeItem] = useState(null);
+    const [manualScoreInput, setManualScoreInput] = useState('');
 
     // AI Accumulator State
     const [bestPicks, setBestPicks] = useState(null);
@@ -204,6 +206,32 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
             alert("Failed to grade prediction. AI Agent may have timed out or hit search limits.");
         } finally {
             setGradingIds(prev => prev.filter(p_id => p_id !== id));
+        }
+    };
+
+    const handleManualGrade = async (isCorrectValue) => {
+        if (!manualGradeItem || !manualScoreInput.trim()) return;
+        try {
+            await api.post(`/grade-manual`, {
+                match_id: manualGradeItem.match_id,
+                actual_score: manualScoreInput.trim(),
+                is_correct: isCorrectValue
+            });
+
+            // Update local state instantly
+            setHistory(prevHistory =>
+                prevHistory.map(item =>
+                    item.match_id === manualGradeItem.match_id
+                        ? { ...item, actual_result: manualScoreInput.trim(), is_correct: isCorrectValue }
+                        : item
+                )
+            );
+
+            setManualGradeItem(null);
+            setManualScoreInput('');
+        } catch (err) {
+            console.error("Manual grade failed:", err);
+            alert("Failed to save manual grade.");
         }
     };
 
@@ -612,10 +640,48 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
                                             Regrade
                                         </button>
                                     )}
+
+                                    {/* Manual Grade Override Button — always visible */}
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setManualGradeItem(item);
+                                            setManualScoreInput('');
+                                        }}
+                                        className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 mt-1 bg-amber-500/10 px-2 py-1 rounded hover:bg-amber-500/20 transition-colors"
+                                    >
+                                        ✍️ Manual
+                                    </button>
                                 </div>
                             </div>
                         );
                     })}
+                </div>
+            )}
+
+            {/* Manual Grade Override Modal */}
+            {manualGradeItem && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-gray-800 border border-amber-500/30 rounded-xl p-6 w-full max-w-sm shadow-2xl relative">
+                        <button onClick={() => setManualGradeItem(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">×</button>
+                        <h3 className="text-lg font-bold text-white mb-1">✍️ Manual Grade Override</h3>
+                        <p className="text-xs text-gray-400 mb-4">{manualGradeItem.teams}</p>
+                        <p className="text-xs text-amber-400 mb-3">Tip: <span className="font-semibold text-white">{manualGradeItem.safe_bet_tip}</span></p>
+                        <label className="text-xs text-gray-300 mb-1 block">Actual Final Score</label>
+                        <input
+                            type="text"
+                            value={manualScoreInput}
+                            onChange={e => setManualScoreInput(e.target.value)}
+                            placeholder="e.g. Paradou AC 0 - 3 CR Belouizdad"
+                            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm mb-4 focus:outline-none focus:border-amber-500"
+                        />
+                        <p className="text-xs text-gray-400 mb-3">Did the tip WIN or LOSE?</p>
+                        <div className="flex gap-2">
+                            <button onClick={() => handleManualGrade(true)} className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold py-2 rounded-lg transition-colors">✅ Win</button>
+                            <button onClick={() => handleManualGrade(false)} className="flex-1 bg-red-600 hover:bg-red-500 text-white text-sm font-bold py-2 rounded-lg transition-colors">❌ Loss</button>
+                            <button onClick={() => handleManualGrade('refund')} className="flex-1 bg-gray-600 hover:bg-gray-500 text-white text-sm font-bold py-2 rounded-lg transition-colors">🔄 Refund</button>
+                        </div>
+                    </div>
                 </div>
             )}
 

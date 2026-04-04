@@ -526,7 +526,17 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
         match_date = match_date.split('T')[0]
 
     def normalize(name):
-        return name.lower().replace("fc", "").replace("afc", "").replace("united", "utd").strip()
+        """
+        Strips common club prefixes that confuse fuzzy matching across leagues.
+        Handles European (FC, AFC, United) and African/Arabic (CR, JS, MC, CS, USM, CAP) patterns.
+        """
+        name = name.lower()
+        # Strip common prefixes that don't uniquely identify clubs
+        for prefix in ["fc ", "afc ", "cr ", "js ", "mc ", "cs ", "cap ", "usm ", "usmh ", "olympique ", "sporting ", "athletic ", "club "]:
+            name = name.replace(prefix, "")
+        # Strip common suffixes
+        name = name.replace(" fc", "").replace(" afc", "").replace("united", "utd")
+        return name.strip()
 
     def _fuzzy_match_from_events(events, team_a, team_b, match_date):
         """Shared fuzzy matching logic that works against any list of event dicts."""
@@ -553,21 +563,36 @@ def resolve_sofascore_match_id(team_a: str, team_b: str, match_date: str = None)
             # Fuzzy team name matching
             h_name = normalize(event.get('homeTeam', {}).get('name', ''))
             a_name = normalize(event.get('awayTeam', {}).get('name', ''))
+
+            # ==== HARD KEYWORD SANITY GUARD ====
+            # Before calculating fuzzy scores, ensure at least ONE meaningful word
+            # from either expected team appears as a substring in the event teams.
+            # This prevents completely wrong matches (e.g. Netherlands U21 matching Paradou AC).
+            event_text = f"{h_name} {a_name}"
+            query_words_a = [w for w in t_h_name.split() if len(w) > 3]
+            query_words_b = [w for w in t_a_name.split() if len(w) > 3]
+            all_query_words = query_words_a + query_words_b
+            if all_query_words and not any(w in event_text for w in all_query_words):
+                continue  # Hard reject: zero keyword overlap — this is definitely the wrong match
+            # ==== END SANITY GUARD ====
             
             score_normal = SequenceMatcher(None, h_name, t_h_name).ratio() + SequenceMatcher(None, a_name, t_a_name).ratio()
             score_swapped = SequenceMatcher(None, h_name, t_a_name).ratio() + SequenceMatcher(None, a_name, t_h_name).ratio()
             current_score = max(score_normal, score_swapped)
             
-            # Bonus for exact date match
+            # Bonus for exact date match (this is always applied for date-filtered results)
             if match_date and event_date_str == match_date:
                 current_score += 0.5
             
             if current_score > highest_score:
                 highest_score = current_score
                 best_match = event.get('id')
-        
-        if best_match and highest_score > 1.3:
+
+        # Threshold at 1.0: the +0.5 date bonus guards against false positives.
+        # The keyword guard above already eliminates clearly wrong matches.
+        if best_match and highest_score > 1.0:
             return best_match, highest_score
+        print(f"⚠️ Best fuzzy match score was {round(highest_score, 2)} — below threshold. Could not resolve ID.")
         return None, 0.0
 
     # ---- TIER 1: RapidAPI match/list (EC2-safe, no IP blocking) ----

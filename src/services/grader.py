@@ -48,22 +48,34 @@ def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, saf
     or if the match ID cannot be resolved.
     """
     prompt = f"""
-    Act as a strict sports betting adjudicator.
+    Act as a strict sports betting adjudicator with access to global football data sources.
     
     ### Task
-    Search the web for the final or live soccer score between {team_a} and {team_b} played on {match_date}.
-    Then, evaluate if the prediction '{safe_bet_tip}' won or lost based on that score.
+    Search the web for the FINAL score of the soccer match between {team_a} and {team_b} played on {match_date}.
+    Then evaluate if the prediction '{safe_bet_tip}' won or lost.
+    
+    ### MANDATORY SEARCH STRATEGY (Execute ALL of these searches):
+    1. Search: "{team_a} {team_b} {match_date} score result"
+    2. Search: "{team_a} vs {team_b} résultat" (French sources — many African/Algerian leagues are covered only in French)
+    3. Search: "flashscore {team_a} {team_b}" OR "livescore {team_a} {team_b}"
+    4. Search: "{team_a} {team_b} soccerway" OR "{team_a} {team_b} sofascore"
+    5. If no English results: search the team names in their local language spellings
+    
+    ### Key Instruction
+    You MUST exhaust all search attempts before declaring the result "Not available". 
+    FlashScore and Soccerway cover virtually every professional league worldwide including 
+    Algerian Ligue Professionnelle 1, Moroccan, Tunisian, and all African leagues.
     
     ### Rules
     1. If the match has not started yet or was postponed, set `status` to "Scheduled" and `is_correct` to null.
-    2. If the match is currently playing, set `status` to "Live" and evaluate `is_correct` IF the bet has already won or lost (e.g. "Over 2.5 goals" and the score is already 2-1). Otherwise, set `is_correct` to null.
-    3. If the match is finished, set `status` to "Finished" and firmly evaluate `is_correct` as true, false, or "refund" (e.g., if it's a DNB and the match is a draw).
+    2. If the match is currently playing, set `status` to "Live" and evaluate if the bet is already settled. Otherwise set `is_correct` to null.
+    3. If the match is finished, set `status` to "Finished" and FIRMLY evaluate `is_correct` as true, false, or "refund".
 
     ### Output Format
-    Return ONLY valid JSON matching this exact structure:
+    Return ONLY valid JSON:
     {{
-        "actual_score": "e.g., Chelsea 2 - 0 Burnley",
-        "status": "e.g., Finished, Live, or Scheduled",
+        "actual_score": "e.g., {team_a} 2 - 1 {team_b}",
+        "status": "Finished, Live, or Scheduled",
         "is_correct": true, false, "refund", or null
     }}
     """
@@ -82,10 +94,22 @@ def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, saf
             config={"tools": [{"googleSearch": {}}]}
         )
         
+        # Robust text extraction — google search grounding sometimes wraps text differently
+        raw_text = None
+        try:
+            raw_text = response.text
+        except Exception:
+            pass
+        if not raw_text:
+            try:
+                raw_text = response.candidates[0].content.parts[0].text
+            except Exception:
+                pass
+        
         # Parse JSON block from pure text string
-        result = _extract_json(response.text)
+        result = _extract_json(raw_text or "")
         if not result:
-             raise ValueError(f"Empty or invalid JSON extracted from: {response.text[:100]}...")
+             raise ValueError(f"Empty or invalid JSON extracted from: {str(raw_text)[:100]}...")
         return result
         
     except Exception as e:
@@ -117,9 +141,20 @@ def fetch_result_with_ai(team_a: str, team_b: str, match_date: str, safe_bet_tip
     if not grade_data or grade_data.get("score_summary") == "Unknown":
         print(f"⚠️ Failed to fetch RapidAPI grade data for {match_id}. Falling back to Search.")
         return fetch_result_with_ai_fallback(team_a, team_b, match_date, safe_bet_tip)
-        
+
     actual_score_str = grade_data["score_summary"]
     status_desc = grade_data["match_status"]
+
+    # 2b. Team Identity Sanity Check — prevent grading the wrong match
+    # If neither team name appears anywhere in the resolved score summary, it's a false positive ID.
+    def _team_in_score(team_name, score_str):
+        # Check if any meaningful word (>3 chars) from team_name appears in score_str
+        score_lower = score_str.lower()
+        return any(w.lower() in score_lower for w in team_name.split() if len(w) > 3)
+
+    if not _team_in_score(team_a, actual_score_str) and not _team_in_score(team_b, actual_score_str):
+        print(f"🚨 [Grader] Team mismatch! Expected '{team_a} vs {team_b}' but got '{actual_score_str}'. Falling back to Search.")
+        return fetch_result_with_ai_fallback(team_a, team_b, match_date, safe_bet_tip)
     
     # 3. AI Adjudication
     print(f"⚖️ [Grader] Evaluating {safe_bet_tip} against RapidAPI payload...")

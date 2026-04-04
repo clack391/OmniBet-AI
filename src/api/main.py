@@ -704,9 +704,6 @@ def grade_history(request: GradeRequest, current_user: dict = Depends(get_admin_
     if not prediction:
         raise HTTPException(status_code=404, detail="Prediction not found in history.")
 
-    # We need the team names and date. Let's extract from the DB JSON string if not returned directly.
-    # We'll re-fetch the raw row if needed, but get_all_predictions is easier for the frontend to pass data.
-    # To keep it simple, we'll require the frontend to just pass the match_id, and we'll infer it from the DB.
     conn = __import__('sqlite3').connect("omnibet.db")
     cursor = conn.cursor()
     cursor.execute('SELECT teams, match_date, safe_bet_tip FROM predictions WHERE match_id = ?', (request.match_id,))
@@ -716,7 +713,7 @@ def grade_history(request: GradeRequest, current_user: dict = Depends(get_admin_
     if not row:
         raise HTTPException(status_code=404, detail="Match data not found.")
 
-    teams_str = row[0] # e.g. "Chelsea vs Burnley"
+    teams_str = row[0]
     match_date = row[1]
     safe_bet_tip = row[2]
 
@@ -739,6 +736,40 @@ def grade_history(request: GradeRequest, current_user: dict = Depends(get_admin_
         "match_id": request.match_id,
         "graded_result": result_data
     }
+
+
+class ManualGradeRequest(BaseModel):
+    match_id: str
+    actual_score: str
+    is_correct: object  # true, false, "refund", or null
+
+@app.post("/grade-manual")
+def grade_manual(request: ManualGradeRequest, current_user: dict = Depends(get_admin_user)):
+    """
+    Manual grade override — allows admin to directly set the actual score and outcome
+    for matches where automated grading (RapidAPI + AI Search) fails (e.g. obscure leagues).
+    """
+    # Determine is_correct value
+    is_correct_val = request.is_correct
+    status = "Finished"
+
+    update_prediction_result(
+        request.match_id,
+        request.actual_score,
+        status,
+        is_correct_val
+    )
+    print(f"✍️ [Manual Grade] Match {request.match_id} overridden: Score='{request.actual_score}', Result={is_correct_val}")
+
+    return {
+        "match_id": request.match_id,
+        "graded_result": {
+            "actual_score": request.actual_score,
+            "status": status,
+            "is_correct": is_correct_val
+        }
+    }
+
 
 @app.post("/predict-batch")
 def predict_batch(request: MatchBatchRequest, current_user: dict = Depends(get_admin_user)):
