@@ -1410,44 +1410,31 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       The AI MUST pivot to high-event structural floors. Set the Safe Banker to 'Over 1.5 Match Goals', 'Over 4.5 Cards' (due to lazy tackles), or 'BTTS: Yes'.
 
-    - **RULE 40: THE DESPERATION GRIND (THE BOTTOM-FEEDER MIRAGE)**:
+    - **RULE 40: THE EARLY-SEASON QUARANTINE (THE BOTTOM-FEEDER MIRAGE)**:
 
       **THE TRIGGER:**
-      If the AI identifies a match between two winless, bottom-tier, or relegation-threatened teams — ESPECIALLY early in the season (sample size < 6 matches for either team).
+      If EITHER team has played fewer than 5 league matches in the current season, OR the AI identifies a match between two winless or relegation-threatened teams early in the campaign.
 
-      **THE TACTICAL REALITY (FEAR OF LOSING):**
-      High 'Goals Against' (GA) averages for bottom-tier teams are mirages — they were conceded against top teams in mismatched fixtures, NOT against fellow relegation candidates. When two poor teams face each other, neither possesses the clinical quality to exploit the other's weak defense. Crucially, two desperate, winless managers will play 'not to lose' rather than 'to win,' producing a nervous, low-quality, foul-heavy grind devoid of incisive attacking play. These matches characteristically end 0-0, 1-0, or 0-1 — not high-scoring affairs. The 'Goals Against' paper mirage completely evaporates when neither team has the offensive engine to punish it.
+      **THE TACTICAL REALITY:**
+      A sample size of fewer than 5 league matches is pure statistical noise. It cannot accurately model a sterile offense (Under) OR a leaky defense (Over). Early-season variance swings violently in BOTH directions — a team "averaging 0.3 goals per game" across 3 matches may simply not have had their high-scoring game yet. A team "conceding 2.5 per game" may have faced back-to-back elite opponents. Neither data point is statistically valid for a ceiling or floor bet in any direction.
+      Furthermore, when two poor teams meet, high GA averages are mirages — conceded against stronger opponents, NOT against fellow relegation candidates. Two desperate, winless managers will play 'not to lose,' producing a foul-heavy grind. The GA paper mirage evaporates when neither side has the offensive engine to punish it.
 
-      **THE FORBIDDEN ACTION:**
-      If the Desperation Grind trigger is active, the Supreme Court is STRICTLY FORBIDDEN from using ANY of the following as the Safe Banker:
-      - 'Over 1.5 Goals', 'Over 2.5 Goals', or any upward goals market — two bad offenses cannot coordinate a high-scoring game regardless of GA averages.
-      - 'BTTS: Yes' — neither team has the clinical quality to guarantee a goal.
-      - Any Match Control market: 'Match Winner (1X2)', 'Double Chance (1X / X2)', or 'Draw No Bet (DNB)' — in a low-quality coin-flip match, any team can scrape a 0-1 win. There is no reliable result floor. You cannot trust either team to avoid defeat. The result is irrelevant; only the goal volume is predictable.
+      **THE FORBIDDEN ACTION — MATCH GOALS QUARANTINE:**
+      When EITHER team has played fewer than 5 league matches, the Supreme Court is STRICTLY FORBIDDEN from using ANY Match Goals market as the Safe Banker. This applies universally in all directions:
+      - FORBIDDEN: 'Over 0.5', 'Over 1.5', 'Over 2.5', 'Over 3.5', 'Over 4.5' — all upward goals markets.
+      - FORBIDDEN: 'Under 1.5', 'Under 2.5', 'Under 3.5', 'Under 4.5' — ALL downward ceilings without exception. When the sample is < 5, ceilings do not exist. 'Under 3.5 Goals' is still a ceiling bet derived from a 3-game sample. That is forbidden.
+      - FORBIDDEN: 'BTTS: Yes' or 'BTTS: No' — bilateral goal markets require reliable bilateral data that cannot exist in fewer than 5 matches.
+      **THE CORE LOGIC:** You cannot declare "the data is too small" to trust an Over pick and simultaneously trust the exact same data to justify an Under pick. Small-sample quarantine applies in BOTH directions or it is not a quarantine — it is selective, intellectually dishonest cherry-picking.
 
-      **THE PIVOT:**
-      The AI MUST completely decouple from Match Control (1X2, Double Chance, DNB). In a low-quality coin-flip match, any team can scrape a 0-1 win — there is no reliable result floor to stand on. The AI is STRICTLY FORBIDDEN from relying on either team to avoid defeat. The Safe Banker MUST be purely goal-based structural floors: you are betting entirely on the absence of offensive quality, completely ignoring who actually wins the game.
-      1. **Anchor the Correct Score** to 0-0 or 0-1 — the two most statistically likely outcomes in a grind between bottom-feeders.
-      2. **'Under 3.5 Goals'** — The primary Safe Banker. The hard ceiling when neither team can attack with intent.
-      3. **'1st Half Under 1.5 Goals'** — The secondary Safe Banker. Two desperate managers will start cautiously; the first half is almost always sterile.
-
-      **RECOGNITION TRIGGERS:**
-      You MUST activate the Desperation Grind if ALL of the following are true:
-      - Both teams are winless (0 wins) OR sit in the bottom 20% of their league table (relegation zone or equivalent).
-      - EITHER team has played fewer than 6 matches in the current season (small sample — GA average is unreliable).
-      - The proposed Safe Banker relies on goal volume: 'Over 1.5', 'Over 2.5', 'BTTS: Yes', or any upward goals market.
-      - There is no evidence that either team possesses an elite individual goalscorer (10+ goals in the current season) capable of single-handedly breaking a low-block.
+      **THE MANDATORY PIVOT — IN STRICT ORDER:**
+      1. **Match Control (Double Chance)**: Pivot the Safe Banker to Double Chance (1X or X2) based on the overall, historical squad quality of the two clubs — NOT their early-season statistics. A top-flight club in game 3 of the season still has decades of squad pedigree to justify a 1X. An elite away side has a long-term track record that validates X2. Use historical quality differential, not the 3-game sample.
+      2. **Extreme Variance Veto (NO BET)**: If the two squads are historically too evenly matched — no clear quality edge exists even from a long-term perspective — or if historical pedigree is ambiguous, you MUST invoke the NO BET protocol. Discard the match from the accumulator entirely. It is strictly better to drop a match than to manufacture a 'Safe Banker' from unreliable data.
 
       **OVERRIDE HIERARCHY:**
-      Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption) when the sample size for either team is fewer than 6 matches. The GA averages in small-sample bottom-tier football are not statistically valid — they are noise generated by fixtures against superior opponents. Rule 33 (which embraces chaos from mutual defensive collapse) was designed for mid-season data with large, reliable samples. It must never be triggered by a 3-match GA average from newly promoted or bottom-tier sides.
-
-      **SMALL SAMPLE UNDER HYPOCRISY BAN (THE CRITICAL ADDENDUM):**
-      The Supreme Court is STRICTLY FORBIDDEN from using a narrow Under pick (Under 2.5 or Below) as a 'Safe Banker' when EITHER team has played fewer than 5 matches in the current season.
-      **WHY THIS IS A FATAL HYPOCRISY:** If you acknowledge that a 3-match average GA is too small to reliably trigger Rule 16 (Sterile Offense) or Rule 33 (Mutual Collapse), then the EXACT SAME 3-match average is too small to reliably justify an Under 2.5 ceiling. You cannot selectively discard small-sample data when it suits Over picks and then weaponize the SAME small-sample data to justify an Under pick. The math does not change based on direction.
-      **THE REAL RISK:** Small-sample averages of 0.3 goals/game can hide a single 2-goal game that represents 67% of all goals in 3 matches. In just one more match, a team that "averages 0.3 goals" could score 2, instantly invalidating your Under 2.5 ceiling.
-      **THE RULE:** When sample size < 5 matches for EITHER team, the MINIMUM Under ceiling allowed as a Safe Banker is **'Under 3.5 Goals'**. Under 2.5, Under 2.0, or any narrower ceiling is ABSOLUTELY FORBIDDEN as the primary banker. If Under 3.5 feels insufficiently precise, the correct action is to declare **NO BET** due to insufficient data, not to narrow the ceiling based on unreliable averages.
+      Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption), Rule 16 (Sterile Offense), and ALL goal-direction rules when the sample size for either team is fewer than 5 matches. Rule 33 and Rule 16 were designed for mid-season data with large, reliable samples — they MUST NOT be triggered by a 3-match average, regardless of how large or small the numbers appear.
 
       **FINAL WARNING:**
-      Do NOT confuse a bad defense with a porous one in this specific context. A bottom-tier team conceding 2.0 goals per game has done so against better opposition — it tells you nothing about what happens when the attacker is equally inept. Two bad offenses facing two bad defenses do not produce a high-scoring game. They produce a grinding, directionless non-event. The scoreboard stays blank until desperation forces a single mistake. Anchor to the floor. Do not trust the paper mirage.
+      Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. The only safe banker in an early-season quarantine is one anchored to the long-term pedigree of the squads — not the fragile averages of their first 3 or 4 games. If no Match Control floor can be confidently identified, declare NO BET and protect the accumulator.
 
     - **RULE 41: THE PLAYOFF PARALYSIS VETO (HIGH-STAKES FEAR)**:
       **THE TRIGGER:**
@@ -1723,6 +1710,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **FINAL WARNING:**
       A Match Control market in a "Nothing to Lose" game state is a death trap. Accumulator safety demands you embrace the chaos and pivot to Goal Markets. A team with nothing to lose does not park the bus — they throw everyone forward and accept the shootout. Trust the tactical reality, not the season-long Match Control statistics.
 
+
+    - **RULE 63: THE DISCIPLINE PARADOX (THE FOUL-HEAVY TRAP)**:
+      **THE TRIGGER:**
+      A match involving teams with exceptionally high foul or yellow/red card averages.
+      **THE TACTICAL REALITY:**
+      The AI frequently assumes high foul counts lead to a "stop-start" game that suffocates goals. This is a FALLACY. High foul counts lead to dangerous set-pieces, penalties, and defenders playing tentatively on yellow cards. Aggressive, sloppy defending increases variance and heavily favors messy, high-scoring games.
+      **THE RULE:**
+      The AI is strictly FORBIDDEN from using high foul counts, yellow cards, or "stop-start/physical" narratives as justification to select an Under market (Under 2.5, Under 3.5). 
+      **THE PIVOT:**
+      If the game is highly physical and lacks elite defensive structure, you must assume defensive errors will occur and pivot your Safe Banker to Match Control or Over markets.
 
         """
 

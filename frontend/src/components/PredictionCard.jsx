@@ -10,6 +10,35 @@ const PredictionCard = ({ prediction }) => {
     const [activeInsight, setActiveInsight] = useState(null); // Track which insight is open in modal
     const [showLogic, setShowLogic] = useState(false); // Toggle for AI step-by-step logic
 
+    // === Rule 40 Warning Detection ===
+    // Scan all available supreme court text for Early-Season Quarantine or Desperation Grind signals.
+    const rule40Text = [
+        prediction.supreme_court?.ruling_text,
+        prediction.supreme_court?.Internal_Logic_Override,
+        prediction.supreme_court?.Overall_Strategy_Override,
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    const isEarlySeasonQuarantine = (
+        rule40Text.includes('rule 40') ||
+        rule40Text.includes('early-season quarantine') ||
+        rule40Text.includes('early season quarantine') ||
+        rule40Text.includes('fewer than 5') ||
+        rule40Text.includes('less than 5 match') ||
+        rule40Text.includes('small sample') ||
+        rule40Text.includes('sample size quarantine') ||
+        rule40Text.includes('extreme variance veto')
+    );
+
+    const isDesperationGrind = (
+        rule40Text.includes('desperation grind') ||
+        rule40Text.includes('bottom-feeder') ||
+        rule40Text.includes('bottom feeder') ||
+        rule40Text.includes('winless') ||
+        (rule40Text.includes('relegation') && rule40Text.includes('grind'))
+    );
+
+    const hasRule40Warning = isEarlySeasonQuarantine || isDesperationGrind;
+
     // Parse teams safely
     const [homeTeam, awayTeam] = (prediction.match || "Unknown vs Unknown").split(' vs ');
 
@@ -156,7 +185,7 @@ const PredictionCard = ({ prediction }) => {
                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 bg-slate-800/50 px-3 py-1 rounded-full">
                             Match • Prediction
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             {/* Risk Manager Badge */}
                             {prediction.is_downgraded !== undefined && (
                                 <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${prediction.is_downgraded ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-blue-500/10 border-blue-500/30 text-blue-400'}`}>
@@ -164,6 +193,22 @@ const PredictionCard = ({ prediction }) => {
                                     <span className="text-[10px] font-bold uppercase tracking-wide">
                                         {prediction.is_downgraded ? "Risk Manager Downgraded" : "Risk Manager Verified"}
                                     </span>
+                                </div>
+                            )}
+
+                            {/* Rule 40: Early-Season Quarantine Badge */}
+                            {isEarlySeasonQuarantine && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border bg-yellow-500/10 border-yellow-500/40 text-yellow-400">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wide">Early-Season Quarantine</span>
+                                </div>
+                            )}
+
+                            {/* Rule 40: Desperation Grind Badge */}
+                            {!isEarlySeasonQuarantine && isDesperationGrind && (
+                                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border bg-red-900/20 border-red-500/40 text-red-400">
+                                    <AlertTriangle className="w-4 h-4" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wide">Desperation Grind</span>
                                 </div>
                             )}
 
@@ -212,6 +257,26 @@ const PredictionCard = ({ prediction }) => {
                         </div>
                     </div>
                 </div>
+
+                {/* Rule 40 Warning Banner — shown below team logos when active */}
+                {hasRule40Warning && (
+                    <div className={`mt-4 mx-4 mb-4 px-4 py-3 rounded-xl border flex items-start gap-3 ${isEarlySeasonQuarantine
+                        ? 'bg-yellow-500/5 border-yellow-500/30'
+                        : 'bg-red-500/5 border-red-500/20'
+                        }`}>
+                        <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${isEarlySeasonQuarantine ? 'text-yellow-400' : 'text-red-400'}`} />
+                        <div>
+                            <p className={`text-xs font-black uppercase tracking-wider mb-0.5 ${isEarlySeasonQuarantine ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {isEarlySeasonQuarantine ? '⚠️ Rule 40 — Early-Season Quarantine Active' : '⚠️ Rule 40 — Desperation Grind Detected'}
+                            </p>
+                            <p className="text-[11px] text-slate-400 leading-relaxed">
+                                {isEarlySeasonQuarantine
+                                    ? 'One or both teams have played fewer than 5 matches. All Match Goals markets (Over, Under, BTTS) are statistically unreliable. The AI must anchor to Match Control (Double Chance) or declare NO BET.'
+                                    : 'Both teams are winless or in the relegation zone. GA averages are mirages from mismatched fixtures. High-scoring goals markets are structurally unsound for this low-quality grind.'}
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Agent 3: Supreme Court Ruling Component */}
@@ -224,7 +289,7 @@ const PredictionCard = ({ prediction }) => {
             </div>
 
             {/* Dual Expert Picks Section */}
-            <div className="relative z-10 px-6 py-2">
+            < div className="relative z-10 px-6 py-2" >
                 <div className="bg-slate-800/40 border border-white/5 rounded-xl p-5 glass-panel">
                     <div className="flex justify-between items-start mb-4">
                         <span className="text-primary text-xs font-bold uppercase tracking-wider">AI Expert Picks</span>
@@ -332,10 +397,10 @@ const PredictionCard = ({ prediction }) => {
                         )}
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Market Insights Grid (Using full_analysis) */}
-            <div className="relative z-10 p-6 pt-4">
+            < div className="relative z-10 p-6 pt-4" >
                 <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
                     <Activity className="w-4 h-4 text-accent-purple" />
                     Market Insights (Click to Expand)
@@ -385,108 +450,112 @@ const PredictionCard = ({ prediction }) => {
                 </div>
 
                 {/* Game State Simulation (New Phase 9) */}
-                {prediction.scenario_analysis && (
-                    <div className="bg-slate-900/50 rounded-xl p-5 border-t border-slate-800 mt-4">
-                        <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                            <Target className="w-4 h-4 text-orange-400" />
-                            Game State Simulation
-                        </h4>
+                {
+                    prediction.scenario_analysis && (
+                        <div className="bg-slate-900/50 rounded-xl p-5 border-t border-slate-800 mt-4">
+                            <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                                <Target className="w-4 h-4 text-orange-400" />
+                                Game State Simulation
+                            </h4>
 
-                        {prediction.supreme_court?.simulation_data && (
-                            <div className="mb-5 p-4 bg-slate-950/40 rounded-lg border border-amber-500/20">
-                                <h5 className="text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-3 flex items-center gap-2">
-                                    <BarChart2 className="w-3 h-3" /> 10,000 Monte Carlo Variations (Goal Distribution)
-                                </h5>
-                                <div className="flex items-end gap-2 h-20 w-full mt-2 relative">
-                                    {Object.entries(prediction.supreme_court.simulation_data).map(([goals, count]) => {
-                                        const height = Math.max(5, (count / 10000) * 100);
-                                        return (
-                                            <div key={goals} className="flex-1 h-full flex flex-col items-center justify-end group py-px relative">
-                                                <span className="text-[9px] text-amber-300 font-mono opacity-0 group-hover:opacity-100 transition-opacity font-bold absolute -top-5">
-                                                    {((count / 10000) * 100).toFixed(1)}%
-                                                </span>
-                                                <div
-                                                    className="w-full bg-gradient-to-t from-orange-600/60 to-amber-400 rounded-t-sm transition-all duration-500 ease-out border-b border-amber-500/30 hover:brightness-125"
-                                                    style={{ height: `${height}%` }}
-                                                ></div>
-                                                <span className="text-[10px] font-black text-slate-400 mt-2">{goals}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                                <div className="text-[9px] text-center text-slate-500 font-black mt-2 uppercase tracking-wide">Total Match Goals</div>
-                                {prediction.supreme_court?.top_scorelines && prediction.supreme_court.top_scorelines.length > 0 && (
-                                    <div className="mt-4 border-t border-amber-500/20 pt-3">
-                                        <div className="text-[9px] text-amber-500/70 uppercase tracking-widest font-bold mb-2 text-center">Top 5 Exact Scorelines</div>
-                                        <div className="flex flex-wrap gap-2 justify-center">
-                                            {prediction.supreme_court.top_scorelines.map((scoreObj, idx) => (
-                                                <div key={idx} className="flex flex-col items-center bg-black/40 border border-amber-500/20 rounded px-2 py-1">
-                                                    <span className="text-[10px] font-mono text-white font-bold">{scoreObj.score}</span>
-                                                    <span className="text-[8px] text-amber-400 font-bold">{scoreObj.probability.toFixed(1)}%</span>
+                            {prediction.supreme_court?.simulation_data && (
+                                <div className="mb-5 p-4 bg-slate-950/40 rounded-lg border border-amber-500/20">
+                                    <h5 className="text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                        <BarChart2 className="w-3 h-3" /> 10,000 Monte Carlo Variations (Goal Distribution)
+                                    </h5>
+                                    <div className="flex items-end gap-2 h-20 w-full mt-2 relative">
+                                        {Object.entries(prediction.supreme_court.simulation_data).map(([goals, count]) => {
+                                            const height = Math.max(5, (count / 10000) * 100);
+                                            return (
+                                                <div key={goals} className="flex-1 h-full flex flex-col items-center justify-end group py-px relative">
+                                                    <span className="text-[9px] text-amber-300 font-mono opacity-0 group-hover:opacity-100 transition-opacity font-bold absolute -top-5">
+                                                        {((count / 10000) * 100).toFixed(1)}%
+                                                    </span>
+                                                    <div
+                                                        className="w-full bg-gradient-to-t from-orange-600/60 to-amber-400 rounded-t-sm transition-all duration-500 ease-out border-b border-amber-500/30 hover:brightness-125"
+                                                        style={{ height: `${height}%` }}
+                                                    ></div>
+                                                    <span className="text-[10px] font-black text-slate-400 mt-2">{goals}</span>
                                                 </div>
-                                            ))}
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="text-[9px] text-center text-slate-500 font-black mt-2 uppercase tracking-wide">Total Match Goals</div>
+                                    {prediction.supreme_court?.top_scorelines && prediction.supreme_court.top_scorelines.length > 0 && (
+                                        <div className="mt-4 border-t border-amber-500/20 pt-3">
+                                            <div className="text-[9px] text-amber-500/70 uppercase tracking-widest font-bold mb-2 text-center">Top 5 Exact Scorelines</div>
+                                            <div className="flex flex-wrap gap-2 justify-center">
+                                                {prediction.supreme_court.top_scorelines.map((scoreObj, idx) => (
+                                                    <div key={idx} className="flex flex-col items-center bg-black/40 border border-amber-500/20 rounded px-2 py-1">
+                                                        <span className="text-[10px] font-mono text-white font-bold">{scoreObj.score}</span>
+                                                        <span className="text-[8px] text-amber-400 font-bold">{scoreObj.probability.toFixed(1)}%</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
+                                    <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario A: The Expected Script</h5>
+                                    <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_a_expected_script}</p>
+                                </div>
+                                <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
+                                    <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario B: The Underdog Disruption</h5>
+                                    <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_b_underdog_disruption}</p>
+                                </div>
+                                {prediction.scenario_analysis.scenario_c_red_card_disruption && (
+                                    <div className="bg-slate-800/40 p-3 rounded-lg border border-red-500/20">
+                                        <h5 className="text-xs font-bold text-red-400 uppercase mb-1 flex items-center gap-1">
+                                            <AlertTriangle className="w-3 h-3 text-red-400" /> Scenario C: The Red Card Disruption
+                                        </h5>
+                                        <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_c_red_card_disruption}</p>
                                     </div>
                                 )}
                             </div>
-                        )}
-
-                        <div className="space-y-4">
-                            <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
-                                <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario A: The Expected Script</h5>
-                                <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_a_expected_script}</p>
-                            </div>
-                            <div className="bg-slate-800/40 p-3 rounded-lg border border-slate-700/50">
-                                <h5 className="text-xs font-bold text-slate-400 uppercase mb-1">Scenario B: The Underdog Disruption</h5>
-                                <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_b_underdog_disruption}</p>
-                            </div>
-                            {prediction.scenario_analysis.scenario_c_red_card_disruption && (
-                                <div className="bg-slate-800/40 p-3 rounded-lg border border-red-500/20">
-                                    <h5 className="text-xs font-bold text-red-400 uppercase mb-1 flex items-center gap-1">
-                                        <AlertTriangle className="w-3 h-3 text-red-400" /> Scenario C: The Red Card Disruption
-                                    </h5>
-                                    <p className="text-sm text-slate-300">{prediction.scenario_analysis.scenario_c_red_card_disruption}</p>
-                                </div>
-                            )}
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* AI Logic Dropdown (CoT) */}
-                {(prediction.supreme_court?.Internal_Logic_Override || prediction.step_by_step_reasoning) && (
-                    <div className="mt-4 bg-slate-800/20 rounded-xl border border-slate-700/50 overflow-hidden transition-all duration-300">
-                        <button
-                            onClick={() => setShowLogic(!showLogic)}
-                            className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-800/40 transition-colors"
-                        >
-                            <div className="flex items-center gap-2">
-                                <Bolt className="w-4 h-4 text-slate-400" />
-                                <span className="text-sm font-semibold text-slate-300">View AI Internal Logic</span>
-                                {prediction.supreme_court?.Internal_Logic_Override && (
-                                    <span className="ml-2 px-2 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] uppercase font-bold rounded border border-accent-purple/30">
-                                        SUPREME COURT OVERRIDE
-                                    </span>
+                {
+                    (prediction.supreme_court?.Internal_Logic_Override || prediction.step_by_step_reasoning) && (
+                        <div className="mt-4 bg-slate-800/20 rounded-xl border border-slate-700/50 overflow-hidden transition-all duration-300">
+                            <button
+                                onClick={() => setShowLogic(!showLogic)}
+                                className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-800/40 transition-colors"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Bolt className="w-4 h-4 text-slate-400" />
+                                    <span className="text-sm font-semibold text-slate-300">View AI Internal Logic</span>
+                                    {prediction.supreme_court?.Internal_Logic_Override && (
+                                        <span className="ml-2 px-2 py-0.5 bg-accent-purple/20 text-accent-purple text-[10px] uppercase font-bold rounded border border-accent-purple/30">
+                                            SUPREME COURT OVERRIDE
+                                        </span>
+                                    )}
+                                </div>
+                                {showLogic ? (
+                                    <ChevronUp className="w-4 h-4 text-slate-400" />
+                                ) : (
+                                    <ChevronDown className="w-4 h-4 text-slate-400" />
                                 )}
-                            </div>
-                            {showLogic ? (
-                                <ChevronUp className="w-4 h-4 text-slate-400" />
-                            ) : (
-                                <ChevronDown className="w-4 h-4 text-slate-400" />
-                            )}
-                        </button>
+                            </button>
 
-                        {/* Expandable Content */}
-                        <div className={`transition-all duration-300 ease-in-out ${showLogic ? 'max-h-[600px] overflow-y-auto opacity-100 p-5 pt-0' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-                            <div className="pt-4 border-t border-slate-700/50">
-                                <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-mono bg-black/20 p-4 rounded-lg">
-                                    {prediction.supreme_court?.Internal_Logic_Override || prediction.step_by_step_reasoning}
-                                </p>
+                            {/* Expandable Content */}
+                            <div className={`transition-all duration-300 ease-in-out ${showLogic ? 'max-h-[600px] overflow-y-auto opacity-100 p-5 pt-0' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                                <div className="pt-4 border-t border-slate-700/50">
+                                    <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-wrap font-mono bg-black/20 p-4 rounded-lg">
+                                        {prediction.supreme_court?.Internal_Logic_Override || prediction.step_by_step_reasoning}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
                 <div className="h-1.5 w-full bg-gradient-to-r from-primary via-accent-purple to-accent-green"></div>
-            </div>
+            </div >
 
             {/* Modal for Expanded Insight */}
             {
