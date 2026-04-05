@@ -453,10 +453,27 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
     
     26. **THE UNCERTAINTY CEILING AUDIT (DEFENSIVE APATHY)**: If Agent 1 selects an 'Under Goals' market (Under 2.5, Under 3.5) for a match flagged as an Exhibition/Friendly OR involving a 'Dead Engine' that ALSO concedes >1.3 goals/game, you MUST activate the Defensive Apathy trigger. THE TACTICAL REALITY: Apathy breeds goals. Without competitive pressure, defensive structures collapse and second-half mass substitutions destroy tactical discipline. THE FORBIDDEN ACTION: You MUST REJECT any 'Under' market used as a Safe Banker in these scenarios. You cannot cap a game that has no defensive floor. THE PIVOT: Downgrade the pick and force a pivot to: 'Over 1.5 Match Goals', 'Favorite Over 1.5 Team Goals', or wide Match Control ('1X'). Flag the downgrade with is_downgraded: true.
 
-    27. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
+    27. **THE BORDERLINE SURVIVAL VETO (ACCUMULATOR PROTECTION)**: Before approving Agent 1's Safe Banker pick, you MUST pre-emptively assess its likely Monte Carlo survival rate based on the combined xG and variance characteristics. If the match has ANY of these red flags, the pick is TOO RISKY for an 8+ leg accumulator even if it's technically "safe":
+
+        **BORDERLINE RED FLAGS (82-85% Survival Zone - NOT SAFE ENOUGH):**
+        - Combined xG between 2.5-3.0 with variance > 1.2 (chaos spreads probability too thin)
+        - Missing 2+ starting defenders but opponent is NOT a Dead Engine
+        - Rule 42 (Glass Cannon) or Rule 62 (Nothing to Lose) active (defensive variance too high)
+        - Top scoreline probability < 10% (probability too diffused across scorelines)
+        - Over 1.5 pick where 0-0 is the highest individual scoreline (borderline cumulative edge)
+
+        **THE FORBIDDEN ACTION:** If 2+ red flags are present, you MUST immediately downgrade to a SAFER market:
+        - Over 1.5 → Over 0.5 (rock-solid floor)
+        - Over 2.5 → Over 1.5 (one-level downgrade)
+        - BTTS: Yes → Over 1.5 or Match Control (eliminate double-condition risk)
+        - Match Winner → Double Chance or Draw No Bet (eliminate single-outcome risk)
+
+        **THE PIVOT MANDATE:** Your Safe Banker MUST target 85%+ survival for 8-leg accumulators. If Agent 1 picked a 82-84% survival market, that is a MEDIUM RISK pick, NOT a Safe Banker. Downgrade it or recommend it ONLY as a standalone/value bet, NOT for the accumulator. Flag with: "⚠️ BORDERLINE SURVIVAL: Downgraded for accumulator safety."
+
+    28. **Scrutinize the `alternative_pick` (The Value Bet)**: Is it completely reckless?
        - A value bet can be risky, but it must be backed by the data timeline. If it predicts an Away win, ensure "Scenario A" doesn't completely wipe them out in the first 15 minutes.
 
-    28. **Update the JSON**:
+    29. **Update the JSON**:
        - Rewrite the `primary_pick` and `alternative_pick` objects with your final approved tips.
        - **STRICT HARMONIZATION**: The exact text inside `primary_pick["tip"]` and `alternative_pick["tip"]` MUST perfectly match the prediction part of one of the items inside your `full_analysis` grid.
        - **NO BRACKETS IN TIP**: The `tip` string MUST be short and punchy (e.g., "Hamburger SV Over 0.5 Goals" or "Draw No Bet: Home"). You are STRICTLY FORBIDDEN from including `[Reasoning...]` text or brackets inside the `tip` string itself. Put all reasoning in the `reasoning` array or `step_by_step_reasoning`.
@@ -609,11 +626,22 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     Review the following JSON list of analyzed matches. Each match now contains a `primary_pick`, an `alternative_pick`, a `scenario_analysis`, and often a `supreme_court` ruling.
     Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip that balances supreme safety with reasonable accumulator odds.
     - **RULE 54: THE CONSENSUS AUDIT (THE ENSEMBLE PIPELINE)**:
-      After the Supreme Court generates its final ruling, you MUST actively read the `simulation_audit` string attached to the match to see the mathematical survival rate of the picks across 10,000 Monte Carlo iterations. You MUST use this hard math to justify your final categorization:
-      - **CONDITION GREEN (THE LOCK - ABSOLUTE HARMONY)**: Both agents arrive at the EXACT same Safe Banker (e.g., both select 'Over 1.5' or '1X'). Action: Accept the pick. Multiply confidence. Output tag: [CONSENSUS VERIFIED: GREEN LOCK].
-      - **CONDITION YELLOW (THE DOWNGRADE - LOGICAL ALIGNMENT)**: Agent 2 specifies an aggressive market, and Agent 3 downgrades it to a safer structural floor in the same logic family. Action: Accept the Supreme Court's safer floor ONLY IF IT COMPLETELY NEUTRALIZES THE RISK AGENT 2 MISSED. If the match is inherently too chaotic or high-variance even with the downgrade, you MUST upgrade the match to CONDITION RED and purge it. Output tag: [CONSENSUS DOWNGRADE: YELLOW SHIELD].
-      - **CONDITION RED (THE TOXIC CONTRADICTION - SYSTEMIC CONFLICT)**: Agent 2 and Agent 3 are in fundamental mathematical opposition. Action: Fatal logic collision. The system is strictly FORBIDDEN from generating a Safe Banker for this match. You MUST completely purge the match from the accumulator. Output tag: [CONSENSUS FAILURE: RED PURGE - MATCH DISCARDED DUE TO LOGIC COLLISION].
-      - **THE HALLUCINATION EXEMPTION (CONDITION BLUE)**: If Agent 3 explicitly flags Agent 2 for a Data Hallucination, this is a verified correction, not a toxic contradiction. Action: Bypass Condition Red. Accept Agent 3's corrected Safe Banker. Output tag: [CONSENSUS OVERRIDE: BLUE SHIELD - AGENT 2 HALLUCINATION PURGED].
+      After the Supreme Court generates its final ruling, you MUST actively read the `simulation_audit` string attached to the match to see the mathematical survival rate of the picks across 10,000 Monte Carlo iterations. You MUST use these STRICT survival thresholds for 8+ leg accumulators:
+
+      **SURVIVAL RATE CATEGORIZATION (MANDATORY):**
+      - **85%+ Survival**: SAFE BANKER — qualified for 8+ leg accumulators ✅
+      - **82-84% Survival**: MEDIUM RISK — qualified for 4-7 leg accumulators only ⚠️
+      - **70-81% Survival**: HIGH RISK — standalone/value bets only, NOT for accumulators ❌
+      - **<70% Survival**: REJECT — too dangerous for any bet type 🚫
+
+      **CRITICAL RULE:** For 8+ leg accumulators, you MUST ONLY accept picks with 85%+ survival rates. If a pick shows 82.7% survival (like Over 1.5), it is TOO RISKY for the accumulator and MUST be purged, even if the consensus is Green/Yellow. A borderline pick that "technically passes" at 82% will DESTROY your accumulator over multiple legs. Protect the capital.
+
+      **CONSENSUS CONDITIONS (WITH SURVIVAL FILTER):**
+      - **CONDITION GREEN (THE LOCK - ABSOLUTE HARMONY)**: Both agents arrive at the EXACT same Safe Banker (e.g., both select 'Over 1.5' or '1X') AND survival rate is 85%+. Action: Accept the pick. Multiply confidence. Output tag: [CONSENSUS VERIFIED: GREEN LOCK].
+      - **CONDITION YELLOW (THE DOWNGRADE - LOGICAL ALIGNMENT)**: Agent 2 specifies an aggressive market, and Agent 3 downgrades it to a safer structural floor in the same logic family AND survival rate is 85%+. Action: Accept the Supreme Court's safer floor ONLY IF IT COMPLETELY NEUTRALIZES THE RISK AGENT 2 MISSED. If the match is inherently too chaotic or high-variance even with the downgrade, OR if survival is 82-84%, you MUST upgrade the match to CONDITION RED and purge it. Output tag: [CONSENSUS DOWNGRADE: YELLOW SHIELD].
+      - **CONDITION ORANGE (THE BORDERLINE - 82-84% SURVIVAL)**: Pick is logically sound but survival rate is between 82-84%. Action: PURGE from 8+ leg accumulator. Flag as "Medium Risk - Not Safe Enough for Large Accumulator." These picks can be offered as standalone or 4-6 leg accumulator options, but NOT for your primary 8+ leg builder. Output tag: [BORDERLINE SURVIVAL: ORANGE CAUTION - PURGED FROM MAIN ACCUMULATOR].
+      - **CONDITION RED (THE TOXIC CONTRADICTION - SYSTEMIC CONFLICT)**: Agent 2 and Agent 3 are in fundamental mathematical opposition, OR survival rate is <82%. Action: Fatal logic collision or insufficient survival. The system is strictly FORBIDDEN from generating a Safe Banker for this match. You MUST completely purge the match from the accumulator. Output tag: [CONSENSUS FAILURE: RED PURGE - MATCH DISCARDED DUE TO LOGIC COLLISION OR LOW SURVIVAL].
+      - **THE HALLUCINATION EXEMPTION (CONDITION BLUE)**: If Agent 3 explicitly flags Agent 2 for a Data Hallucination, this is a verified correction, not a toxic contradiction. Action: Bypass Condition Red IF survival rate is 85%+. Accept Agent 3's corrected Safe Banker. Output tag: [CONSENSUS OVERRIDE: BLUE SHIELD - AGENT 2 HALLUCINATION PURGED].
     - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive Scenarios A, B, AND C, you must throw the match out. A safe parlay choice MUST be resilient to an early red card or an underdog goal.
     {target_instruction}
     Return ONLY the absolute safest, highest-confidence matches for the master parlay.
@@ -1068,7 +1096,25 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       1. Odds Agnosticism: The 'Arbiter's Safe Pick' must be the absolute safest mathematical floor, completely regardless of how low the odds are (e.g., 1.05, 1.10). Decouple 'Value' from the Safe Pick entirely.
       2. The Final Stress Test: Take your tentative Safe Banker and forcefully run a final internal simulation. Push the bet through your own 'Variance Warning' and worst-case Game State Scenarios.
       3. The Relentless Downgrade (STRICT ANTI-RATIONALIZATION): If the tentative bet dies in the worst-case scoreline you just predicted in your Crucible Warning, you are strictly FORBIDDEN from publishing it. You are STRICTLY FORBIDDEN from rationalizing the risk. You CANNOT use phrases like 'However, this is unlikely', 'the team's form provides a buffer', or 'but home advantage should prevail'. If the Crucible outputs a scoreline that breaks your bet (e.g., a 0-1 scoreline breaking a 1X bet), the bet is COMPROMISED. You must instantly downgrade the market across the 17 available buckets (e.g., dropping 'BTTS' to 'Over 1.5 Goals', or 'Away Win' to 'Away +2.5 Handicap') until you find a market that mathematically survives the exact nightmare scenario you just predicted. Never step into the trap you just identified.
-      4. **MONTE CARLO THRESHOLD ENFORCEMENT (MANDATORY)**: After the Python Monte Carlo Simulator runs 10,000 iterations, you will receive the survival rate for your proposed Safe Banker. If the Safe Banker wins in FEWER than 70% of the simulated scorelines, you are STRICTLY FORBIDDEN from assigning it a confidence above 70%. You MUST either: (a) downgrade to a safer market that survives >75% of scenarios, or (b) declare NO_BET. You CANNOT override the Monte Carlo with subjective reasoning. The simulation is the mathematical ground truth. If Over 1.5 wins in only 66% of scenarios, your confidence CANNOT be 85% — this is a statistical fraud. Align your confidence to the simulator's output or downgrade the pick.
+      4. **MONTE CARLO THRESHOLD ENFORCEMENT (MANDATORY - ACCUMULATOR RISK TIERS)**: After the Python Monte Carlo Simulator runs 10,000 iterations, you will receive the survival rate for your proposed Safe Banker. You MUST use these STRICT survival thresholds based on accumulator usage:
+
+         **ACCUMULATOR SAFE BANKER (8+ legs):**
+         - Minimum survival rate: **85%**
+         - If survival < 85%: You MUST downgrade to a safer market OR declare NO_BET
+         - This is a ROCK-SOLID threshold for capital preservation in large accumulators
+         - Example: Over 1.5 at 82.7% survival is TOO RISKY for an 8-leg accumulator
+
+         **MEDIUM ACCUMULATOR (4-7 legs):**
+         - Minimum survival rate: **82%**
+         - If survival < 82%: You MUST downgrade to a safer market OR declare NO_BET
+         - Acceptable for shorter accumulators with higher individual risk tolerance
+
+         **STANDALONE/VALUE BET (1-3 legs):**
+         - Minimum survival rate: **70%**
+         - These are NOT Safe Bankers — label them as "Medium Risk" or "Value Bet"
+         - Only acceptable for singles, doubles, or small trebles
+
+         **CRITICAL RULE:** You CANNOT override the Monte Carlo with subjective reasoning. The simulation is the mathematical ground truth. If Over 1.5 wins in only 82.7% of scenarios, it does NOT qualify as a Safe Banker for an 8+ leg accumulator — this is a statistical fraud. Your confidence level MUST align with the simulator's survival rate AND the accumulator context. If you cannot find a market with 85%+ survival, you MUST declare NO_BET to protect the accumulator.
       5. The Ultimate Veto (No Bet): If, after downgrading, you determine that absolutely NONE of the 17 markets can safely survive the game's variance without risking the accumulator, you must strike the match from the record. In the Safe Pick field, output exactly: 'NO BET: Market too volatile for Accumulator survival.' Protect the capital at all costs.
 
     - **RULE 4: THE ANTI-BIAS MANDATE**:
