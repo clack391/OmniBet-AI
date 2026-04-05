@@ -906,45 +906,6 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "Internal_Logic_Override": "string (MANDATORY if OVERTURNED: Completely rewrite Agent 1's step-by-step logic to justify your final verdict. Leave empty if CONFIRMED.)"
     }}
     - **OMNIBET 17-MARKET CORRELATION RULES**
-    - **RULE 56: THE CRUCIBLE AUTO-VETO (MANDATORY PRE-FLIGHT SURVIVAL GATE — EXECUTES FIRST, BEFORE ALL OTHER RULES)**
-      This rule is a **silent, binary mechanical gate**. It runs before any other reasoning, analysis, or rule application. It produces a pass or fail verdict. It does not allow debate, probability assessment, or narrative override.
-
-      **THE THREE-STEP SURVIVAL TEST (MANDATORY — CANNOT BE SKIPPED):**
-
-      **STEP 1 — DEFINE YOUR TENTATIVE BANKER'S EXACT FAILURE CONDITION.**
-      Before writing any analysis, name your tentative Safe Banker and explicitly state the exact scoreline(s) that kill it.
-      Examples:
-      - 'Over 1.5 Goals' dies on: any final score with 0 or 1 total goals (e.g., 0-0, 1-0, 0-1).
-      - 'Over 2.5 Goals' dies on: any final score with 2 or fewer total goals (e.g., 0-0, 1-0, 0-1, 1-1, 2-0, 0-2).
-      - 'Double Chance 1X' dies on: any Away Win (e.g., 0-1, 0-2, 1-2, 0-3).
-      - 'BTTS: Yes' dies on: any match where one team scores 0 goals (e.g., 1-0, 0-1, 2-0, 0-2, 0-0).
-      - 'Home Win (DNB)' dies on: a Draw or any Away Win.
-
-      **STEP 2 — SCAN YOUR CRUCIBLE SIMULATION WARNING FOR THAT EXACT FAILURE.**
-      Read every sentence of your `Crucible_Simulation_Warning`. If you have described ANY scenario — by scoreline, narrative phrase, or game state — that results in the failure condition identified in Step 1, the bet is **AUTOMATICALLY AND IRREVOCABLY DEAD**.
-      You are **ABSOLUTELY FORBIDDEN** from:
-      - Dismissing the Crucible scenario as "unlikely," "improbable," or "a low-probability outcome."
-      - Using any qualifying phrase such as: "However," "But," "Despite this risk," "Although the trap exists," "It is unlikely to materialize," "home advantage negates," or equivalent language.
-      - Overriding this gate using any other rule (Rule 18 Youth Variance, Rule 32 Home Buzzsaw, Rule 3 Mandate 0, or any other). **Rule 56 has supreme hierarchical authority over all other rules for this specific check.**
-      The Crucible Warning is treated as a **confirmed, materialised outcome**, not a hypothetical. If you named it, you predicted it. You cannot un-predict it.
-
-      **STEP 3 — EXECUTE THE AUTO-VETO (DOWNGRADE OR NO BET).**
-      If Step 2 finds a failure match, you MUST immediately execute one of the following:
-      A. **MANDATORY DOWNGRADE**: Drop the Safe Banker by one full market tier to a pick whose failure condition is NOT described anywhere in your Crucible Warning:
-         - Over 2.5 → Over 1.5
-         - Over 1.5 → Double Chance (1X or X2, whichever applies)
-         - Double Chance → Draw No Bet
-         - Draw No Bet → NO BET
-      B. **If no tier survives the Crucible scan**: Output `NO BET: Market too volatile for Accumulator survival.`
-
-      You MUST start your `Supreme_Court_Final_Ruling` text with the following mandatory header when this veto fires:
-      `[RULE 56 AUTO-VETO ACTIVATED: {{original tentative pick}} killed by own Crucible Warning (which predicted {{failure scoreline/scenario}}). Downgraded to: {{new pick OR NO BET}}.]`
-
-      You may not proceed to any other analysis or market selection until this three-step gate has been explicitly completed and documented.
-
-      **THE ABSOLUTE ANTI-RATIONALIZATION CLAUSE:**
-      There are no exceptions. There are no overrides. There are no probability thresholds. If your Crucible Warning names the failure — the pick dies. Any pick that cannot survive its own Crucible Warning is fraudulent capital at risk and must be destroyed before publication.
-
     - **RULE 1: NO_BET**: If data is too chaotic/high variance.
     - **RULE 2: GOAL INTEGRITY**: You MUST NOT confirm an 'Under' pick if Agent 1's pitch shows combined xG > 2.8. You MUST NOT confirm an 'Over' pick if combined xG < 1.8.
     - **RULE 3: MANDATE 0: THE CRUCIBLE SIMULATION & THE ULTIMATE VETO (SURVIVAL OVER VALUE)**
@@ -1715,6 +1676,52 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       - Preferred: 'Under 3.5 Goals' as the ceiling, NOT 'Over 1.5' as the floor.
       - Acceptable: Asian Handicap for the stronger team (+0.5 or -0.5), which survives both a 1-0 and a 2-0.
       **THE CORE TRUTH:** Goals on paper are not goals on the pitch. A superior team that scores first does NOT need a second goal. They play chess while the inferior team plays panic. The clinical 1-0 is not a surprise — it is the expected, rational outcome of superior game management.
+
+    - **RULE 61: THE "MEN VS. BOYS" PARADOX (U23 VS SENIOR)**:
+      **THE TRIGGER:**
+      A fixture where a U23/Reserve team (e.g., Dortmund II) plays against a Senior men's team (e.g., Fortuna Köln).
+      **THE TACTICAL REALITY:**
+      U23 offensive stats are a mirage generated against other youth teams. When boys play men, physical maturity and tactical discipline always win. The senior team will physically bully the youth team into a low-scoring grind. Youth teams do not unlock against senior opposition — they are overwhelmed by physicality, press resistance, and competitive experience.
+      **THE FORBIDDEN ACTION:**
+      The Supreme Court is STRICTLY FORBIDDEN from labeling any U23/Reserve team a "Home Buzzsaw" (Rule 32 override) when their opponent is a top-half senior team. You MUST NOT use a U23 team's domestic youth goal average to justify an 'Over Goals' or 'BTTS: Yes' market, as that data is explicitly generated against other youth teams and is statistically invalid in this fixture tier.
+      **THE MANDATORY PIVOT:**
+      You MUST favor the senior team via one of the following routes:
+      1. **Match Control (Away Win / Draw No Bet)**: If the senior team is a top-half outfit with a functioning defense, target Match Control markets that survive the physical disparity.
+      2. **'Under' Goal Ceilings**: If the senior team has an elite defense (conceding < 1.0 goals per game), pivot to 'Under 2.5 Goals' or 'Under 3.5 Goals', as the U23 team will fail to convert their few opportunities against experienced senior defenders.
+      **RECOGNITION TRIGGERS:**
+      You MUST activate Rule 61 if ANY of the following are true:
+      - Team name explicitly contains 'II', 'B', 'U19', 'U21', 'U23', 'Primavera', 'Reserve', or 'Academy'.
+      - Agent 1 or 2 identifies the team as a youth or reserve squad in their tactical analysis.
+      - The fixture is in a lower-division league where reserve teams compete (e.g., German Bundesliga 3, English League Two).
+      **FINAL WARNING:**
+      Do NOT apply Rule 18 (Youth Variance Mandate) to override Rule 61 in the direction of 'Over Goals'. Rule 61 recognizes that youth-vs-youth variance is fundamentally different from youth-vs-senior variance. In a Men vs. Boys clash, the senior team's experience and physicality systematically suppress the youth team's offensive output. The mismatch is physical, not tactical.
+
+    - **RULE 62: THE "NOTHING TO LOSE" SHOOTOUT (BROKEN DEFENSE AGGRESSION)**:
+      **THE TRIGGER:**
+      Rule 10 (Defensive Collapse Override) is active — a team is confirmed missing their Starting Goalkeeper AND/OR two or more starting Center-Backs.
+      **THE TACTICAL REALITY:**
+      A team with a catastrophically broken defense will NOT set up to defend for a 0-0 draw. They know with mathematical certainty that they will concede. Their rational managerial response is to overcompensate offensively — pressing higher, pushing full-backs forward, and playing recklessly aggressive attacking football in a bid to outscore their defensive mistakes. The match devolves into a high-variance, end-to-end transition shootout — not the sterile low-scoring grind that Match Control markets assume.
+      **THE FORBIDDEN ACTION:**
+      When Rule 10 (Defensive Collapse) is triggered, the Supreme Court is STRICTLY FORBIDDEN from using ANY Match Control market as the Safe Banker:
+      - No Match Winner (1X2)
+      - No Double Chance (1X, X2, 12)
+      - No Draw No Bet
+      - No Asian Handicap
+      These markets assume tactical stability — which is mathematically impossible with a broken defensive structure. A broken defense creates high-variance game states that kill all Match Control bets via unexpected early concessions.
+      **THE MANDATORY PIVOT:**
+      The Supreme Court MUST pivot to High-Variance Goal Markets that BENEFIT from the inevitable shootout dynamic:
+      1. **'BTTS: Yes'** — A team playing with nothing to lose WILL score. Their opponent with a broken defense WILL concede. Both teams will find the net.
+      2. **'Over 2.5 Goals'** — The reckless, open attacking play from the broken-defense team guarantees voluminous goal chances for both sides.
+      3. **'Over 1.5 Goals'** — The absolute safest structural floor when BTTS/Over 2.5 odds are too low for value.
+      **CONFLICT DISAMBIGUATION:**
+      Rule 62 STRICTLY OVERRIDES Rule 28 (Sterile Possession Protocol) and Rule 60 (Game Management Ceiling). You CANNOT enforce a clinical 1-0 game management ceiling when the team managing the game has a broken defensive line — they cannot absorb a counter-attack, so the game CANNOT remain at 1-0.
+      Rule 62 is DISTINCT from Rule 10's Supply Line Mandate / Mud Fight Trigger: The Mud Fight fires only when BOTH the attacking supply line AND the opposing defense are broken. Rule 62 fires when ONE team's defense is broken and the opponent has a functional offense. If only one condition (broken defense) exists, Rule 62 proceeds.
+      **RECOGNITION TRIGGERS:**
+      You MUST activate Rule 62 if ALL of the following are true:
+      - One team is confirmed missing their Starting GK OR two or more starting CBs (Rule 10 trigger confirmed).
+      - The opposing team has a functional offense (Dead Engine Veto from Rule 26 is NOT active for the attacking side).
+      **FINAL WARNING:**
+      A Match Control market in a "Nothing to Lose" game state is a death trap. Accumulator safety demands you embrace the chaos and pivot to Goal Markets. A team with nothing to lose does not park the bus — they throw everyone forward and accept the shootout. Trust the tactical reality, not the season-long Match Control statistics.
 
 
         """
