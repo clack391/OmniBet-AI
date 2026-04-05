@@ -166,11 +166,11 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
            2. **Tier 2 (Safe)**: Over 1.5 Goals, BTTS, Draw No Bet, Asian Handicap (+0.5 or wider)
            3. **Tier 3 (Moderate)**: Over 2.5 Goals, Match Winner, Team Over 1.5 Goals
            You MUST pick from the highest tier where you have 70%+ confidence. Only drop to Tier 3 if the data overwhelmingly supports it across BOTH scenarios. A "Banker" that loses half the time is not a Banker — it is a gamble.
-          - **Rule 16 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 5 rounds (Matchdays 1-4), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Game 2-3. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
+          - **Rule 16 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 8 rounds (Matchdays 1-7), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Games 2-7. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
         - **Rule 17 - THE ANTI-BIAS PROTOCOL (CRITICAL)**: You must actively resist two common analytical biases:
             1. **THE "FIRST-LEG" FALLACY**: Do NOT automatically assume 1st Leg matches will be low-scoring or conservative. Base your Match Goals and 1X2 predictions strictly on the teams' xG and defensive metrics, not on tournament tropes.
             2. **THE "SYSTEM VS. INDIVIDUAL" RULE**: If a superior team (e.g., an away favorite) is missing a star striker, do NOT automatically downgrade them to 'Under' or 'Draw'. If their underlying team system creates high possession and high Big Chances, trust the system to overcome the injury. Do not let Agent 2 panic you into downgrading a fundamentally superior team just because a name is missing from the lineup.
-        - **Rule 18 - THE SMALL SAMPLE WEIGHTING DIRECTIVE**: If your analysis relies on a venue-specific metric (like a "home win streak") derived from fewer than 5 matches, you MUST explicitly state in your reasoning: "Venue data is based on a small sample size ($N < 5$); results have been blended with overall season metrics for reliability." Failing to do so is a statistical error.
+        - **Rule 18 - THE SMALL SAMPLE WEIGHTING DIRECTIVE**: If your analysis relies on a venue-specific metric (like a "home win streak") derived from fewer than 8 matches, you MUST explicitly state in your reasoning: "Venue data is based on a small sample size ($N < 8$); results have been blended with overall season metrics for reliability." Failing to do so is a statistical error.
         - **Rule 19 - THE EXPECTED GOALS (xG) REALITY CHECK**: You MUST prioritize Expected Goals (xG) over raw goals scored to detect "luck". FIRST, check the 'Advanced Tactical Metrics' JSON block provided above for 'Expected goals (xG) per game'. If the API provided it, use it immediately. If a team's actual goals are much higher than their xG, they are lucky and due for regression. If the xG data is MISSING from the JSON payload (e.g., obscure leagues), you may fallback to your Google Search tool to find recent xG data. If search also fails, default to 'Big chances created' to evaluate their true offensive threat.
         - **Rule 20 - THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 10 matches. Early-season variance is a massive trap. Furthermore, you must NEVER assume an opposing team's offensive output will drop to zero simply because 1 or 2 starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance (The Wounded Animal Effect) and often play with a high-intensity point to prove.
         - **THE DATA PURITY MANDATE**: When conducting Live Searches for rosters, injuries, or stats, you MUST ONLY pull data from official, verified sports databases (e.g., Transfermarkt, Soccerway, Flashscore, Sofascore, or official club websites). You are strictly forbidden from citing data from gaming wikis (SOFIFA, Football Manager), Reddit career mode threads, or fan-concept sites.
@@ -308,7 +308,7 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             check_cancelled(match_id)
             try:
                 # Add timeout and retry logic to gracefully handle RemoteDisconnected drops
-                # Increased to 300s for heavy Google Search grounding
+                # Increased to 600s for heavy Google Search grounding
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
@@ -380,6 +380,16 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
     {json.dumps(initial_prediction_json, indent=2)}
     
     ### RISK MANAGEMENT RULES
+
+    ⚠️ **CRITICAL: SUPREME COURT VETO AWARENESS**
+    Your downgrades will be reviewed by the Supreme Court (Agent 3), which has VETO AUTHORITY over certain rules.
+    Before applying high-variance rules (Mutual Collapse, Glass Cannon, etc.), you MUST check Dead Engine status:
+    - If EITHER team has < 0.8 goals/game AND < 1.5 big chances/game → Dead Engine ACTIVE
+    - Dead Engine VETOES: Rule 19 (Mutual Collapse), Rule 20 (Dam Break), Rule 24 (Glass Cannon)
+    - If Dead Engine active: DO NOT downgrade to Over/BTTS picks, use Under 3.5 or Match Control instead
+
+    This prevents your pick from being overturned by Supreme Court, creating user confusion.
+
     1. **Catching the "Human Bias"**: Identify any widespread public narratives about this match (e.g., "The Home Team is unbeatable at home" or "They drew 0-0 last match so it will be low scoring again"). Cross-reference this bias with the underlying defensive/offensive data. If the public expectation contradicts the deep data, aggressive bet sizing against the public is warranted.
 
     2. **Catching the "Gambler's Fallacy"**: Do not assume extreme streaks (e.g., 5 games without scoring) will continue indefinitely; enforce Regression to the Mean when probabilistically appropriate.
@@ -558,7 +568,7 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
         for attempt in range(max_retries):
             check_cancelled(match_id, job_id)
             try:
-                # Increased to 300s for Risk Manager deep fact-checking
+                # Increased to 600s for Risk Manager deep fact-checking
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
@@ -652,7 +662,7 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                # Increased to 300s for Accumulator generation
+                # Increased to 600s for Accumulator generation
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
@@ -682,6 +692,10 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     """
     The Betslip Auditor Mode (Pipeline B - Dual Agent Phase 2)
     Evaluates the 'user_selected_bet' against Agent 1's full tactical breakdown.
+
+    CRITICAL: If initial_prediction contains supreme_court data (from 3-agent pipeline),
+    the auditor MUST prioritize Supreme Court's final verdict over Agent 1's original analysis,
+    as Supreme Court has already vetoed/corrected any Agent 1 errors.
     """
     check_cancelled(match_id, job_id)
     # Harden against list-wrapped JSON from Agent 1
@@ -700,7 +714,19 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
     ============
     
     Your job is to act as the "Judge." You must evaluate the User's Bet against your colleague's hard data and scenario analysis. Decide if the user's bet is safe, if it needs to be downgraded for safety, or if it is a complete trap.
-    
+
+    ⚠️ **CRITICAL: SUPREME COURT FINAL VERDICT PRIORITY**
+    If the breakdown above contains "supreme_court" data (from the 3-agent pipeline), you MUST prioritize the Supreme Court's final verdict over Agent 1's original analysis. The Supreme Court has already:
+    - Vetoed any Agent 1 hallucinations
+    - Applied Rule 35 (Dead Engine Veto) checks
+    - Corrected xG/variance contradictions
+    - Run Monte Carlo simulation validation
+
+    When Supreme Court data exists, evaluate the user's bet against:
+    1. FIRST: Supreme Court's "Arbiter_Safe_Pick" and "Supreme_Court_Final_Ruling"
+    2. SECOND: Agent 1's original analysis (only if it aligns with Supreme Court)
+    3. NEVER: Approve a user bet that Supreme Court explicitly overturned
+
     *** CRITICAL: FACT-CHECKING DIRECTIVE ***
     Your colleague is not infallible and may hallucinate. You have Live Google Search access! 
     Whenever you review a major claim (such as a key player injury, a massive historical win streak, or team lineups), actively use your Search Tool to fact-check your colleague's data before passing your verdict. If your search proves your colleague lied or used outdated data, explicitly call them out in your internal_debate and reject/downgrade the bet accordingly.
@@ -737,7 +763,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         4. **THE HALLUCINATION CONTEXT RULE**: When applying the Hallucination Penalty (Rule 1), evaluate the context of the correction. If Agent 1 hallucinates that a star player is injured/suspended, but your live search proves the player is actually ELIGIBLE and PLAYING, do NOT downgrade the team's prediction. The team is actually stronger than Agent 1 calculated. Only apply the penalty and downgrade the bet if the fact-check proves the team is materially weaker than claimed.
         5. **ESTIMATED ODDS**: You MUST provide a realistic `estimated_odds` (Decimal format) for your recommended bet. Use Agent 1's odds or the Odds API payload as a reference. If no odds are available, estimate based on the implied probability of your own tactical analysis.
       4. **GRID CORRECTIONS (CONSISTENCY)**: If you OVERTURN a ruling (Scenario 1), you MUST provide a `grid_corrections` object. This object should contain corrected prediction strings for matching keys in the `full_analysis` grid (specifically `Match_Goals`, `BTTS`, and `Correct_Score`) to ensure the entire card is logically consistent with your Verdict. If Agent 2 changed the score to "1-0" but you ruled "Over 1.5 Goals," you MUST provide a correction for `Correct_Score` (e.g., "2-1").
-      3. **STATISTICAL RELIABILITY (SAMPLE SIZE)**: If your colleagues rely on venue-specific trends from fewer than 5 matches, you MUST prioritize the broader season metrics. Do not approve a high-risk bet justified solely by a 3-game "venue streak" if the overall data is conflicting.
+      3. **STATISTICAL RELIABILITY (SAMPLE SIZE)**: If your colleagues rely on venue-specific trends from fewer than 8 matches, you MUST prioritize the broader season metrics. Do not approve a high-risk bet justified solely by a 3-7 game "venue streak" if the overall data is conflicting.
       - **RULE 7: THE MUTUAL COLLAPSE EXEMPTION AUDIT**: If the match data reveals BOTH teams are missing critical defensive personnel (starting center-backs or starting goalkeeper) OR both teams concede > 1.8 goals per game, you MUST REJECT or DOWNGRADE any 'Under Goals' bet the user has selected ('Under 2.5', 'Under 3.5', 'Under 4.5') or any 'First Half Under' pick. You CANNOT approve a goal ceiling bet when both defensive structures are structurally absent. The market reality is an end-to-end transition shootout where even poor finishers score. Downgrade to: 'BTTS: Yes', 'Over 2.5 Match Goals', 'Over 4.5 Cards', or 'Over 8.5 Corners'.
       - **RULE 8: THE DAM BREAK EXEMPTION AUDIT**: If Agent 1's data shows a team has been flagged for a high Big Chance Miss Rate (Clinical Ineptitude conditions) BUT is simultaneously creating > 2.0 Big Chances per game, you MUST REJECT or DOWNGRADE any 'Under 2.5' or 'Under 3.5' bet the user has selected for that team's matches. The miss rate is temporary negative variance — the high creation volume signals elite offensive quality primed for positive regression. Downgrade to: 'Home Win', 'Home -1.0 Asian Handicap', or 'Over 1.5 Team Goals'.
       - **RULE 9: THE HOME BUZZSAW AUDIT**: If the match data shows the Home Underdog averages > 1.3 goals per game in the current season, OR has recently scored multiple goals against elite/top-tier opposition, you MUST REJECT or DOWNGRADE any Away Team Asian Handicap (Away +1.0, Away +1.5) or Away Double Chance (X2) the user has selected. These markets cannot absorb the blowout risk of a potent home underdog — if the away favorite falls behind, they chase, expose their defensive line, and concede devastating counter-attacks. Downgrade to: 'Home Over 0.5 Goals', 'Home +2.5 Asian Handicap', or 'Over 1.5 Match Goals'. You MUST also ignore any H2H win streak the away team holds — current home offensive form overrides all historical H2H data.
@@ -785,7 +811,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         for attempt in range(max_retries):
             check_cancelled(match_id, job_id)
             try:
-                # Increased to 300s for Betslip Auditor
+                # Increased to 600s for Betslip Auditor
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
                 break
@@ -823,6 +849,73 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     The Final Risk Arbiter (Pipeline B - Phase 3).
     Resolves the debate between Agent 1 (Tactical) and Agent 2 (Risk Manager).
     Applies the OmniBet 17-Market Correlation Matrix for EV calculation.
+
+    RULE HIERARCHY & CONFLICT RESOLUTION:
+    =====================================
+
+    TIER 0 - ABSOLUTE VETOES (Cannot be overridden by ANY other rule):
+    - Rule 48: 0-0 Anchor Ban
+    - Rule 53: Defensive Clown Show
+      → CRITICAL EXCEPTION: Rule 35 (Dead Engine Veto) overrides Rule 53 when ONE team
+        averages < 0.8 GPG AND creates < 1.5 Big Chances per game. Two leaky defenses
+        do NOT guarantee goals if one team literally cannot attack.
+    - Rule 57: Sterility Supremacy Mandate (enforces Rules 48 & 53, subject to Rule 35 exception)
+
+    TIER 1 - SAMPLE SIZE QUARANTINE (Overrides all goal-direction rules):
+    - Rule 40: Early-Season Quarantine (N < 8 matches)
+      → Overrides: Rules 16, 33, 35, all goal markets
+
+    TIER 2 - STRUCTURAL OVERRIDES (Override tactical rules):
+    - Rule 41: Playoff Paralysis (High-Stakes Fear)
+      → Holds ABSOLUTE SUPREMACY over Rule 18 (Youth Variance)
+      → VETOES Rule 33 (Mutual Collapse in Cup Finals)
+    - Rule 43: Exhibition Void (Friendly Matches)
+      → VETOES Rule 32 (Home Buzzsaw)
+      → VETOES Rule 35 (Dead Engine)
+
+    TIER 3 - FATIGUE RULES (Hierarchical by severity):
+    - Rule 56: Biological Supremacy (< 3 days rest, BOTH teams)
+      → Overrides: Rules 18, 43
+    - Rule 51: Symmetric Fatigue Grind (< 4 days rest, BOTH teams)
+    - Rule 22: Cumulative Fatigue Override (120-min penalty, ONE team)
+    - Rule 29: Asymmetric Fatigue Protocol (ONE team fatigued)
+    NOTE: Rules 22 and 51 are NOT contradictory - they apply to different scenarios
+
+    TIER 4 - DEFENSIVE ANALYSIS:
+    - Rule 33: Mutual Collapse Exemption (BOTH defenses broken)
+      → Overrides: Rule 16 (Sterile Offense), Rule 31 (Clinical Ineptitude)
+      → VETOED BY: Rule 35 (Dead Engine), Rule 41 (Playoff Paralysis)
+    - Rule 10: Defensive Collapse Override (ONE defense broken)
+      → Enables: Rule 62 (Nothing to Lose Shootout)
+      → Blocked by: Rule 10's Supply Line Mandate (Mud Fight check)
+
+    TIER 5 - OFFENSIVE ANALYSIS:
+    - Rule 34: Dam Break Exemption (high chance volume)
+      → Overrides: Rule 31 (Clinical Ineptitude), Rule 16 (Sterile Offense)
+    - Rule 35: Dead Engine Veto
+      → VETOES: Rule 33 (Mutual Collapse), Rule 18 (Youth Variance)
+
+    TIER 6 - CONTEXTUAL RULES:
+    - Rule 32: Home Buzzsaw Override
+      → Overrides: Rule 20 (H2H Respect Clause)
+      → VETOED BY: Rule 61 (U23 vs Senior)
+    - Rule 36: H2H Obsession Trap
+      → Overrides: Rule 20 (H2H Respect Clause)
+
+    CONFLICT RESOLUTION PRINCIPLES:
+    1. Higher tier always wins over lower tier
+    2. Within same tier, VETO rules beat OVERRIDE rules
+    3. Structural rules (game state) beat statistical rules (averages)
+    4. Sample size mandates beat all data-driven rules
+    5. **xG-Variance Alignment MANDATORY**: variance_multiplier MUST align with combined_xG:
+       - combined_xG < 2.5 → variance = 1.0 (FORCED, even if high-variance rule active)
+       - combined_xG 2.5-3.5 → variance = 1.0-1.3 (use 1.3 only if BOTH offenses functional)
+       - combined_xG >= 3.5 → variance = 1.3-1.5 (chaos mode justified)
+    6. **Rule 35 Veto Check MANDATORY**: Before applying Rule 53, 33, 19, or 62:
+       - Check if EITHER team is Dead Engine (< 0.8 GF/game AND < 1.5 big chances)
+       - If yes: Rule 35 VETOES the high-variance rule entirely
+       - Pivot to Under 3.5 or Match Control (NOT Over/BTTS)
+    7. When in doubt, apply Rule 26 (Extreme Variance Veto) → NO BET
     """
     check_cancelled(match_id, job_id)
     # Harden against list-wrapped JSON
@@ -869,8 +962,70 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     You MUST generate the JSON fields in this exact order to ensure your reasoning precedes your selection:
     1. Crucible_Simulation_Warning: Identify the exact nightmare trap/variance first.
     2. Supreme_Court_Final_Ruling: Explain how you are dodging that trap.
-    3. home_xG, away_xG, variance_multiplier: Extract the statistical parameters for the Python Monte Carlo Simulator.
+    3. home_xG, away_xG, variance_multiplier: Calculate the statistical parameters for the Python Monte Carlo Simulator using this MANDATORY protocol:
+       - **home_xG**: Extract from Agent 1's "Advanced Tactical Metrics" → "Expected goals (xG) per game" for the home team. If missing, use "Goals scored per game" from match_data. If still missing, calculate as (Total Goals Scored / Total Matches Played) for the home team.
+       - **away_xG**: Extract from Agent 1's "Advanced Tactical Metrics" → "Expected goals (xG) per game" for the away team. If missing, use "Goals scored per game" from match_data. If still missing, calculate as (Total Goals Stored / Total Matches Played) for the away team.
+       - **variance_multiplier**: Use this MANDATORY decision tree:
+
+         **STEP 1 — Calculate Combined xG:**
+         combined_xG = home_xG + away_xG
+
+         **STEP 2 — Apply Variance Multiplier Logic:**
+         • **IF combined_xG < 2.5**: Set variance_multiplier to 1.0 (Standard Poisson)
+           → Low-scoring matches do NOT support chaos mode, even if defenses are leaky.
+           → A Dead Engine offense (< 0.8 GF/game) will NOT "magically wake up" against a bad defense — Rule 35 veto applies.
+
+         • **ELSE IF combined_xG >= 2.5 AND combined_xG < 3.5**: Set variance_multiplier to 1.0-1.3
+           → Use 1.3 ONLY if Rule 33 (Mutual Collapse) or Rule 42 (Glass Cannon) is active AND both teams have functional offenses (not Dead Engines).
+
+         • **ELSE IF combined_xG >= 3.5**: Set variance_multiplier to 1.3-1.5
+           → High-scoring games with broken defenses justify elevated variance.
+           → Use 1.5 if Rule 62 (Nothing to Lose Shootout) or multiple high-variance rules are active.
+
+       ⚠️ VARIANCE MULTIPLIER VALIDATION — XG SANITY CHECK:
+       Before setting variance_multiplier > 1.2, you MUST verify the combined_xG supports it. High variance mode (NegBinom) is ONLY appropriate for HIGH-SCORING chaotic games (combined xG ≥ 3.0).
+
+       ⚠️ CRITICAL RULE 53 VALIDATION — DEAD ENGINE VETO:
+       If you are invoking Rule 53 (Defensive Clown Show), you MUST FIRST check Rule 35 (Dead Engine Veto). If EITHER team averages < 0.8 goals per game AND creates < 1.5 Big Chances per game, Rule 35 VETOES Rule 53 entirely. In this case:
+       - Do NOT set variance_multiplier > 1.0
+       - Do NOT pivot to 'Over 1.5 Goals'
+       - INSTEAD pivot to 'Under 3.5 Goals' or Match Control (1X, X2)
+
+       A team that literally cannot attack will not "magically wake up" against a bad defense — they are structurally flatlined. The combined_xG will be low (< 2.5), proving the Dead Engine status. Trust the xG calculation, not the defensive stats.
     4. Arbiter_Safe_Pick: The indestructible selection after downgrading.
+
+    *** MANDATORY PRE-FLIGHT VALIDATION CHECKLIST ***
+    Before finalizing your Supreme Court ruling, you MUST verify ALL of the following to prevent rule conflicts:
+
+    ✅ **VETO HIERARCHY CHECK:**
+       1. If invoking Rule 53 (Defensive Clown Show):
+          → MUST check Rule 35 (Dead Engine Veto) FIRST
+          → If EITHER team has < 0.8 GF/game AND < 1.5 big chances: Rule 35 VETOES Rule 53
+          → Abort Rule 53, pivot to Under 3.5 or Match Control
+
+       2. If invoking Rule 33 (Mutual Collapse) or Rule 19:
+          → MUST check Rule 35 (Dead Engine Veto) FIRST
+          → MUST check Rule 41 (Playoff Paralysis) if high-stakes match
+          → If either veto is active, REJECT Over/BTTS picks
+
+       3. If invoking Rule 62 (Nothing to Lose Shootout):
+          → MUST verify opponent has FUNCTIONAL offense (not Dead Engine)
+          → If opponent is Dead Engine, Rule 62 does NOT apply
+
+    ✅ **XG-VARIANCE ALIGNMENT CHECK:**
+       1. Calculate: combined_xG = home_xG + away_xG
+       2. If combined_xG < 2.5: variance_multiplier MUST be 1.0
+       3. If combined_xG 2.5-3.5: variance_multiplier MUST be 1.0-1.3 (use 1.3 only if both offenses functional)
+       4. If combined_xG >= 3.5: variance_multiplier CAN be 1.3-1.5
+       5. If variance > 1.2 but combined_xG < 3.0: CRITICAL ERROR - realign variance to 1.0
+
+    ✅ **RULE CONTRADICTION CHECK:**
+       1. If selecting 'Over' pick: Verify Rule 48 (0-0 Ban) not violated
+       2. If selecting 'Under' pick: Verify Rule 53 (Defensive Clown Show) not violated
+       3. If both teams concede > 1.1 GF/game: Rule 53 active → CANNOT use Under 2.5/3.5
+       4. If invoking high-variance rule: Verify variance_multiplier >= 1.3
+
+    ⚠️ CRITICAL VALIDATION: You MUST provide valid numeric values for home_xG, away_xG, and variance_multiplier. These fields are MANDATORY for the Monte Carlo simulation and cannot be null or omitted. If your validation checklist reveals a conflict, you MUST resolve it by applying the higher-priority veto rule.
 
     Return your ruling STRICTLY in JSON:
     {{
@@ -909,11 +1064,12 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - **RULE 1: NO_BET**: If data is too chaotic/high variance.
     - **RULE 2: GOAL INTEGRITY**: You MUST NOT confirm an 'Under' pick if Agent 1's pitch shows combined xG > 2.8. You MUST NOT confirm an 'Over' pick if combined xG < 1.8.
     - **RULE 3: MANDATE 0: THE CRUCIBLE SIMULATION & THE ULTIMATE VETO (SURVIVAL OVER VALUE)**
-      The Supreme Court is the ultimate intelligence layer, acting as the Supreme Judge for a zero-tolerance Accumulator. You must be smarter than Agent 1 and Agent 2 by actively trying to destroy your own tentative bet before publishing it. You must pass these 4 steps:
+      The Supreme Court is the ultimate intelligence layer, acting as the Supreme Judge for a zero-tolerance Accumulator. You must be smarter than Agent 1 and Agent 2 by actively trying to destroy your own tentative bet before publishing it. You must pass these 5 steps:
       1. Odds Agnosticism: The 'Arbiter's Safe Pick' must be the absolute safest mathematical floor, completely regardless of how low the odds are (e.g., 1.05, 1.10). Decouple 'Value' from the Safe Pick entirely.
       2. The Final Stress Test: Take your tentative Safe Banker and forcefully run a final internal simulation. Push the bet through your own 'Variance Warning' and worst-case Game State Scenarios.
       3. The Relentless Downgrade (STRICT ANTI-RATIONALIZATION): If the tentative bet dies in the worst-case scoreline you just predicted in your Crucible Warning, you are strictly FORBIDDEN from publishing it. You are STRICTLY FORBIDDEN from rationalizing the risk. You CANNOT use phrases like 'However, this is unlikely', 'the team's form provides a buffer', or 'but home advantage should prevail'. If the Crucible outputs a scoreline that breaks your bet (e.g., a 0-1 scoreline breaking a 1X bet), the bet is COMPROMISED. You must instantly downgrade the market across the 17 available buckets (e.g., dropping 'BTTS' to 'Over 1.5 Goals', or 'Away Win' to 'Away +2.5 Handicap') until you find a market that mathematically survives the exact nightmare scenario you just predicted. Never step into the trap you just identified.
-      4. The Ultimate Veto (No Bet): If, after downgrading, you determine that absolutely NONE of the 17 markets can safely survive the game's variance without risking the accumulator, you must strike the match from the record. In the Safe Pick field, output exactly: 'NO BET: Market too volatile for Accumulator survival.' Protect the capital at all costs.
+      4. **MONTE CARLO THRESHOLD ENFORCEMENT (MANDATORY)**: After the Python Monte Carlo Simulator runs 10,000 iterations, you will receive the survival rate for your proposed Safe Banker. If the Safe Banker wins in FEWER than 70% of the simulated scorelines, you are STRICTLY FORBIDDEN from assigning it a confidence above 70%. You MUST either: (a) downgrade to a safer market that survives >75% of scenarios, or (b) declare NO_BET. You CANNOT override the Monte Carlo with subjective reasoning. The simulation is the mathematical ground truth. If Over 1.5 wins in only 66% of scenarios, your confidence CANNOT be 85% — this is a statistical fraud. Align your confidence to the simulator's output or downgrade the pick.
+      5. The Ultimate Veto (No Bet): If, after downgrading, you determine that absolutely NONE of the 17 markets can safely survive the game's variance without risking the accumulator, you must strike the match from the record. In the Safe Pick field, output exactly: 'NO BET: Market too volatile for Accumulator survival.' Protect the capital at all costs.
 
     - **RULE 4: THE ANTI-BIAS MANDATE**:
       1. **REJECT THE "FIRST-LEG" FALLACY**: Do not allow Agent 2 to overturn a goal market based on "first-leg caution" if the tactical metrics (possession, big chances) show two attacking systems colliding.
@@ -957,7 +1113,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     - **RULE 15: THE EV HARMONIZATION MANDATE**: If you or the Risk Manager downgrade the 'Primary Safe Pick' to a Double Chance (1X or X2) specifically because of a high Draw probability, defensive stalemates, or underdog resilience, your 'Alternative Value Pick (EV)' MUST NOT contradict this logic. You are STRICTLY FORBIDDEN from picking a straight Match Winner or aggressive Team Over Goals for the EV pick in these scenarios. Instead, the EV pick must aggressively embrace the tight game state. Acceptable EV pivots include: Outright Draw (X), Under 2.5 Goals, Underdog Asian Handicap (+1.5), or BTTS: Yes (if you project a 1-1 script). Align the risk.
 
-    - **RULE 16: THE STERILE OFFENSE TRAP**: You are strictly forbidden from backing ANY team (Home or Away) in the Match Winner (1X2), Double Chance (1X/X2), or Draw No Bet markets if they have scored FEWER total goals than total matches played in their recent venue or overall form (meaning they average < 1.0 goals per game). A strong defense is irrelevant if the team has zero "bounce-back" ability after conceding a lucky goal. If a team has an elite defense but a terrible offense, you MUST pivot your Banker away from team-dependent outcomes and strictly into structural markets (e.g., Under 2.5 Goals, Under 3.5 Goals, or BTTS: No). CRITICAL HIERARCHY: Rule 16 STRICTLY OVERRIDES Rule 4. If a dominant home team is a 'False Dominant' trap (Rule 4), but the away team suffers from a 'Sterile Offense' (Rule 16), you are STILL FORBIDDEN from backing the away team on a Double Chance (X2) or Match Winner. Do not trust a toothless underdog to win a fight. In the event of a Rule 4 and Rule 16 collision, you must abandon team-based markets entirely and default your Banker to Under 2.5 Goals or Under 3.5 Goals. THE RELEGATION FODDER EXCEPTION: You must waive the Sterile Offense Trap and you are FORBIDDEN from picking 'Under 2.5 Goals' ONLY IF the opponent possesses a catastrophically broken defense (conceding an average of >= 2.0 goals per game). Even a sterile offense can score 3 goals against a historically bad defense. In this specific scenario, abandon the Under and pivot to team-based markets (e.g., Home Win, Team Goals Over 1.5) or BTTS: No. THE SAMPLE SIZE MANDATE: The AI is strictly FORBIDDEN from triggering this rule if a team has played fewer than 5 matches in their current competition. Early-season metrics (Matchday 1 to 4) are statistically invalid. If the sample size is < 5, you CANNOT use this rule to override Agent 2's base projections.
+    - **RULE 16: THE STERILE OFFENSE TRAP**: You are strictly forbidden from backing ANY team (Home or Away) in the Match Winner (1X2), Double Chance (1X/X2), or Draw No Bet markets if they have scored FEWER total goals than total matches played in their recent venue or overall form (meaning they average < 1.0 goals per game). A strong defense is irrelevant if the team has zero "bounce-back" ability after conceding a lucky goal. If a team has an elite defense but a terrible offense, you MUST pivot your Banker away from team-dependent outcomes and strictly into structural markets (e.g., Under 2.5 Goals, Under 3.5 Goals, or BTTS: No). CRITICAL HIERARCHY: Rule 16 STRICTLY OVERRIDES Rule 4. If a dominant home team is a 'False Dominant' trap (Rule 4), but the away team suffers from a 'Sterile Offense' (Rule 16), you are STILL FORBIDDEN from backing the away team on a Double Chance (X2) or Match Winner. Do not trust a toothless underdog to win a fight. In the event of a Rule 4 and Rule 16 collision, you must abandon team-based markets entirely and default your Banker to Under 2.5 Goals or Under 3.5 Goals. THE RELEGATION FODDER EXCEPTION: You must waive the Sterile Offense Trap and you are FORBIDDEN from picking 'Under 2.5 Goals' ONLY IF the opponent possesses a catastrophically broken defense (conceding an average of >= 2.0 goals per game). Even a sterile offense can score 3 goals against a historically bad defense. In this specific scenario, abandon the Under and pivot to team-based markets (e.g., Home Win, Team Goals Over 1.5) or BTTS: No. THE SAMPLE SIZE MANDATE: The AI is strictly FORBIDDEN from triggering this rule if a team has played fewer than 8 matches in their current competition. Early-season metrics (Matchday 1 to 7) are statistically invalid. If the sample size is < 8, you CANNOT use this rule to override Agent 2's base projections.
 
     - **RULE 17: MANDATORY PRE-FLIGHT CHECK (SHOW YOUR WORK)**: Before you write your Final Ruling or select your Banker, you MUST internally calculate the Goal Ratio for both teams. You must start your 'View AI Internal Logic' or 'Final Ruling' section with a bracketed check, like this:
          [RULE 16 CHECK: Home Team Goals (X) vs Matches (Y) | Away Team Goals (A) vs Matches (B)]
@@ -971,9 +1127,9 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     - **RULE 21: THE CROSS-COMPETITION DATA WALL (CONTEXTUAL SEPARATION)**: When analyzing matches in inter-league tournaments or domestic cups, you are strictly FORBIDDEN from blending domestic league statistics with tournament statistics to justify a Safe Banker. A team averaging 2.5 goals per game in a weaker domestic league does not translate to continental competition against superior opposition. You MUST isolate and heavily weight the team's specific form within the current competition tier. If a team from a lower-coefficient league is playing away against a team from a higher-coefficient league, you must apply a severe 'Step-Up Penalty' to their offensive metrics. Never trust a domestic flat-track bully to score away in Europe/Continental play. If the data is mixed, pivot to structural game-state markets or declare 'NO BET'.
 
-    - **RULE 22: THE CUMULATIVE FATIGUE OVERRIDE (THE 120-MINUTE PENALTY)**: If a heavy underdog is entering a match following a 120-minute extra-time fixture within the last 7 days, their defensive block will inevitably collapse late in the game due to physical exhaustion. You are strictly FORBIDDEN from relying on their defensive metrics to justify an 'Under' Match Goals banker, a positive Asian Handicap, or a low-scoring game script. You must heavily upgrade the superior opponent's offensive ceiling, specifically targeting 2nd-half goals, team totals, or high-variance goal markets to capitalize on the underdog's inevitable late-game physical collapse. If no safe offensive market exists, declare 'NO BET'.
+    - **RULE 22: THE CUMULATIVE FATIGUE OVERRIDE (THE 120-MINUTE PENALTY - ASYMMETRIC FATIGUE)**: If a heavy underdog is entering a match following a 120-minute extra-time fixture within the last 7 days (and their opponent is NOT similarly fatigued), their defensive block will inevitably collapse late in the game due to physical exhaustion. You are strictly FORBIDDEN from relying on their defensive metrics to justify an 'Under' Match Goals banker, a positive Asian Handicap, or a low-scoring game script. You must heavily upgrade the superior opponent's offensive ceiling, specifically targeting 2nd-half goals, team totals, or high-variance goal markets to capitalize on the underdog's inevitable late-game physical collapse. If no safe offensive market exists, declare 'NO BET'. **CRITICAL:** This rule applies ONLY to asymmetric fatigue (one team fatigued, opponent fresh). If BOTH teams are fatigued, defer to Rule 51 or Rule 56.
 
-    - **RULE 23: THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 10 matches. Furthermore, you must NEVER assume a team's offensive output will drop to zero simply because starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance. If a match features a heavy favorite relying on a small-sample-size defense (< 10 games) facing an underdog with key suspensions, you must immediately ABANDON all team-based Banker markets (Match Winner, 1X2, Double Chance). You must pivot your Safe Banker to wide-margin, structural goal totals (e.g., Over 1.5 Goals or Under 3.5 Goals) to absorb this variance.
+    - **RULE 23: THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 8 matches. Furthermore, you must NEVER assume a team's offensive output will drop to zero simply because starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance. If a match features a heavy favorite relying on a small-sample-size defense (< 8 games) facing an underdog with key suspensions, you must immediately ABANDON all team-based Banker markets (Match Winner, 1X2, Double Chance). You must pivot your Safe Banker to wide-margin, structural goal totals (e.g., Over 1.5 Goals or Under 3.5 Goals) to absorb this variance.
 
     - **RULE 24: THE 17-MARKET HARMONIZATION MANDATE (ANTI-FRANKENSTEIN GRID)**:
       Before you output your final 17-market grid in `grid_corrections`, you MUST run a mandatory internal mathematical coherence pass. All 17 markets MUST tell the exact same story and align flawlessly with your predicted Correct Score. You are STRICTLY FORBIDDEN from outputting contradictory markets. Follow these absolute constraints:
@@ -1413,17 +1569,17 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - **RULE 40: THE EARLY-SEASON QUARANTINE (THE BOTTOM-FEEDER MIRAGE)**:
 
       **THE TRIGGER:**
-      If EITHER team has played fewer than 5 league matches in the current season, OR the AI identifies a match between two winless or relegation-threatened teams early in the campaign.
+      If EITHER team has played fewer than 8 league matches in the current season, OR the AI identifies a match between two winless or relegation-threatened teams early in the campaign.
 
       **THE TACTICAL REALITY:**
-      A sample size of fewer than 5 league matches is pure statistical noise. It cannot accurately model a sterile offense (Under) OR a leaky defense (Over). Early-season variance swings violently in BOTH directions — a team "averaging 0.3 goals per game" across 3 matches may simply not have had their high-scoring game yet. A team "conceding 2.5 per game" may have faced back-to-back elite opponents. Neither data point is statistically valid for a ceiling or floor bet in any direction.
+      A sample size of fewer than 8 league matches is pure statistical noise. It cannot accurately model a sterile offense (Under) OR a leaky defense (Over). Early-season variance swings violently in BOTH directions — a team "averaging 0.3 goals per game" across 3-7 matches may simply not have had their high-scoring game yet. A team "conceding 2.5 per game" may have faced back-to-back elite opponents. Neither data point is statistically valid for a ceiling or floor bet in any direction.
       Furthermore, when two poor teams meet, high GA averages are mirages — conceded against stronger opponents, NOT against fellow relegation candidates. Two desperate, winless managers will play 'not to lose,' producing a foul-heavy grind. The GA paper mirage evaporates when neither side has the offensive engine to punish it.
 
       **THE FORBIDDEN ACTION — MATCH GOALS QUARANTINE:**
-      When EITHER team has played fewer than 5 league matches, the Supreme Court is STRICTLY FORBIDDEN from using ANY Match Goals market as the Safe Banker. This applies universally in all directions:
+      When EITHER team has played fewer than 8 league matches, the Supreme Court is STRICTLY FORBIDDEN from using ANY Match Goals market as the Safe Banker. This applies universally in all directions:
       - FORBIDDEN: 'Over 0.5', 'Over 1.5', 'Over 2.5', 'Over 3.5', 'Over 4.5' — all upward goals markets.
-      - FORBIDDEN: 'Under 1.5', 'Under 2.5', 'Under 3.5', 'Under 4.5' — ALL downward ceilings without exception. When the sample is < 5, ceilings do not exist. 'Under 3.5 Goals' is still a ceiling bet derived from a 3-game sample. That is forbidden.
-      - FORBIDDEN: 'BTTS: Yes' or 'BTTS: No' — bilateral goal markets require reliable bilateral data that cannot exist in fewer than 5 matches.
+      - FORBIDDEN: 'Under 1.5', 'Under 2.5', 'Under 3.5', 'Under 4.5' — ALL downward ceilings without exception. When the sample is < 8, ceilings do not exist. 'Under 3.5 Goals' is still a ceiling bet derived from a 3-7 game sample. That is forbidden.
+      - FORBIDDEN: 'BTTS: Yes' or 'BTTS: No' — bilateral goal markets require reliable bilateral data that cannot exist in fewer than 8 matches.
       **THE CORE LOGIC:** You cannot declare "the data is too small" to trust an Over pick and simultaneously trust the exact same data to justify an Under pick. Small-sample quarantine applies in BOTH directions or it is not a quarantine — it is selective, intellectually dishonest cherry-picking.
 
       **THE MANDATORY PIVOT — IN STRICT ORDER:**
@@ -1431,10 +1587,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       2. **Extreme Variance Veto (NO BET)**: If the two squads are historically too evenly matched — no clear quality edge exists even from a long-term perspective — or if historical pedigree is ambiguous, you MUST invoke the NO BET protocol. Discard the match from the accumulator entirely. It is strictly better to drop a match than to manufacture a 'Safe Banker' from unreliable data.
 
       **OVERRIDE HIERARCHY:**
-      Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption), Rule 16 (Sterile Offense), and ALL goal-direction rules when the sample size for either team is fewer than 5 matches. Rule 33 and Rule 16 were designed for mid-season data with large, reliable samples — they MUST NOT be triggered by a 3-match average, regardless of how large or small the numbers appear.
+      Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption), Rule 16 (Sterile Offense), and ALL goal-direction rules when the sample size for either team is fewer than 8 matches. Rule 33 and Rule 16 were designed for mid-season data with large, reliable samples — they MUST NOT be triggered by a 3-7 match average, regardless of how large or small the numbers appear.
 
       **FINAL WARNING:**
-      Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. The only safe banker in an early-season quarantine is one anchored to the long-term pedigree of the squads — not the fragile averages of their first 3 or 4 games. If no Match Control floor can be confidently identified, declare NO BET and protect the accumulator.
+      Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. The only safe banker in an early-season quarantine is one anchored to the long-term pedigree of the squads — not the fragile averages of their first 3-7 games. If no Match Control floor can be confidently identified, declare NO BET and protect the accumulator.
 
     - **RULE 41: THE PLAYOFF PARALYSIS VETO (HIGH-STAKES FEAR)**:
       **THE TRIGGER:**
@@ -1552,15 +1708,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       The Safe Banker MUST be 'Over 1.5 Goals' to absorb the inevitable defensive clown-show.
 
-    - **RULE 51: THE FATIGUE FREEZE**:
+    - **RULE 51: THE SYMMETRIC FATIGUE GRIND**:
       **THE TRIGGER:**
-      A team is playing on short rest (rescheduled match, < 4 days rest) in a non-elite league (lacking deep bench rotation).
-      **THE TACTICAL REALITY (OFFENSIVE DEATH BEFORE DEFENSIVE DEATH):**
-      Fatigue destroys offensive transition and finishing quality before it destroys defense. Tired teams drop deep, kill the clock, and play for a point.
+      BOTH teams are playing on short rest (rescheduled match, < 4 days rest) in a non-elite league (lacking deep bench rotation).
+      **THE TACTICAL REALITY (MUTUAL EXHAUSTION):**
+      When BOTH teams are symmetrically fatigued, the match devolves into a slow-paced, low-intensity grind. Neither team has the energy to press aggressively or maintain high tempo. Both managers prioritize game management and accept the draw. This is DISTINCT from asymmetric fatigue (Rule 22/29).
       **THE FORBIDDEN ACTION:**
-      The AI is strictly FORBIDDEN from projecting a high-scoring shootout ('Over 2.5', 'BTTS: Yes') purely based on fatigue.
+      The AI is strictly FORBIDDEN from projecting a high-scoring shootout ('Over 2.5', 'BTTS: Yes') when symmetric fatigue is active.
       **THE PIVOT:**
       Pivot the Safe Banker to wide structural Unders ('Under 3.5 Goals' or '1st Half Under 1.5 Goals').
+      **CRITICAL HIERARCHY NOTE:** Rule 51 ONLY applies when BOTH teams are fatigued. If only ONE team is fatigued, defer to Rule 22 (Cumulative Fatigue Override) or Rule 29 (Asymmetric Fatigue Protocol).
 
     - **RULE 52: THE CHAOS MULTIPLIER (THE STERILE CEILING FALLACY)**:
       **THE TRIGGER:**
@@ -1582,6 +1739,9 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       If both defenses are leaky, the AI MUST abandon 'Under' markets and pivot to 'Over 1.5 Goals', 'BTTS: Yes', or Wide Asian Handicaps.
 
+      **CRITICAL HIERARCHY EXCEPTION — RULE 35 SUPREMACY:**
+      Before applying Rule 53, you MUST run the Dead Engine Check (Rule 35). If ANY team averages < 0.8 goals per game AND creates < 1.5 Big Chances per game, Rule 35 VETOES Rule 53 entirely. A team that literally cannot attack will not "magically wake up" against a bad defense — they are structurally flatlined. In this scenario, you MUST pivot to 'Under 3.5 Goals' or Match Control (1X, X2) instead of 'Over 1.5 Goals'. Rule 35 is the ONLY exception to Rule 53's absolute veto authority.
+
     - **RULE 55: THE HIGH-VARIANCE CONTAGION (THE CEILING BAN)**:
       **THE TRIGGER:**
       If either team in the matchup has a Total Match Goals average of > 3.0 (e.g., scoring 1.8 and conceding 1.6).
@@ -1592,17 +1752,18 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       You must pivot to 'Over 1.5 Goals', 'BTTS: Yes', or Match Control for the superior team. Do not cap the chaos.
 
-    - **RULE 56: BIOLOGICAL SUPREMACY (FATIGUE HIERARCHY)**:
+    - **RULE 56: BIOLOGICAL SUPREMACY (EXTREME FATIGUE HIERARCHY)**:
       **THE TRIGGER:**
-      Teams are playing on severe short rest (e.g., a tournament setting with 3 games in 6 days, or < 3 days rest).
+      Teams are playing on EXTREME short rest (e.g., a tournament setting with 3 games in 6 days, or < 3 days rest), AND this is symmetric (BOTH teams equally fatigued).
       **THE TACTICAL REALITY (DEAD LEGS EQUAL DEAD GAMES):**
-      Biological exhaustion destroys offensive transitions and clinical finishing. 
+      Extreme biological exhaustion destroys offensive transitions and clinical finishing when BOTH teams are equally affected.
       **THE HIERARCHY OVERRIDE:**
-      Rule 51 (The Fatigue Freeze) holds ABSOLUTE SUPREMACY over Rule 18 (Youth Variance) and Rule 43 (The Exhibition Void). 
+      Rule 56 (when triggered) holds ABSOLUTE SUPREMACY over Rule 18 (Youth Variance) and Rule 43 (The Exhibition Void).
       **THE FORBIDDEN ACTION:**
-      If severe fatigue is detected, the AI is strictly FORBIDDEN from projecting a shootout. It cannot bet 'Over 1.5' or 'BTTS: Yes' based on the fact that it is a 'Friendly' or a 'Youth Match'. Fatigue nullifies the chaos.
+      If extreme symmetric fatigue is detected, the AI is strictly FORBIDDEN from projecting a shootout. It cannot bet 'Over 1.5' or 'BTTS: Yes' based on the fact that it is a 'Friendly' or a 'Youth Match'. Extreme fatigue nullifies the chaos.
       **THE PIVOT:**
       The Safe Banker MUST pivot to 'Under 3.5 Goals' or '1st Half Under 1.5 Goals' to absorb the dead-legs grind.
+      **CRITICAL NOTE:** This rule is the EXTREME version of Rule 51. It requires < 3 days rest (not < 4). For asymmetric fatigue scenarios, use Rule 22 or Rule 29 instead.
 
     - **RULE 57: THE STERILITY SUPREMACY MANDATE (RULE 48 / RULE 53 ARE ABSOLUTE)**:
       Rule 48 (0-0 Anchor Ban) and Rule 53 (Defensive Clown Show) are ABSOLUTE VETOES with ZERO exceptions.
@@ -1778,14 +1939,47 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         payload["tools"] = [{"google_search": {}}]
 
         max_retries = 3
+        parsed = None
         for attempt in range(max_retries):
             # Also check cancelled during retry loops for ultra-responsive STOP button
             check_cancelled(match_id, job_id)
             try:
-                # Increased timeout to 300s to allow for deep reasoning + search
+                # Increased timeout to 600s to allow for deep reasoning + search
                 response = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, timeout=600)
                 response.raise_for_status()
+
+                response_json = response.json()
+                raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
+
+                parsed = json.loads(raw_text)
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    parsed = parsed[0]
+
+                # ===== PHYSICAL EXECUTION LOCK: RULE 48 / RULE 53 ENFORCEMENT =====
+                # If the Supreme Court's ruling contains the phrase 'anchor to 0-0' (in any case),
+                # it has committed an absolute violation of Rule 48 (0-0 Anchor Ban).
+                # This is a hard failure — we raise an exception to force the retry loop to regenerate.
+                ruling_text = ""
+                if isinstance(parsed, dict):
+                    ruling_text = str(parsed.get("Supreme_Court_Final_Ruling", "")).lower()
+                    ruling_text += str(parsed.get("supreme_court", {}).get("Supreme_Court_Final_Ruling", "")).lower()
+                if "anchor to 0-0" in ruling_text or "anchored to 0-0" in ruling_text or "0-0 anchor" in ruling_text:
+                    print(f"🚨 [RULE 48 VIOLATION DETECTED] Supreme Court attempted a 0-0 Anchor. Forcing regeneration (attempt {attempt+1}/{max_retries})...")
+                    raise ValueError("RULE_48_VIOLATION: '0-0 Anchor' detected in Supreme Court output. This is an absolute forbidden action. Regenerating.")
+                # ===== END EXECUTION LOCK =====
+
+                # If we reach here, validation passed - break out of retry loop
                 break
+
+            except ValueError as ve:
+                # Rule 48 violation - retry if attempts remain
+                if "RULE_48_VIOLATION" in str(ve) and attempt < max_retries - 1:
+                    import time
+                    print(f"⏳ Regenerating Supreme Court ruling (attempt {attempt + 2}/{max_retries})...")
+                    time.sleep(5)
+                    continue
+                else:
+                    raise
             except requests.exceptions.RequestException as e:
                 if attempt < max_retries - 1:
                     import time
@@ -1793,37 +1987,42 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                     time.sleep(5)
                 else:
                     raise
-
-        response_json = response.json()
-        raw_text = response_json['candidates'][0]['content']['parts'][0]['text']
-
-        parsed = json.loads(raw_text)
-        if isinstance(parsed, list) and len(parsed) > 0:
-            parsed = parsed[0]
-
-        # ===== PHYSICAL EXECUTION LOCK: RULE 48 / RULE 53 ENFORCEMENT =====
-        # If the Supreme Court's ruling contains the phrase 'anchor to 0-0' (in any case),
-        # it has committed an absolute violation of Rule 48 (0-0 Anchor Ban).
-        # This is a hard failure — we raise an exception to force the retry loop to regenerate.
-        ruling_text = ""
-        if isinstance(parsed, dict):
-            ruling_text = str(parsed.get("Supreme_Court_Final_Ruling", "")).lower()
-            ruling_text += str(parsed.get("supreme_court", {}).get("Supreme_Court_Final_Ruling", "")).lower()
-        if "anchor to 0-0" in ruling_text or "anchored to 0-0" in ruling_text or "0-0 anchor" in ruling_text:
-            print(f"🚨 [RULE 48 VIOLATION DETECTED] Supreme Court attempted a 0-0 Anchor. Forcing regeneration (attempt {attempt+1}/{max_retries})...")
-            raise ValueError("RULE_48_VIOLATION: '0-0 Anchor' detected in Supreme Court output. This is an absolute forbidden action. Regenerating.")
-        # ===== END EXECUTION LOCK =====
             
         try:
             from src.rag.simulator import run_crucible_simulation
             
             # Robust extraction of xG stats to prevent float(None) crashes
+            # NOTE: Supreme Court is instructed to provide these values (lines 928-931),
+            # but LLMs occasionally omit them. This fallback ensures simulation always runs.
             raw_home_xg = parsed.get("home_xG")
             raw_away_xg = parsed.get("away_xG")
             raw_var = parsed.get("variance_multiplier")
-            
-            h_xg = float(raw_home_xg) if raw_home_xg is not None else 1.0
-            a_xg = float(raw_away_xg) if raw_away_xg is not None else 1.0
+
+            # Intelligent fallback: extract from match_data if Supreme Court failed to provide xG
+            if raw_home_xg is None or raw_away_xg is None:
+                try:
+                    # Try to extract from advanced_stats in match_data
+                    home_metrics = match_data.get("advanced_stats", {}).get("home_team", {}).get("metrics", {})
+                    away_metrics = match_data.get("advanced_stats", {}).get("away_team", {}).get("metrics", {})
+
+                    # Use xG from advanced stats if available, otherwise goals per game
+                    if raw_home_xg is None:
+                        h_xg = home_metrics.get("Expected goals (xG) per game") or home_metrics.get("Goals scored per game") or 1.3
+                    else:
+                        h_xg = float(raw_home_xg)
+
+                    if raw_away_xg is None:
+                        a_xg = away_metrics.get("Expected goals (xG) per game") or away_metrics.get("Goals scored per game") or 1.1
+                    else:
+                        a_xg = float(raw_away_xg)
+                except (AttributeError, KeyError, TypeError):
+                    # Ultimate fallback: use league-adjusted neutral values
+                    h_xg = float(raw_home_xg) if raw_home_xg is not None else 1.3  # Home advantage
+                    a_xg = float(raw_away_xg) if raw_away_xg is not None else 1.1
+            else:
+                h_xg = float(raw_home_xg)
+                a_xg = float(raw_away_xg)
+
             v_mult = float(raw_var) if raw_var is not None else 1.0
 
             # Robust extraction of Agent 2's pick (handling fallback to Agent 1's safe_bet_tip)

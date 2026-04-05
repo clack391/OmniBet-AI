@@ -12,9 +12,36 @@ from scipy.stats import nbinom
 #
 # RHO_TABLE[home_goals][away_goals] = adjustment multiplier
 # Only applies to scorelines where max(h, a) <= 1 (the four "edge" cells).
-RHO = -0.13  # Calibrated for football: slightly negative = low-score bias
+RHO_STANDARD = -0.13  # Calibrated for evenly-matched football
+RHO_MISMATCH = -0.10  # Reduced bias for mismatched games (reduces 0-0 over-weighting)
+RHO_HIGH_SCORING = -0.05  # Minimal bias for high-scoring games (combined xG > 3.0)
 
-def dixon_coles_weight(h: int, a: int, mu_h: float, mu_a: float, rho: float = RHO) -> float:
+def calculate_rho(home_xG: float, away_xG: float) -> float:
+    """
+    Dynamically adjusts rho based on:
+    1. Combined xG (high-scoring game detection)
+    2. xG imbalance (mismatch detection)
+
+    For high-scoring games (combined xG > 3.0), Dixon-Coles should apply
+    minimal 0-0 correction because the base probability of 0-0 is already
+    very low. Standard Dixon-Coles was calibrated on low-scoring English
+    football from the 1990s and over-corrects for modern high-xG matches.
+    """
+    combined_xG = home_xG + away_xG
+    xG_ratio = max(home_xG, away_xG) / max(min(home_xG, away_xG), 0.5)
+
+    # Priority 1: High-scoring games need minimal 0-0 correction
+    if combined_xG > 3.0:
+        return RHO_HIGH_SCORING  # -0.05 for explosive matches
+
+    # Priority 2: Mismatched games (one-sided)
+    if xG_ratio > 1.5:
+        return RHO_MISMATCH  # -0.10 for mismatches
+
+    # Default: Standard evenly-matched games
+    return RHO_STANDARD  # -0.13 for normal matches
+
+def dixon_coles_weight(h: int, a: int, mu_h: float, mu_a: float, rho: float) -> float:
     """
     Returns the Dixon-Coles correction multiplier for a (h, a) scoreline.
     Only meaningful for low-scoring outcomes (h <= 1 and a <= 1).
@@ -85,6 +112,9 @@ def run_crucible_simulation(home_xG: float, away_xG: float, variance_multiplier:
     """
     N = 10_000
 
+    # Calculate dynamic rho based on xG imbalance
+    rho = calculate_rho(home_xG, away_xG)
+
     # 1. Sample goal distributions (Upgrade 2: Poisson vs NegBinom based on chaos level)
     home_goals_raw = sample_goals(home_xG, variance_multiplier, N)
     away_goals_raw = sample_goals(away_xG, variance_multiplier, N)
@@ -146,14 +176,26 @@ def run_crucible_simulation(home_xG: float, away_xG: float, variance_multiplier:
             return away_score >= home_score
 
         # Asian Handicap
-        elif "asian handicap" in pick or "ah " in pick or "+" in pick or "-" in pick:
+        elif "asian handicap" in pick or "ah " in pick or "handicap" in pick or "+" in pick or "-" in pick:
             match = re.search(r'([+-]\d+(?:\.\d+)?)', pick)
             if match:
                 handicap = float(match.group(1))
-                if "home" in pick or " 1 " in pick or pick.endswith("1"):
+                # Check if "home" or "away" is explicitly mentioned
+                if "home" in pick or " 1 " in pick or pick.endswith(" 1"):
                     return (home_score + handicap) >= away_score
-                elif "away" in pick or " 2 " in pick or pick.endswith("2"):
+                elif "away" in pick or " 2 " in pick or pick.endswith(" 2"):
                     return (away_score + handicap) >= home_score
+                # If neither home/away mentioned, infer from handicap sign convention:
+                # Negative handicap typically means favorite (if at start of string, assume home)
+                # Positive handicap typically means underdog
+                elif handicap > 0:
+                    # Positive handicap usually for underdog (commonly away, but context-dependent)
+                    # Default to away getting the handicap
+                    return (away_score + handicap) >= home_score
+                elif handicap < 0:
+                    # Negative handicap for favorite (commonly home, but context-dependent)
+                    # Default to home giving the handicap (home score adjusted)
+                    return (home_score + handicap) >= away_score
 
         # Default fallback for corners/cards markets we cannot simulate with xG
         return True
@@ -168,17 +210,26 @@ def run_crucible_simulation(home_xG: float, away_xG: float, variance_multiplier:
         h = int(home_goals_raw[i])
         a = int(away_goals_raw[i])
 
-        # === Dixon-Coles Rejection Sampling ===
-        # For low-scoring scorelines (h<=1, a<=1), compute the correction weight.
-        # If a random draw falls outside the weight, resample once to correct bias.
-        dc_weight = dixon_coles_weight(h, a, mu_h, mu_a)
-        if dc_weight < 1.0 and np.random.random() > dc_weight:
-            # The standard Poisson overweighted this scoreline; resample to correct
-            h = int(sample_goals(home_xG, variance_multiplier, 1)[0])
-            a = int(sample_goals(away_xG, variance_multiplier, 1)[0])
-        elif dc_weight > 1.0 and np.random.random() < (dc_weight - 1.0):
-            # Boost: accept this low-scoring result (already accepted above, no re-roll)
-            pass
+        # === Dixon-Coles Acceptance-Rejection Sampling ===
+        # CRITICAL: Only apply Dixon-Coles for STANDARD POISSON (variance <= 1.2).
+        # Negative Binomial already accounts for goal correlation through its
+        # overdispersion parameter. Applying Dixon-Coles on top of NegBinom
+        # creates double-counting and artificially inflates 0-0 probability.
+        if variance_multiplier <= CHAOS_THRESHOLD:
+            # For low-scoring scorelines (h<=1, a<=1), apply the correlation adjustment.
+            # dc_weight < 1.0: Poisson overestimates this scoreline → reject with probability (1 - dc_weight)
+            # dc_weight > 1.0: Poisson underestimates this scoreline → accept always (no rejection)
+            dc_weight = dixon_coles_weight(h, a, mu_h, mu_a, rho)
+
+            # Only apply rejection if Poisson overweighted (dc_weight < 1.0)
+            if dc_weight < 1.0:
+                # Reject this sample with probability (1 - dc_weight)
+                if np.random.random() > dc_weight:
+                    # Rejected - resample once
+                    h = int(sample_goals(home_xG, variance_multiplier, 1)[0])
+                    a = int(sample_goals(away_xG, variance_multiplier, 1)[0])
+            # If dc_weight >= 1.0, accept the sample as-is (Poisson underweighted or neutral)
+        # If using NegBinom (variance > 1.2), skip Dixon-Coles entirely and accept raw sample
 
         # Evaluate Picks
         if evaluate_pick(h, a, agent_2_pick):
@@ -205,9 +256,25 @@ def run_crucible_simulation(home_xG: float, away_xG: float, variance_multiplier:
 
     # Describe the engine used for transparency
     engine_mode = "NegBinom(Chaos)" if variance_multiplier > CHAOS_THRESHOLD else "Poisson(Standard)"
+
+    # Dixon-Coles is only applied to Poisson, not NegBinom
+    if variance_multiplier <= CHAOS_THRESHOLD:
+        # Determine rho label based on value
+        if rho == RHO_HIGH_SCORING:
+            rho_label = "High-Scoring"
+        elif rho == RHO_MISMATCH:
+            rho_label = "Mismatch"
+        else:
+            rho_label = "Standard"
+        dc_description = f" + Dixon-Coles {rho_label} (ρ={rho:.2f})"
+    else:
+        # NegBinom mode - Dixon-Coles not applied
+        dc_description = ""
+
     audit_string = (
         f"[SIMULATION AUDIT: 10,000 Monte Carlo iterations. "
-        f"Engine: {engine_mode} + Dixon-Coles Adjustment (ρ={RHO}). "
+        f"Parameters: Home xG={home_xG:.2f}, Away xG={away_xG:.2f}, Variance={variance_multiplier:.2f}. "
+        f"Engine: {engine_mode}{dc_description}. "
         f"Agent 2 Pick ({agent_2_pick}) Survival: {a2_win_rate:.1f}%. "
         f"Supreme Court Pick ({supreme_court_pick}) Survival: {sc_win_rate:.1f}%.]"
     )

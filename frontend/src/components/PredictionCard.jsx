@@ -463,6 +463,24 @@ const PredictionCard = ({ prediction }) => {
                                     <h5 className="text-[10px] font-bold text-amber-500/70 uppercase tracking-widest mb-3 flex items-center gap-2">
                                         <BarChart2 className="w-3 h-3" /> 10,000 Monte Carlo Variations (Goal Distribution)
                                     </h5>
+
+                                    {/* Simulation Audit String - Parameters Display */}
+                                    {prediction.supreme_court?.simulation_audit && (
+                                        <div className="mb-4 p-4 bg-gradient-to-br from-amber-950/40 to-orange-950/40 rounded-lg border-2 border-amber-500/30 shadow-lg shadow-amber-500/10">
+                                            <div className="flex items-start gap-3">
+                                                <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <h6 className="text-[10px] font-black text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                                        🔬 Simulation Parameters
+                                                    </h6>
+                                                    <p className="text-xs font-mono text-amber-300/90 leading-relaxed break-words">
+                                                        {prediction.supreme_court.simulation_audit}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-end gap-2 h-20 w-full mt-2 relative">
                                         {Object.entries(prediction.supreme_court.simulation_data).map(([goals, count]) => {
                                             const height = Math.max(5, (count / 10000) * 100);
