@@ -187,6 +187,15 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
         }
     };
 
+    const calcTotalOdds = (picks) => {
+        if (!picks || picks.length === 0) return null;
+        const total = picks.reduce((acc, pick) => {
+            const o = parseFloat(pick.odds);
+            return !isNaN(o) && o > 0 ? acc * o : acc;
+        }, 1);
+        return parseFloat(total.toFixed(2));
+    };
+
     const renderPickCard = (pick, tierKey) => {
         const accentColor = tierKey === 'tier1' ? 'amber' : tierKey === 'tier2' ? 'blue' : 'rose';
         const tipLabel = pick.market && (pick.chosen_tip || pick.safe_bet_tip) && !(pick.chosen_tip || pick.safe_bet_tip).toUpperCase().includes(pick.market.toUpperCase())
@@ -448,6 +457,12 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
                                 </h3>
                                 <span className="px-2 py-0.5 rounded-full bg-blue-500/20 border border-blue-500/30 text-[10px] font-bold text-blue-300 tracking-widest">75–84.9% SURVIVAL</span>
                             </div>
+                            {calcTotalOdds(bestPicks.tier_2_picks) && (
+                                <div className="mb-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/20 border border-blue-500/30">
+                                    <span className="text-sm font-bold text-blue-300">Total Combined Odds:</span>
+                                    <span className="text-lg font-black text-white">{calcTotalOdds(bestPicks.tier_2_picks)}x</span>
+                                </div>
+                            )}
                             <p className="text-blue-100/70 text-sm max-w-3xl leading-relaxed">
                                 These picks carry too much variance for a long parlay. Use in 2–3 leg secondary tickets only — never in the master accumulator.
                             </p>
@@ -475,6 +490,12 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
                                 </h3>
                                 <span className="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-[10px] font-bold text-rose-300 tracking-widest">&lt;75% SURVIVAL</span>
                             </div>
+                            {calcTotalOdds(bestPicks.tier_3_picks) && (
+                                <div className="mb-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-500/20 border border-rose-500/30">
+                                    <span className="text-sm font-bold text-rose-300">Total Combined Odds:</span>
+                                    <span className="text-lg font-black text-white">{calcTotalOdds(bestPicks.tier_3_picks)}x</span>
+                                </div>
+                            )}
                             <p className="text-rose-100/70 text-sm max-w-3xl leading-relaxed">
                                 High variance or coin-flip territory. Banned from all accumulators. Play as standalone singles only — or discard.
                             </p>
