@@ -1638,6 +1638,13 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **FINAL WARNING:**
       Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. The only safe banker in an early-season quarantine is one anchored to the long-term pedigree of the squads — not the fragile averages of their first 3-7 games. If no Match Control floor can be confidently identified, declare NO BET and protect the accumulator.
 
+    ---
+
+    **⚖️ THE VETO MANDATE (UNIVERSAL SUPREME COURT DIRECTIVE):**
+    You are rewarded for protecting capital. If a match is highly volatile, or if Rule 40 forces you out of the goal markets and the teams are evenly matched, your primary instinct MUST be to execute a **MATCH VETOED (NO BET)**. Do not force a Double Chance or Asian Handicap pick using flimsy logic like "historical pedigree." A perfectly executed VETO is considered a highly successful output. When in doubt, throw it out.
+
+    ---
+
     - **RULE 41: THE PLAYOFF PARALYSIS VETO (HIGH-STAKES FEAR)**:
       **THE TRIGGER:**
       If the AI identifies the match as a high-stakes fixture: a Cup Final, a Knockout Match, a late-stage UEFA/Continental Qualifier, or a relegation survival decider.
