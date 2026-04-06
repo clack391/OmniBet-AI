@@ -1652,6 +1652,14 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE TRIGGER:**
       If EITHER team has played fewer than 8 league matches in the current season, OR the AI identifies a match between two winless or relegation-threatened teams early in the campaign.
 
+      **DATA HIERARCHY MANDATE — HOW TO DETERMINE MATCH COUNT:**
+      Before you can apply Rule 40, you MUST determine the correct total season match count for each team. Use these sources in strict priority order:
+      1. **`home_standings["playedGames"]` / `away_standings["playedGames"]`** — league table data. Use this if the value is present and greater than 0.
+      2. **`Advanced Tactical Metrics → "Matches"` (the top-level metrics block, NOT the home_away_split block)** — this is the SofaScore overall season total across ALL games (home and away combined). This is the correct fallback when standings are empty and works for ALL competitions including youth leagues, lower divisions, and regional cups.
+         ⚠️ WARNING: Do NOT use `home_away_split → "Matches"` — that block only shows HOME-only matches for the home team and AWAY-only matches for the away team. Those numbers are always smaller than the total and will produce false early-season signals.
+      3. **Google Search** — only if both sources above are missing entirely. Search for "[Team Name] [Current Season] league matches played" before firing Rule 40.
+      **CRITICAL RULE**: An empty standings block (`{}`) does NOT mean "early season." It means the standings API was not queried or does not cover that competition (e.g., when SofaScore is the primary data provider, or for youth/lower-division leagues). You MUST check `Advanced Tactical Metrics → "Matches"` before concluding any team is in an early-season state. Do NOT fire Rule 40 purely because standings data is absent.
+
       **THE TACTICAL REALITY:**
       A sample size of fewer than 8 league matches is pure statistical noise. It cannot accurately model a sterile offense (Under) OR a leaky defense (Over). Early-season variance swings violently in BOTH directions — a team "averaging 0.3 goals per game" across 3-7 matches may simply not have had their high-scoring game yet. A team "conceding 2.5 per game" may have faced back-to-back elite opponents. Neither data point is statistically valid for a ceiling or floor bet in any direction.
       Furthermore, when two poor teams meet, high GA averages are mirages — conceded against stronger opponents, NOT against fellow relegation candidates. Two desperate, winless managers will play 'not to lose,' producing a foul-heavy grind. The GA paper mirage evaporates when neither side has the offensive engine to punish it.
