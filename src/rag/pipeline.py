@@ -1659,28 +1659,36 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE FORBIDDEN ACTION — MATCH GOALS QUARANTINE:**
       When EITHER team has played fewer than 8 league matches, the Supreme Court is STRICTLY FORBIDDEN from using the following Match Goals markets as the Safe Banker:
       - FORBIDDEN: 'Over 2.5', 'Over 3.5' — require reliable mid-season bilateral offensive data that a <8-match sample cannot provide.
-      - FORBIDDEN: 'Under 2.5', 'Under 3.5' — precise goal ceilings derived from a <8-match sample are statistical fraud.
+      - FORBIDDEN: 'Under 2.5' — a precise ceiling that requires valid defensive data neither team has yet produced.
       - FORBIDDEN: 'BTTS: Yes' or 'BTTS: No' — bilateral goal markets require reliable bilateral data that cannot exist in fewer than 8 matches.
 
-      **SIMULATION-GATED EXCEPTION — TWO WIDE STRUCTURAL MARKETS ARE PERMITTED:**
-      - PERMITTED: **'Over 1.5 Goals'** — a structural floor requiring only 2+ total goals. This does NOT require knowing which team will score or whether any defense is reliable. It only requires a combined xG estimate, which the Supreme Court always calculates. It is an xG-anchored bet, not a sample-anchored bet.
-      - PERMITTED: **'Under 4.5 Goals'** — an extremely wide ceiling requiring fewer than 5 total goals. Structurally robust across virtually all early-season variance scenarios. Validated by xG, not league averages.
-      **THE CORE LOGIC:** Over 1.5 and Under 4.5 are the only goals markets that are independent of team-result uncertainty and small-sample defensive data. Every other goals market requires bilateral statistical precision that <8 matches cannot deliver. These two wide structural markets are anchored entirely to the Supreme Court's own xG projection, which is always available regardless of season length.
+      **THE PERMITTED MENU — FOUR xG-ANCHORED STRUCTURAL MARKETS:**
+      These four markets do NOT require team-result certainty or small-sample defensive averages. They are validated entirely by the Supreme Court's own xG projection, which is always available regardless of season length. The Supreme Court MUST evaluate all four and select the one its xG projection makes safest:
+
+      - **'Over 0.5 Goals'** — the widest possible floor. Loses ONLY on a 0-0 draw. Typical survival: 88–95%+. This should be the FIRST market evaluated in every early-season quarantine.
+      - **'Under 3.5 Goals'** — a moderately wide ceiling. Valid when combined xG is very low (≤ 1.8). Loses if the match produces 4+ total goals.
+      - **'Under 4.5 Goals'** — an extremely wide ceiling. Valid when combined xG ≤ 2.5. Loses only if the match produces 5+ total goals — rare even in chaotic early-season fixtures.
+      - **'Over 1.5 Goals'** — a wide floor requiring 2+ total goals. Valid when combined xG ≥ 2.0. Loses if the match ends 0-0 or 1-0 in either direction.
+
+      **THE CORE LOGIC:** These four markets are structurally anchored to xG, not to league averages. Every other goals market requires bilateral statistical precision that <8 matches cannot deliver and remains fully banned.
 
       **THE MANDATORY PIVOT — IN STRICT ORDER:**
-      1. **xG-Anchored Structural Floor (attempt first):**
-         - If combined xG (home xG + away xG) is **≤ 2.5**: Select **'Under 4.5 Goals'** as the Safe Banker. This wide ceiling survives almost all early-season chaos regardless of defensive data quality.
-         - If combined xG (home xG + away xG) is **≥ 2.0**: Consider **'Over 1.5 Goals'** as the Safe Banker. This wide floor is structurally robust when both teams are expected to create meaningful chances.
-         - If BOTH conditions apply (combined xG between 2.0 and 2.5), **prefer 'Under 4.5 Goals'** — it is the structurally safer of the two.
-         - The Monte Carlo simulation will validate this pick after your ruling. Your xG estimate is always available regardless of how many league matches have been played — trust it.
-      2. **Match Control (Double Chance)**: If xG data is too ambiguous to anchor either structural floor (e.g., extreme variance, one team's xG is near zero, or both markets feel equally unreliable), pivot to Double Chance (1X or X2) based on overall historical squad pedigree — NOT early-season statistics.
-      3. **Extreme Variance Veto (NO BET)**: If steps 1 and 2 both fail — no structural floor is safe and no clear pedigree edge exists — you MUST invoke the NO BET protocol. Discard the match entirely. It is strictly better to drop a match than to manufacture a banker.
+      1. **xG-Anchored Structural Evaluation (always attempt first):**
+         Evaluate all four permitted markets against your combined xG projection (home xG + away xG) and select the safest one:
+         - **Always evaluate 'Over 0.5' first** — it loses only on a clean double clean sheet (0-0). Unless both teams have near-zero xG (combined < 0.5), this is structurally valid.
+         - **If combined xG ≤ 1.8** → 'Under 3.5 Goals' is your primary structural ceiling. The match is expected to be low-scoring; 4+ goals would require a dramatic xG overperformance.
+         - **If combined xG ≤ 2.5** → 'Under 4.5 Goals' is a valid wide ceiling. The match is unlikely to produce 5+ goals regardless of defensive quality.
+         - **If combined xG ≥ 2.0** → 'Over 1.5 Goals' is a valid wide floor. Both teams are expected to create genuine chances; 0-0 or 1-0 would require dramatic underperformance from both attacks.
+         - **When multiple markets are valid**, choose the one with the highest projected structural safety. Prefer ceiling bets (Under) over floor bets (Over) as they are less dependent on attacking execution.
+         - The Monte Carlo simulation validates your pick after the ruling — trust your xG estimate.
+      2. **Match Control (Double Chance)**: Only if xG data is too ambiguous to anchor ANY of the four structural markets (e.g., extreme variance inputs, one team's xG is near zero with no reliable estimate), pivot to Double Chance (1X or X2) based on long-term historical squad pedigree — NOT early-season statistics.
+      3. **Extreme Variance Veto (NO BET)**: If steps 1 and 2 both fail — no structural market is safe and no clear pedigree edge exists — you MUST invoke the NO BET protocol. Discard the match entirely. Protecting capital is always the correct output when no safe banker exists.
 
       **OVERRIDE HIERARCHY:**
       Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption), Rule 16 (Sterile Offense), and ALL goal-direction rules when the sample size for either team is fewer than 8 matches. Rule 33 and Rule 16 were designed for mid-season data with large, reliable samples — they MUST NOT be triggered by a 3-7 match average, regardless of how large or small the numbers appear.
 
       **FINAL WARNING:**
-      Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. In an early-season quarantine, anchor first to the widest structural goal floors your xG projection supports. Only fall back to Match Control pedigree if the xG anchors are too weak. If nothing holds, declare NO BET and protect the accumulator.
+      Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. In an early-season quarantine, anchor first to the widest structural goal market your xG projection supports. Evaluate all four permitted markets before falling back to Double Chance. If nothing holds, declare NO BET and protect the accumulator.
 
     ---
 
