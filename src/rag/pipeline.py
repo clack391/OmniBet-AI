@@ -1657,21 +1657,30 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       Furthermore, when two poor teams meet, high GA averages are mirages — conceded against stronger opponents, NOT against fellow relegation candidates. Two desperate, winless managers will play 'not to lose,' producing a foul-heavy grind. The GA paper mirage evaporates when neither side has the offensive engine to punish it.
 
       **THE FORBIDDEN ACTION — MATCH GOALS QUARANTINE:**
-      When EITHER team has played fewer than 8 league matches, the Supreme Court is STRICTLY FORBIDDEN from using ANY Match Goals market as the Safe Banker. This applies universally in all directions:
-      - FORBIDDEN: 'Over 0.5', 'Over 1.5', 'Over 2.5', 'Over 3.5', 'Over 4.5' — all upward goals markets.
-      - FORBIDDEN: 'Under 1.5', 'Under 2.5', 'Under 3.5', 'Under 4.5' — ALL downward ceilings without exception. When the sample is < 8, ceilings do not exist. 'Under 3.5 Goals' is still a ceiling bet derived from a 3-7 game sample. That is forbidden.
+      When EITHER team has played fewer than 8 league matches, the Supreme Court is STRICTLY FORBIDDEN from using the following Match Goals markets as the Safe Banker:
+      - FORBIDDEN: 'Over 2.5', 'Over 3.5' — require reliable mid-season bilateral offensive data that a <8-match sample cannot provide.
+      - FORBIDDEN: 'Under 2.5', 'Under 3.5' — precise goal ceilings derived from a <8-match sample are statistical fraud.
       - FORBIDDEN: 'BTTS: Yes' or 'BTTS: No' — bilateral goal markets require reliable bilateral data that cannot exist in fewer than 8 matches.
-      **THE CORE LOGIC:** You cannot declare "the data is too small" to trust an Over pick and simultaneously trust the exact same data to justify an Under pick. Small-sample quarantine applies in BOTH directions or it is not a quarantine — it is selective, intellectually dishonest cherry-picking.
+
+      **SIMULATION-GATED EXCEPTION — TWO WIDE STRUCTURAL MARKETS ARE PERMITTED:**
+      - PERMITTED: **'Over 1.5 Goals'** — a structural floor requiring only 2+ total goals. This does NOT require knowing which team will score or whether any defense is reliable. It only requires a combined xG estimate, which the Supreme Court always calculates. It is an xG-anchored bet, not a sample-anchored bet.
+      - PERMITTED: **'Under 4.5 Goals'** — an extremely wide ceiling requiring fewer than 5 total goals. Structurally robust across virtually all early-season variance scenarios. Validated by xG, not league averages.
+      **THE CORE LOGIC:** Over 1.5 and Under 4.5 are the only goals markets that are independent of team-result uncertainty and small-sample defensive data. Every other goals market requires bilateral statistical precision that <8 matches cannot deliver. These two wide structural markets are anchored entirely to the Supreme Court's own xG projection, which is always available regardless of season length.
 
       **THE MANDATORY PIVOT — IN STRICT ORDER:**
-      1. **Match Control (Double Chance)**: Pivot the Safe Banker to Double Chance (1X or X2) based on the overall, historical squad quality of the two clubs — NOT their early-season statistics. A top-flight club in game 3 of the season still has decades of squad pedigree to justify a 1X. An elite away side has a long-term track record that validates X2. Use historical quality differential, not the 3-game sample.
-      2. **Extreme Variance Veto (NO BET)**: If the two squads are historically too evenly matched — no clear quality edge exists even from a long-term perspective — or if historical pedigree is ambiguous, you MUST invoke the NO BET protocol. Discard the match from the accumulator entirely. It is strictly better to drop a match than to manufacture a 'Safe Banker' from unreliable data.
+      1. **xG-Anchored Structural Floor (attempt first):**
+         - If combined xG (home xG + away xG) is **≤ 2.5**: Select **'Under 4.5 Goals'** as the Safe Banker. This wide ceiling survives almost all early-season chaos regardless of defensive data quality.
+         - If combined xG (home xG + away xG) is **≥ 2.0**: Consider **'Over 1.5 Goals'** as the Safe Banker. This wide floor is structurally robust when both teams are expected to create meaningful chances.
+         - If BOTH conditions apply (combined xG between 2.0 and 2.5), **prefer 'Under 4.5 Goals'** — it is the structurally safer of the two.
+         - The Monte Carlo simulation will validate this pick after your ruling. Your xG estimate is always available regardless of how many league matches have been played — trust it.
+      2. **Match Control (Double Chance)**: If xG data is too ambiguous to anchor either structural floor (e.g., extreme variance, one team's xG is near zero, or both markets feel equally unreliable), pivot to Double Chance (1X or X2) based on overall historical squad pedigree — NOT early-season statistics.
+      3. **Extreme Variance Veto (NO BET)**: If steps 1 and 2 both fail — no structural floor is safe and no clear pedigree edge exists — you MUST invoke the NO BET protocol. Discard the match entirely. It is strictly better to drop a match than to manufacture a banker.
 
       **OVERRIDE HIERARCHY:**
       Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption), Rule 16 (Sterile Offense), and ALL goal-direction rules when the sample size for either team is fewer than 8 matches. Rule 33 and Rule 16 were designed for mid-season data with large, reliable samples — they MUST NOT be triggered by a 3-7 match average, regardless of how large or small the numbers appear.
 
       **FINAL WARNING:**
-      Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. The only safe banker in an early-season quarantine is one anchored to the long-term pedigree of the squads — not the fragile averages of their first 3-7 games. If no Match Control floor can be confidently identified, declare NO BET and protect the accumulator.
+      Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. In an early-season quarantine, anchor first to the widest structural goal floors your xG projection supports. Only fall back to Match Control pedigree if the xG anchors are too weak. If nothing holds, declare NO BET and protect the accumulator.
 
     ---
 
