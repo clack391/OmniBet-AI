@@ -620,49 +620,84 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
         """
 
     prompt = f"""
-    You are a Chief Risk Officer building the ultimate, safest sports accumulator.
-    
-    ### Task
-    Review the following JSON list of analyzed matches. Each match now contains a `primary_pick`, an `alternative_pick`, a `scenario_analysis`, and often a `supreme_court` ruling.
-    Your goal is to filter out the risky matches entirely, and for the matches you KEEP, select EXACTLY ONE tip that balances supreme safety with reasonable accumulator odds.
-    - **RULE 54: THE CONSENSUS AUDIT (THE ENSEMBLE PIPELINE)**:
-      After the Supreme Court generates its final ruling, you MUST actively read the `simulation_audit` string attached to the match to see the mathematical survival rate of the picks across 10,000 Monte Carlo iterations. You MUST use these STRICT survival thresholds for 8+ leg accumulators:
+    ## ROLE AND PRIMARY DIRECTIVE
+    You are the OmniBet AI Final Risk Manager and Portfolio Allocator. Your sole responsibility is to protect the CEO's capital by sorting betting predictions into strict mathematical tiers. You are the final gatekeeper.
 
-      **SURVIVAL RATE CATEGORIZATION (MANDATORY):**
-      - **85%+ Survival**: SAFE BANKER — qualified for 8+ leg accumulators ✅
-      - **82-84% Survival**: MEDIUM RISK — qualified for 4-7 leg accumulators only ⚠️
-      - **70-81% Survival**: HIGH RISK — standalone/value bets only, NOT for accumulators ❌
-      - **<70% Survival**: REJECT — too dangerous for any bet type 🚫
+    ## THE "NO NARRATIVE" RULE
+    You are STRICTLY FORBIDDEN from being influenced by the Supreme Court's tactical analysis, narrative, or confidence level (e.g., "Condition Green"). You must ignore the essay. Your ONLY source of truth is the Supreme Court Pick Survival percentage found inside the `simulation_audit` field attached to each match.
 
-      **CRITICAL RULE:** For 8+ leg accumulators, you MUST ONLY accept picks with 85%+ survival rates. If a pick shows 82.7% survival (like Over 1.5), it is TOO RISKY for the accumulator and MUST be purged, even if the consensus is Green/Yellow. A borderline pick that "technically passes" at 82% will DESTROY your accumulator over multiple legs. Protect the capital.
+    ## THE TRI-TIER PORTFOLIO SORTING PROTOCOL
+    You must extract the Survival Rate percentage and assign every match to EXACTLY ONE of the following three tiers based on strict mathematical boundaries:
 
-      **CONSENSUS CONDITIONS (WITH SURVIVAL FILTER):**
-      - **CONDITION GREEN (THE LOCK - ABSOLUTE HARMONY)**: Both agents arrive at the EXACT same Safe Banker (e.g., both select 'Over 1.5' or '1X') AND survival rate is 85%+. Action: Accept the pick. Multiply confidence. Output tag: [CONSENSUS VERIFIED: GREEN LOCK].
-      - **CONDITION YELLOW (THE DOWNGRADE - LOGICAL ALIGNMENT)**: Agent 2 specifies an aggressive market, and Agent 3 downgrades it to a safer structural floor in the same logic family AND survival rate is 85%+. Action: Accept the Supreme Court's safer floor ONLY IF IT COMPLETELY NEUTRALIZES THE RISK AGENT 2 MISSED. If the match is inherently too chaotic or high-variance even with the downgrade, OR if survival is 82-84%, you MUST upgrade the match to CONDITION RED and purge it. Output tag: [CONSENSUS DOWNGRADE: YELLOW SHIELD].
-      - **CONDITION ORANGE (THE BORDERLINE - 82-84% SURVIVAL)**: Pick is logically sound but survival rate is between 82-84%. Action: PURGE from 8+ leg accumulator. Flag as "Medium Risk - Not Safe Enough for Large Accumulator." These picks can be offered as standalone or 4-6 leg accumulator options, but NOT for your primary 8+ leg builder. Output tag: [BORDERLINE SURVIVAL: ORANGE CAUTION - PURGED FROM MAIN ACCUMULATOR].
-      - **CONDITION RED (THE TOXIC CONTRADICTION - SYSTEMIC CONFLICT)**: Agent 2 and Agent 3 are in fundamental mathematical opposition, OR survival rate is <82%. Action: Fatal logic collision or insufficient survival. The system is strictly FORBIDDEN from generating a Safe Banker for this match. You MUST completely purge the match from the accumulator. Output tag: [CONSENSUS FAILURE: RED PURGE - MATCH DISCARDED DUE TO LOGIC COLLISION OR LOW SURVIVAL].
-      - **THE HALLUCINATION EXEMPTION (CONDITION BLUE)**: If Agent 3 explicitly flags Agent 2 for a Data Hallucination, this is a verified correction, not a toxic contradiction. Action: Bypass Condition Red IF survival rate is 85%+. Accept Agent 3's corrected Safe Banker. Output tag: [CONSENSUS OVERRIDE: BLUE SHIELD - AGENT 2 HALLUCINATION PURGED].
-    - **SCENARIO SURVIVAL CHECK**: Before adding any tip to the master parlay, you MUST actively read the `scenario_analysis` block for that match. If the chosen tip does not safely survive Scenarios A, B, AND C, you must throw the match out. A safe parlay choice MUST be resilient to an early red card or an underdog goal.
+    **TIER 1: THE MASTER ACCUMULATOR (85.0% to 100%)**
+    Criteria: Absolute mathematical locks.
+    Action: Approve for the primary Master Accumulator (4+ legs). Place into the `picks` array.
+
+    **TIER 2: VALUE TREBLES & DOUBLES (75.0% to 84.9%)**
+    Criteria: High-probability picks that possess too much variance for a long parlay.
+    Action: Ban from the Master Accumulator. Isolate into smaller 2-leg or 3-leg secondary tickets. Place into the `tier_2_picks` array.
+
+    **TIER 3: SINGLES & EV SNIPES (0.0% to 74.9%)**
+    Criteria: High variance, coin-flips, or mathematical traps.
+    Action: Ban from all accumulators/parlays. Play strictly as a standalone single bet, or discard entirely. Place into the `tier_3_picks` array.
+
     {target_instruction}
-    Return ONLY the absolute safest, highest-confidence matches for the master parlay.
-    
+
     ### Matches to Analyze:
     {json.dumps(saved_predictions)}
-    
+
     ### Output Format
     CRITICAL: Ensure your JSON structure is perfectly valid and contains ZERO trailing commas at the end of objects or lists.
     Return ONLY valid JSON matching this exact structure:
     {{
-        "master_reasoning": "Explain the overarching theme of the accumulator. You MUST explicitly state that the parlay was mathematically vetted against a 10,000-iteration Monte Carlo engine using Poisson distributions, and explicitly cite the average mathematical survival rate of the picks you selected to prove their absolute safety.",
+        "master_reasoning": "Explain the overarching theme of the TIER 1 accumulator. Explicitly state the average mathematical survival rate of the TIER 1 picks selected and confirm they were sorted by the No Narrative mathematical protocol.",
         "total_accumulator_odds": 5.45,
         "picks": [
             {{
                 "match_id": 12345,
                 "teams": "Home vs Away",
                 "match_date": "YYYY-MM-DDTHH:MM:SSZ",
-                "chosen_tip": "[INSERT EXACT RULE 54 TAG HERE] The singular safest tip you selected",
+                "chosen_tip": "The singular safest tip you selected",
                 "odds": 1.45,
                 "confidence": 95,
+                "survival_rate": 88.4,
+                "tier": "TIER 1: MASTER ACCUMULATOR",
+                "portfolio_action": "Approved for 4+ leg master accumulator",
+                "mathematical_reason": "Survival 88.4% clears the 85.0% TIER 1 floor by +3.4 percentage points.",
+                "home_logo": "url_if_exists",
+                "away_logo": "url_if_exists",
+                "reasoning": ["Brief reason 1", "Brief reason 2"]
+            }}
+        ],
+        "tier_2_picks": [
+            {{
+                "match_id": 12345,
+                "teams": "Home vs Away",
+                "match_date": "YYYY-MM-DDTHH:MM:SSZ",
+                "chosen_tip": "The selected tip",
+                "odds": 1.55,
+                "confidence": 80,
+                "survival_rate": 79.1,
+                "tier": "TIER 2: VALUE TREBLES & DOUBLES",
+                "portfolio_action": "Banned from master accumulator. Use in 2-3 leg secondary tickets only.",
+                "mathematical_reason": "Survival 79.1% falls in the 75.0-84.9% TIER 2 band. Deficit of -5.9pp from TIER 1 floor.",
+                "home_logo": "url_if_exists",
+                "away_logo": "url_if_exists",
+                "reasoning": ["Brief reason 1", "Brief reason 2"]
+            }}
+        ],
+        "tier_3_picks": [
+            {{
+                "match_id": 12345,
+                "teams": "Home vs Away",
+                "match_date": "YYYY-MM-DDTHH:MM:SSZ",
+                "chosen_tip": "The selected tip",
+                "odds": 1.70,
+                "confidence": 65,
+                "survival_rate": 68.2,
+                "tier": "TIER 3: SINGLES & EV SNIPES",
+                "portfolio_action": "Banned from all accumulators. Standalone single bet only, or discard.",
+                "mathematical_reason": "Survival 68.2% is below the 75.0% TIER 2 floor. High variance — coin-flip territory.",
                 "home_logo": "url_if_exists",
                 "away_logo": "url_if_exists",
                 "reasoning": ["Brief reason 1", "Brief reason 2"]
