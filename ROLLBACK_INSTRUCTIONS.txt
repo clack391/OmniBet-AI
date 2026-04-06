@@ -1,0 +1,203 @@
+═══════════════════════════════════════════════════════════════════════════════
+ ROLLBACK INSTRUCTIONS - REVERT TO ORIGINAL SYNC CODE
+═══════════════════════════════════════════════════════════════════════════════
+
+IF YOU WANT TO UNDO THE ASYNC CHANGES AND GO BACK TO THE ORIGINAL CODE:
+
+Follow these exact steps to restore the original sequential pipeline.
+
+═══════════════════════════════════════════════════════════════════════════════
+ FILE TO MODIFY: src/worker/tasks.py
+═══════════════════════════════════════════════════════════════════════════════
+
+STEP 1: REMOVE THE ASYNC IMPORT
+--------------------------------
+Find this line (around line 22):
+
+    from src.rag.pipeline_async import analyze_match_smart  # Fast async pipeline (37% faster)
+
+DELETE IT (or comment it out with #)
+
+
+STEP 2: REVERT LOCATION 1 (Around Lines 115-124)
+-------------------------------------------------
+FIND THIS (Current Async Code):
+    odds = fetch_latest_odds(hp, ap)
+    # Use fast async pipeline (37% faster)
+    final_prediction = analyze_match_smart(
+        team_a=hp,
+        team_b=ap,
+        match_data={},
+        odds_data=odds,
+        match_date=match_date if match_date and "1970" not in match_date else None,
+        match_id=match_id,
+        job_id=job_id
+    )
+
+REPLACE WITH THIS (Original Sync Code):
+    odds = fetch_latest_odds(hp, ap)
+    initial_prediction = predict_match(
+        hp, ap,
+        match_stats={},
+        odds_data=odds,
+        match_date=match_date if match_date and "1970" not in match_date else None,
+        match_id=match_id,
+        job_id=job_id,
+    )
+    final_prediction = risk_manager_review(
+        initial_prediction, match_date=match_date, match_id=match_id, job_id=job_id
+    )
+
+
+STEP 3: REVERT LOCATION 2 (Around Lines 171-190)
+-------------------------------------------------
+FIND THIS (Current Async Code):
+    odds = fetch_latest_odds(home_team, away_team)
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+
+    # Use fast async pipeline (37% faster)
+    final_prediction = analyze_match_smart(
+        team_a=home_team,
+        team_b=away_team,
+        match_data={},
+        odds_data=odds,
+        h2h_data={},
+        home_form=None,
+        away_form=None,
+        home_standings={},
+        away_standings={},
+        advanced_stats=advanced_stats,
+        match_date=match_date,
+        match_id=match_id,
+        job_id=job_id
+    )
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+
+    # Supreme verdict already included in final_prediction['supreme_court']
+    supreme_verdict = final_prediction.get('supreme_court', {})
+
+REPLACE WITH THIS (Original Sync Code):
+    odds = fetch_latest_odds(home_team, away_team)
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+    initial_prediction = predict_match(
+        home_team, away_team,
+        match_stats={}, odds_data=odds, h2h_data={},
+        home_form=None, away_form=None,
+        home_standings={}, away_standings={},
+        advanced_stats=advanced_stats,
+        match_date=match_date,
+        match_id=match_id,
+        job_id=job_id,
+    )
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+    final_prediction = risk_manager_review(
+        initial_prediction, match_date=match_date, match_id=match_id, job_id=job_id
+    )
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+    supreme_verdict = supreme_court_judge(
+        advanced_stats, initial_prediction, final_prediction, match_id=match_id, job_id=job_id
+    )
+    final_prediction["supreme_court"] = supreme_verdict
+
+
+STEP 4: REVERT LOCATION 3 (Around Lines 261-280)
+-------------------------------------------------
+FIND THIS (Current Async Code):
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+
+    # Use fast async pipeline (37% faster)
+    final_prediction = analyze_match_smart(
+        team_a=home_team,
+        team_b=away_team,
+        match_data=stats,
+        odds_data=odds,
+        h2h_data=h2h_data,
+        home_form=home_form,
+        away_form=away_form,
+        home_standings=home_standings,
+        away_standings=away_standings,
+        advanced_stats=advanced_stats,
+        match_date=match_date,
+        match_id=match_id,
+        job_id=job_id
+    )
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+
+    # Supreme verdict already included in final_prediction['supreme_court']
+    supreme_verdict = final_prediction.get('supreme_court', {})
+
+REPLACE WITH THIS (Original Sync Code):
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+    initial_prediction = predict_match(
+        home_team, away_team, stats, odds, h2h_data,
+        home_form, away_form, home_standings, away_standings,
+        advanced_stats=advanced_stats, match_date=match_date,
+        match_id=match_id, job_id=job_id,
+    )
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+    final_prediction = risk_manager_review(initial_prediction, match_date=match_date, match_id=match_id, job_id=job_id)
+    if _is_cancelled(job_id): raise Exception("Job cancelled by user")
+    supreme_verdict = supreme_court_judge(
+        advanced_stats or stats, initial_prediction, final_prediction, match_id=match_id, job_id=job_id
+    )
+    final_prediction["supreme_court"] = supreme_verdict
+
+
+STEP 5: VERIFY SYNTAX
+----------------------
+After making changes, verify:
+
+    cd "/home/jay/OmniBet AI"
+    python3 -m py_compile src/worker/tasks.py
+
+If no errors → You're good!
+
+
+STEP 6: RESTART WORKER
+-----------------------
+    pkill -f celery
+    celery -A src.worker.celery_app worker --loglevel=info
+
+
+═══════════════════════════════════════════════════════════════════════════════
+ WHAT HAPPENS AFTER ROLLBACK
+═══════════════════════════════════════════════════════════════════════════════
+
+✅ Your predictions will work exactly as before
+✅ Speed will be back to ~30s per match (slower but stable)
+✅ All existing code/tests will work unchanged
+✅ You can re-apply async changes anytime using UPGRADE_INSTRUCTIONS.txt
+
+═══════════════════════════════════════════════════════════════════════════════
+ FILES YOU CAN SAFELY DELETE (OPTIONAL)
+═══════════════════════════════════════════════════════════════════════════════
+
+If you want to completely remove async components:
+- src/rag/pipeline_async.py
+- ASYNC_PIPELINE_USAGE.md
+- ASYNC_ARCHITECTURE_DIAGRAM.txt
+- PHASE_2_IMPLEMENTATION_SUMMARY.md
+- WHERE_TO_UPDATE_FOR_SPEED.md
+- CHANGES_APPLIED.md
+- UPGRADE_INSTRUCTIONS.txt
+- ROLLBACK_INSTRUCTIONS.txt (this file)
+
+BUT YOU DON'T NEED TO - they don't hurt anything if left alone.
+
+═══════════════════════════════════════════════════════════════════════════════
+ QUICK CLAUDE PROMPT (If asking Claude to do it)
+═══════════════════════════════════════════════════════════════════════════════
+
+Copy this and send to Claude in a new chat:
+
+"I need to rollback the async changes in src/worker/tasks.py. Please revert:
+1. Remove async import on line 22
+2. Revert Location 1 (around lines 115-124) to use predict_match + risk_manager_review
+3. Revert Location 2 (around lines 171-190) to use predict_match + risk_manager_review + supreme_court_judge
+4. Revert Location 3 (around lines 261-280) to use predict_match + risk_manager_review + supreme_court_judge
+
+See ROLLBACK_INSTRUCTIONS.txt for exact code to restore."
+
+═══════════════════════════════════════════════════════════════════════════════
+ END OF ROLLBACK INSTRUCTIONS
+═══════════════════════════════════════════════════════════════════════════════
