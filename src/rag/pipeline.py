@@ -1842,7 +1842,11 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE FORBIDDEN ACTION:**
       The Supreme Court is strictly FORBIDDEN from using 'Under 2.5' or 'Under 3.5 Goals' as a Safe Banker simply because it cannot predict a Match Winner. You cannot put a mathematical ceiling on two terrible defenses.
       **THE PIVOT:**
-      If both defenses are leaky, the AI MUST abandon 'Under' markets and pivot to 'Over 1.5 Goals', 'BTTS: Yes', or Wide Asian Handicaps.
+      If both defenses are leaky, the AI MUST abandon 'Under' markets and evaluate the following Goal markets in strict priority order:
+      1. **'Over 0.5 Goals'** — the widest structural floor. Loses ONLY on a 0-0 result. Select this FIRST, but ONLY if the available odds are ≥ 1.10. Below 1.10, the odds are too thin to contribute meaningful parlay value.
+      2. **'Over 1.5 Goals'** — the standard structural floor. Use this if Over 0.5 odds are below 1.10, or if both teams have near-zero xG (combined < 1.0).
+      3. **'BTTS: Yes'** — use when both teams have strong offensive metrics and the xG supports bilateral scoring.
+      4. **Wide Asian Handicaps** — last resort when goal markets are all too short for value.
 
       **CRITICAL HIERARCHY EXCEPTION — RULE 35 SUPREMACY:**
       Before applying Rule 53, you MUST run the Dead Engine Check (Rule 35). If ANY team averages < 0.8 goals per game AND creates < 1.5 Big Chances per game, Rule 35 VETOES Rule 53 entirely. A team that literally cannot attack will not "magically wake up" against a bad defense — they are structurally flatlined. In this scenario, you MUST pivot to 'Under 3.5 Goals' or Match Control (1X, X2) instead of 'Over 1.5 Goals'. Rule 35 is the ONLY exception to Rule 53's absolute veto authority.
@@ -1962,10 +1966,11 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       - No Asian Handicap
       These markets assume tactical stability — which is mathematically impossible with a broken defensive structure. A broken defense creates high-variance game states that kill all Match Control bets via unexpected early concessions.
       **THE MANDATORY PIVOT:**
-      The Supreme Court MUST pivot to High-Variance Goal Markets that BENEFIT from the inevitable shootout dynamic:
-      1. **'BTTS: Yes'** — A team playing with nothing to lose WILL score. Their opponent with a broken defense WILL concede. Both teams will find the net.
-      2. **'Over 2.5 Goals'** — The reckless, open attacking play from the broken-defense team guarantees voluminous goal chances for both sides.
-      3. **'Over 1.5 Goals'** — The absolute safest structural floor when BTTS/Over 2.5 odds are too low for value.
+      The Supreme Court MUST pivot to High-Variance Goal Markets that BENEFIT from the inevitable shootout dynamic. Evaluate in strict priority order:
+      1. **'Over 0.5 Goals'** — the widest structural floor. Loses ONLY on a 0-0 result. A team with nothing to lose WILL push forward — a complete double blank is structurally implausible. Select this FIRST, but ONLY if the available odds are ≥ 1.10. Below 1.10, the odds are too thin to contribute meaningful parlay value — fall through to step 2.
+      2. **'BTTS: Yes'** — A team playing with nothing to lose WILL score. Their opponent with a broken defense WILL concede. Both teams will find the net.
+      3. **'Over 2.5 Goals'** — The reckless, open attacking play from the broken-defense team guarantees voluminous goal chances for both sides.
+      4. **'Over 1.5 Goals'** — The structural floor fallback when Over 0.5 odds are below 1.10 and BTTS/Over 2.5 odds are too low for value.
       **CONFLICT DISAMBIGUATION:**
       Rule 62 STRICTLY OVERRIDES Rule 28 (Sterile Possession Protocol) and Rule 60 (Game Management Ceiling). You CANNOT enforce a clinical 1-0 game management ceiling when the team managing the game has a broken defensive line — they cannot absorb a counter-attack, so the game CANNOT remain at 1-0.
       Rule 62 is DISTINCT from Rule 10's Supply Line Mandate / Mud Fight Trigger: The Mud Fight fires only when BOTH the attacking supply line AND the opposing defense are broken. Rule 62 fires when ONE team's defense is broken and the opponent has a functional offense. If only one condition (broken defense) exists, Rule 62 proceeds.

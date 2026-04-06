@@ -271,7 +271,7 @@ const PredictionCard = ({ prediction }) => {
                             </p>
                             <p className="text-[11px] text-slate-400 leading-relaxed">
                                 {isEarlySeasonQuarantine
-                                    ? 'One or both teams have played fewer than 5 matches. All Match Goals markets (Over, Under, BTTS) are statistically unreliable. The AI must anchor to Match Control (Double Chance) or declare NO BET.'
+                                    ? 'One or both teams have played fewer than 5 matches. Precise goals markets (Over 2.5, Under 2.5, BTTS) are statistically unreliable. The AI evaluates four xG-anchored structural markets in priority order — Over 0.5, Under 3.5, Under 4.5, Over 1.5 — then falls back to Match Control on pedigree, or declares NO BET if no safe floor exists.'
                                     : 'Both teams are winless or in the relegation zone. GA averages are mirages from mismatched fixtures. High-scoring goals markets are structurally unsound for this low-quality grind.'}
                             </p>
                         </div>
