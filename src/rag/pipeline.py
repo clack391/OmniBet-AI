@@ -358,9 +358,68 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
             "alternative_pick": {"tip": "Analysis Failed", "confidence": 0}
         }
 
+def needs_fact_checking(agent_1_prediction: dict) -> bool:
+    """
+    Determine if Agent 2 needs Google Search capabilities for fact-checking.
+    Only enable search when Agent 1 makes specific factual claims that need verification.
+
+    Returns:
+        bool: True if search is needed, False for quick review mode
+    """
+    # Extract reasoning text from Agent 1's analysis
+    reasoning_text = ""
+    reasoning_text += agent_1_prediction.get("step_by_step_reasoning", "")
+    reasoning_text += " ".join(agent_1_prediction.get("reasoning", []))
+
+    # Extract scenario analysis text
+    scenario_analysis = agent_1_prediction.get("scenario_analysis", {})
+    if isinstance(scenario_analysis, dict):
+        reasoning_text += str(scenario_analysis.get("scenario_a_expected_script", ""))
+        reasoning_text += str(scenario_analysis.get("scenario_b_underdog_disruption", ""))
+        reasoning_text += str(scenario_analysis.get("scenario_c_red_card_disruption", ""))
+
+    reasoning_lower = reasoning_text.lower()
+
+    # Triggers that require fact-checking via search
+    search_triggers = [
+        "recently transferred",
+        "just signed",
+        "new signing",
+        "injury news",
+        "injured",
+        "suspended for this match",
+        "suspended",
+        "missing due to",
+        "ruled out",
+        "confirmed out",
+        "historical h2h",
+        "last meeting",
+        "previous encounter",
+        "derby",
+        "rivalry",
+        "cup final",
+        "knockout",
+        "must-win",
+        "referee",
+        "red card history",
+        "lineup confirmed"
+    ]
+
+    # Check if any search trigger is present
+    needs_search = any(trigger in reasoning_lower for trigger in search_triggers)
+
+    # Also check confidence level - if Agent 1 is very confident (>85%), might need validation
+    primary_pick = agent_1_prediction.get("primary_pick", {})
+    if isinstance(primary_pick, dict):
+        confidence = primary_pick.get("confidence", 0)
+        if confidence > 85:
+            needs_search = True  # High confidence claims should be fact-checked
+
+    return needs_search
+
 def risk_manager_review(initial_prediction_json: dict, match_date: str = None, match_id: int = None, job_id: str = None) -> dict:
     """
-    Second agent in the Multi-Agent Loop. Acts as a strict Risk Manager to verify 
+    Second agent in the Multi-Agent Loop. Acts as a strict Risk Manager to verify
     the safety of the initial prediction.
     """
     check_cancelled(match_id, job_id)
@@ -579,7 +638,13 @@ def risk_manager_review(initial_prediction_json: dict, match_date: str = None, m
             payload["contents"] = [{"parts": [{"text": prompt}]}]
             print(f"🔍 [Agent 2] Blind Backtest Mode: Search enabled with before:{before_date} date constraints")
 
-        payload["tools"] = [{"google_search": {}}]
+        # Conditional search enablement - only use search when Agent 1 makes specific factual claims
+        enable_search = needs_fact_checking(initial_prediction_json)
+        if enable_search:
+            payload["tools"] = [{"google_search": {}}]
+            print(f"🔍 [Agent 2] Fact-checking mode enabled - Google Search active")
+        else:
+            print(f"⚡ [Agent 2] Quick review mode - No search needed (saves 3-5s)")
         
         max_retries = 3
         for attempt in range(max_retries):
@@ -907,6 +972,83 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
             "verdict_reasoning": "Could not extract statistical data to verify bet safety."
         }
 
+def get_xg_with_intelligent_fallback(raw_xg, team_metrics: dict, is_home: bool, match_data: dict = None) -> float:
+    """
+    Extract xG with intelligent league-aware fallback logic.
+
+    Args:
+        raw_xg: Raw xG value from Supreme Court (may be None)
+        team_metrics: Dictionary containing team's advanced tactical metrics
+        is_home: True if home team, False if away team
+        match_data: Full match data for additional context
+
+    Returns:
+        float: Best available xG estimate
+    """
+    # Priority 1: Use Supreme Court's xG if provided
+    if raw_xg is not None:
+        return float(raw_xg)
+
+    # Priority 2: Extract from team's advanced tactical metrics
+    xg_from_metrics = team_metrics.get("Expected goals (xG) per game")
+    if xg_from_metrics is not None:
+        return float(xg_from_metrics)
+
+    # Priority 3: Calculate from actual season data (goals / matches)
+    goals_scored = team_metrics.get("Goals scored per game")
+    if goals_scored is not None:
+        # Apply home advantage adjustment
+        adjustment = 1.10 if is_home else 0.95
+        return float(goals_scored) * adjustment
+
+    # Priority 4: Try to extract from total season stats
+    try:
+        # Some APIs provide "Matches" and total goals
+        total_matches = team_metrics.get("Matches", 0)
+        # Try to find total goals (various API formats)
+        total_goals = (team_metrics.get("Goals scored", 0) or
+                       team_metrics.get("Total goals", 0) or
+                       team_metrics.get("Goals", 0))
+
+        if total_matches >= 5 and total_goals > 0:  # Minimum 5 matches for reliability
+            actual_avg = total_goals / total_matches
+            adjustment = 1.10 if is_home else 0.95
+            calculated_xg = actual_avg * adjustment
+            print(f"⚙️ [Monte Carlo] Calculated xG from season data: {calculated_xg:.2f} (from {total_goals} goals in {total_matches} matches)")
+            return calculated_xg
+    except (TypeError, ZeroDivisionError):
+        pass
+
+    # Priority 5: League-aware neutral fallback
+    # Try to detect league characteristics from match data
+    league_avg_home = 1.3
+    league_avg_away = 1.1
+
+    if match_data:
+        # Check if we can infer league scoring from standings data
+        try:
+            standings = match_data.get("home_standings", {}) if is_home else match_data.get("away_standings", {})
+            if standings:
+                # If we have standings data, we can estimate league average
+                league_goals = standings.get("goalsFor", 0)
+                league_matches = standings.get("playedGames", 0)
+                if league_matches >= 10:  # Need reasonable sample
+                    league_team_avg = league_goals / league_matches
+                    # Adjust for home/away
+                    if is_home:
+                        league_avg_home = league_team_avg * 1.10
+                    else:
+                        league_avg_away = league_team_avg * 0.95
+        except (TypeError, KeyError, ZeroDivisionError):
+            pass
+
+    # Ultimate fallback with warning
+    fallback_value = league_avg_home if is_home else league_avg_away
+    team_type = "Home" if is_home else "Away"
+    print(f"⚠️ [Monte Carlo] Using neutral fallback for {team_type}: {fallback_value:.2f} xG (no season data available)")
+
+    return fallback_value
+
 def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique: dict, match_id: int = None, job_id: str = None) -> dict:
     """
     The Final Risk Arbiter (Pipeline B - Phase 3).
@@ -1033,16 +1175,18 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
          **STEP 1 — Calculate Combined xG:**
          combined_xG = home_xG + away_xG
 
-         **STEP 2 — Apply Variance Multiplier Logic:**
+         **STEP 2 — Apply Variance Multiplier Logic (Fixed Boundaries):**
          • **IF combined_xG < 2.5**: Set variance_multiplier to 1.0 (Standard Poisson)
            → Low-scoring matches do NOT support chaos mode, even if defenses are leaky.
            → A Dead Engine offense (< 0.8 GF/game) will NOT "magically wake up" against a bad defense — Rule 35 veto applies.
 
-         • **ELSE IF combined_xG >= 2.5 AND combined_xG < 3.5**: Set variance_multiplier to 1.0-1.3
+         • **ELSE IF 2.5 <= combined_xG < 3.5**: Set variance_multiplier to 1.0-1.3
+           → Default to 1.0 for mid-scoring matches
            → Use 1.3 ONLY if Rule 33 (Mutual Collapse) or Rule 42 (Glass Cannon) is active AND both teams have functional offenses (not Dead Engines).
 
-         • **ELSE IF combined_xG >= 3.5**: Set variance_multiplier to 1.3-1.5
+         • **ELSE (combined_xG >= 3.5)**: Set variance_multiplier to 1.3-1.5
            → High-scoring games with broken defenses justify elevated variance.
+           → Use 1.3 as baseline for high-scoring matches
            → Use 1.5 if Rule 62 (Nothing to Lose Shootout) or multiple high-variance rules are active.
 
        ⚠️ VARIANCE MULTIPLIER VALIDATION — XG SANITY CHECK:
@@ -1655,10 +1799,13 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **DATA HIERARCHY MANDATE — HOW TO DETERMINE MATCH COUNT:**
       Before you can apply Rule 40, you MUST determine the correct total season match count for each team. Use these sources in strict priority order:
       1. **`home_standings["playedGames"]` / `away_standings["playedGames"]`** — league table data. Use this if the value is present and greater than 0.
+         ⚠️ **COMPETITION CONTEXT VALIDATION**: Before using standings data, you MUST verify the match is in the SAME competition as the standings. If the match is a domestic cup but standings show league data, the standings are INVALID for Rule 40. Teams may have 15+ league matches but only 2 cup matches — you must count cup matches only. Check the `tournament` or `competition_id` fields in match metadata to validate alignment.
       2. **`Advanced Tactical Metrics → "Matches"` (the top-level metrics block, NOT the home_away_split block)** — this is the SofaScore overall season total across ALL games (home and away combined). This is the correct fallback when standings are empty and works for ALL competitions including youth leagues, lower divisions, and regional cups.
          ⚠️ WARNING: Do NOT use `home_away_split → "Matches"` — that block only shows HOME-only matches for the home team and AWAY-only matches for the away team. Those numbers are always smaller than the total and will produce false early-season signals.
-      3. **Google Search** — only if both sources above are missing entirely. Search for "[Team Name] [Current Season] league matches played" before firing Rule 40.
+         ⚠️ **COMPETITION-SPECIFIC COUNTING**: If the current match is in a CUP competition, the "Matches" field from league metrics is INVALID. You must isolate and count matches from the specific cup competition only. Use Google Search to verify "[Team Name] [Cup Name] [Current Season] matches played" if cup-specific data is unavailable.
+      3. **Google Search** — only if both sources above are missing entirely. Search for "[Team Name] [Competition Name] [Current Season] matches played" (include the specific competition name) before firing Rule 40.
       **CRITICAL RULE**: An empty standings block (`{{}}`) does NOT mean "early season." It means the standings API was not queried or does not cover that competition (e.g., when SofaScore is the primary data provider, or for youth/lower-division leagues). You MUST check `Advanced Tactical Metrics → "Matches"` before concluding any team is in an early-season state. Do NOT fire Rule 40 purely because standings data is absent.
+      **CRITICAL CROSS-COMPETITION RULE**: If a team has played 15+ league matches but this is only their 3rd match in a domestic cup, Rule 40 MUST be triggered for the cup match. Each competition has its own early-season phase. League experience does NOT eliminate cup variance.
 
       **THE TACTICAL REALITY:**
       A sample size of fewer than 8 league matches is pure statistical noise. It cannot accurately model a sterile offense (Under) OR a leaky defense (Over). Early-season variance swings violently in BOTH directions — a team "averaging 0.3 goals per game" across 3-7 matches may simply not have had their high-scoring game yet. A team "conceding 2.5 per game" may have faced back-to-back elite opponents. Neither data point is statistically valid for a ceiling or floor bet in any direction.
@@ -2116,30 +2263,23 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             raw_away_xg = parsed.get("away_xG")
             raw_var = parsed.get("variance_multiplier")
 
-            # Intelligent fallback: extract from match_data if Supreme Court failed to provide xG
-            if raw_home_xg is None or raw_away_xg is None:
-                try:
-                    # Try to extract from advanced_stats in match_data
-                    home_metrics = match_data.get("advanced_stats", {}).get("home_team", {}).get("metrics", {})
-                    away_metrics = match_data.get("advanced_stats", {}).get("away_team", {}).get("metrics", {})
+            # Use intelligent fallback system for xG extraction
+            home_metrics = match_data.get("advanced_stats", {}).get("home_team", {}).get("metrics", {})
+            away_metrics = match_data.get("advanced_stats", {}).get("away_team", {}).get("metrics", {})
 
-                    # Use xG from advanced stats if available, otherwise goals per game
-                    if raw_home_xg is None:
-                        h_xg = home_metrics.get("Expected goals (xG) per game") or home_metrics.get("Goals scored per game") or 1.3
-                    else:
-                        h_xg = float(raw_home_xg)
+            h_xg = get_xg_with_intelligent_fallback(
+                raw_xg=raw_home_xg,
+                team_metrics=home_metrics,
+                is_home=True,
+                match_data=match_data
+            )
 
-                    if raw_away_xg is None:
-                        a_xg = away_metrics.get("Expected goals (xG) per game") or away_metrics.get("Goals scored per game") or 1.1
-                    else:
-                        a_xg = float(raw_away_xg)
-                except (AttributeError, KeyError, TypeError):
-                    # Ultimate fallback: use league-adjusted neutral values
-                    h_xg = float(raw_home_xg) if raw_home_xg is not None else 1.3  # Home advantage
-                    a_xg = float(raw_away_xg) if raw_away_xg is not None else 1.1
-            else:
-                h_xg = float(raw_home_xg)
-                a_xg = float(raw_away_xg)
+            a_xg = get_xg_with_intelligent_fallback(
+                raw_xg=raw_away_xg,
+                team_metrics=away_metrics,
+                is_home=False,
+                match_data=match_data
+            )
 
             v_mult = float(raw_var) if raw_var is not None else 1.0
 
