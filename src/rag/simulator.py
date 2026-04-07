@@ -605,9 +605,28 @@ def run_crucible_simulation(
     else:
         audit_string = audit_base + "]"
 
-    # Extract top 5 scorelines
-    sorted_scores = sorted(scoreline_counts.items(), key=lambda item: item[1], reverse=True)[:5]
-    top_scorelines = [{"score": score, "probability": (count / N) * 100} for score, count in sorted_scores]
+    # Build most-likely scoreline per goal range, using bucket probability
+    # This avoids the misleading "top 5 by frequency" pattern where low-scoring
+    # scorelines always dominate individually even when high-scoring buckets are dominant.
+    goal_range_labels = {"0": "0 Goals", "1": "1 Goal", "2": "2 Goals", "3": "3 Goals", "4": "4 Goals", "5+": "5+ Goals"}
+    range_best = {}  # bucket -> (score_str, count)
+    for score_str, count in scoreline_counts.items():
+        h_s, a_s = map(int, score_str.split("-"))
+        total = h_s + a_s
+        bucket = str(total) if total <= 4 else "5+"
+        if bucket not in range_best or count > range_best[bucket][1]:
+            range_best[bucket] = (score_str, count)
+
+    top_scorelines = []
+    for bucket in ["0", "1", "2", "3", "4", "5+"]:
+        if bucket in range_best:
+            score_str, _ = range_best[bucket]
+            bucket_probability = round((distribution[bucket] / N) * 100, 1)
+            top_scorelines.append({
+                "score": score_str,
+                "probability": bucket_probability,
+                "goal_range": goal_range_labels[bucket]
+            })
 
     result = {
         "audit_string": audit_string,
