@@ -26,17 +26,28 @@ def calculate_rho(home_xG: float, away_xG: float) -> float:
     minimal 0-0 correction because the base probability of 0-0 is already
     very low. Standard Dixon-Coles was calibrated on low-scoring English
     football from the 1990s and over-corrects for modern high-xG matches.
+
+    CRITICAL: This function is now protected by upstream recent form analysis.
+    If a team is in a goal drought, the xG extraction layer will blend recent
+    form (70%) with season averages (30%), preventing inflated xG values that
+    would trigger High-Scoring mode inappropriately.
     """
     combined_xG = home_xG + away_xG
     xG_ratio = max(home_xG, away_xG) / max(min(home_xG, away_xG), 0.5)
 
     # Priority 1: High-scoring games need minimal 0-0 correction
+    # (Now protected: drought teams will have combined_xG < 2.5, avoiding this branch)
     if combined_xG > 3.0:
         return RHO_HIGH_SCORING  # -0.05 for explosive matches
 
     # Priority 2: Mismatched games (one-sided)
     if xG_ratio > 1.5:
         return RHO_MISMATCH  # -0.10 for mismatches
+
+    # Priority 3: Low-scoring drought scenarios (Dead Engine protection)
+    # When combined_xG < 2.0, increase rho to better model 0-0 and 1-0 probability
+    if combined_xG < 2.0:
+        return -0.15  # Enhanced correction for very low-scoring matches
 
     # Default: Standard evenly-matched games
     return RHO_STANDARD  # -0.13 for normal matches

@@ -166,11 +166,11 @@ def predict_match(team_a: str, team_b: str, match_stats: dict, odds_data: list =
            2. **Tier 2 (Safe)**: Over 1.5 Goals, BTTS, Draw No Bet, Asian Handicap (+0.5 or wider)
            3. **Tier 3 (Moderate)**: Over 2.5 Goals, Match Winner, Team Over 1.5 Goals
            You MUST pick from the highest tier where you have 70%+ confidence. Only drop to Tier 3 if the data overwhelmingly supports it across BOTH scenarios. A "Banker" that loses half the time is not a Banker — it is a gamble.
-          - **Rule 16 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 8 rounds (Matchdays 1-7), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Games 2-7. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
+          - **Rule 16 - The Sample Size Safety Valve (Early Season Caution)**: If the current league season has played fewer than 5 rounds (Matchdays 1-4), you MUST NOT strictly enforce "Rule 4 (Ineptitude Floor)". One or two "sterile" games in the opener do NOT establish a trend. If a team dominated possession (60%+) but scored 0 goals in Game 1, they are statistically PRIMED for a breakout in Games 2-4. You MUST apply a **10% Confidence Tax** to any "Under" pick justified solely by a sterile opener. Early season volatility favors the "Over" more than the "Under" as teams find their rhythm.
         - **Rule 17 - THE ANTI-BIAS PROTOCOL (CRITICAL)**: You must actively resist two common analytical biases:
             1. **THE "FIRST-LEG" FALLACY**: Do NOT automatically assume 1st Leg matches will be low-scoring or conservative. Base your Match Goals and 1X2 predictions strictly on the teams' xG and defensive metrics, not on tournament tropes.
             2. **THE "SYSTEM VS. INDIVIDUAL" RULE**: If a superior team (e.g., an away favorite) is missing a star striker, do NOT automatically downgrade them to 'Under' or 'Draw'. If their underlying team system creates high possession and high Big Chances, trust the system to overcome the injury. Do not let Agent 2 panic you into downgrading a fundamentally superior team just because a name is missing from the lineup.
-        - **Rule 18 - THE SMALL SAMPLE WEIGHTING DIRECTIVE**: If your analysis relies on a venue-specific metric (like a "home win streak") derived from fewer than 8 matches, you MUST explicitly state in your reasoning: "Venue data is based on a small sample size ($N < 8$); results have been blended with overall season metrics for reliability." Failing to do so is a statistical error.
+        - **Rule 18 - THE SMALL SAMPLE WEIGHTING DIRECTIVE**: If your analysis relies on a venue-specific metric (like a "home win streak") derived from fewer than 5 matches, you MUST explicitly state in your reasoning: "Venue data is based on a small sample size (N < 5); results have been blended with overall season metrics for reliability." Failing to do so is a statistical error.
         - **Rule 19 - THE EXPECTED GOALS (xG) REALITY CHECK**: You MUST prioritize Expected Goals (xG) over raw goals scored to detect "luck". FIRST, check the 'Advanced Tactical Metrics' JSON block provided above for 'Expected goals (xG) per game'. If the API provided it, use it immediately. If a team's actual goals are much higher than their xG, they are lucky and due for regression. If the xG data is MISSING from the JSON payload (e.g., obscure leagues), you may fallback to your Google Search tool to find recent xG data. If search also fails, default to 'Big chances created' to evaluate their true offensive threat.
         - **Rule 20 - THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 10 matches. Early-season variance is a massive trap. Furthermore, you must NEVER assume an opposing team's offensive output will drop to zero simply because 1 or 2 starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance (The Wounded Animal Effect) and often play with a high-intensity point to prove.
         - **THE DATA PURITY MANDATE**: When conducting Live Searches for rosters, injuries, or stats, you MUST ONLY pull data from official, verified sports databases (e.g., Transfermarkt, Soccerway, Flashscore, Sofascore, or official club websites). You are strictly forbidden from citing data from gaming wikis (SOFIFA, Football Manager), Reddit career mode threads, or fan-concept sites.
@@ -891,7 +891,7 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
         4. **THE HALLUCINATION CONTEXT RULE**: When applying the Hallucination Penalty (Rule 1), evaluate the context of the correction. If Agent 1 hallucinates that a star player is injured/suspended, but your live search proves the player is actually ELIGIBLE and PLAYING, do NOT downgrade the team's prediction. The team is actually stronger than Agent 1 calculated. Only apply the penalty and downgrade the bet if the fact-check proves the team is materially weaker than claimed.
         5. **ESTIMATED ODDS**: You MUST provide a realistic `estimated_odds` (Decimal format) for your recommended bet. Use Agent 1's odds or the Odds API payload as a reference. If no odds are available, estimate based on the implied probability of your own tactical analysis.
       4. **GRID CORRECTIONS (CONSISTENCY)**: If you OVERTURN a ruling (Scenario 1), you MUST provide a `grid_corrections` object. This object should contain corrected prediction strings for matching keys in the `full_analysis` grid (specifically `Match_Goals`, `BTTS`, and `Correct_Score`) to ensure the entire card is logically consistent with your Verdict. If Agent 2 changed the score to "1-0" but you ruled "Over 1.5 Goals," you MUST provide a correction for `Correct_Score` (e.g., "2-1").
-      3. **STATISTICAL RELIABILITY (SAMPLE SIZE)**: If your colleagues rely on venue-specific trends from fewer than 8 matches, you MUST prioritize the broader season metrics. Do not approve a high-risk bet justified solely by a 3-7 game "venue streak" if the overall data is conflicting.
+      3. **STATISTICAL RELIABILITY (SAMPLE SIZE)**: If your colleagues rely on venue-specific trends from fewer than 5 matches, you MUST prioritize the broader season metrics. Do not approve a high-risk bet justified solely by a 1-4 game "venue streak" if the overall data is conflicting.
       - **RULE 7: THE MUTUAL COLLAPSE EXEMPTION AUDIT**: If the match data reveals BOTH teams are missing critical defensive personnel (starting center-backs or starting goalkeeper) OR both teams concede > 1.8 goals per game, you MUST REJECT or DOWNGRADE any 'Under Goals' bet the user has selected ('Under 2.5', 'Under 3.5', 'Under 4.5') or any 'First Half Under' pick. You CANNOT approve a goal ceiling bet when both defensive structures are structurally absent. The market reality is an end-to-end transition shootout where even poor finishers score. Downgrade to: 'BTTS: Yes', 'Over 2.5 Match Goals', 'Over 4.5 Cards', or 'Over 8.5 Corners'.
       - **RULE 8: THE DAM BREAK EXEMPTION AUDIT**: If Agent 1's data shows a team has been flagged for a high Big Chance Miss Rate (Clinical Ineptitude conditions) BUT is simultaneously creating > 2.0 Big Chances per game, you MUST REJECT or DOWNGRADE any 'Under 2.5' or 'Under 3.5' bet the user has selected for that team's matches. The miss rate is temporary negative variance — the high creation volume signals elite offensive quality primed for positive regression. Downgrade to: 'Home Win', 'Home -1.0 Asian Handicap', or 'Over 1.5 Team Goals'.
       - **RULE 9: THE HOME BUZZSAW AUDIT**: If the match data shows the Home Underdog averages > 1.3 goals per game in the current season, OR has recently scored multiple goals against elite/top-tier opposition, you MUST REJECT or DOWNGRADE any Away Team Asian Handicap (Away +1.0, Away +1.5) or Away Double Chance (X2) the user has selected. These markets cannot absorb the blowout risk of a potent home underdog — if the away favorite falls behind, they chase, expose their defensive line, and concede devastating counter-attacks. Downgrade to: 'Home Over 0.5 Goals', 'Home +2.5 Asian Handicap', or 'Over 1.5 Match Goals'. You MUST also ignore any H2H win streak the away team holds — current home offensive form overrides all historical H2H data.
@@ -972,9 +972,60 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
             "verdict_reasoning": "Could not extract statistical data to verify bet safety."
         }
 
+def calculate_recent_form_xg(form_data: dict, is_home: bool) -> tuple:
+    """
+    Calculate recent form metrics from last 5 matches.
+
+    Args:
+        form_data: Form data containing recent matches
+        is_home: True if home team, False if away team
+
+    Returns:
+        tuple: (recent_goals_avg, big_chances_avg, matches_analyzed)
+    """
+    if not form_data:
+        return None, None, 0
+
+    try:
+        # Extract recent matches (usually last 5)
+        recent_matches = form_data.get("matches", [])
+        if not recent_matches:
+            return None, None, 0
+
+        total_goals = 0
+        total_big_chances = 0
+        matches_count = 0
+
+        for match in recent_matches[:5]:  # Analyze last 5 matches
+            # Extract goals scored in this match
+            if is_home:
+                goals = match.get("homeScore", {}).get("current", 0)
+            else:
+                goals = match.get("awayScore", {}).get("current", 0)
+
+            total_goals += goals if goals is not None else 0
+
+            # Extract big chances if available
+            big_chances = match.get("statistics", {}).get("bigChancesCreated", 0)
+            total_big_chances += big_chances if big_chances is not None else 0
+
+            matches_count += 1
+
+        if matches_count == 0:
+            return None, None, 0
+
+        recent_goals_avg = total_goals / matches_count
+        recent_big_chances_avg = total_big_chances / matches_count
+
+        return recent_goals_avg, recent_big_chances_avg, matches_count
+    except (TypeError, KeyError, ZeroDivisionError, AttributeError):
+        return None, None, 0
+
+
 def get_xg_with_intelligent_fallback(raw_xg, team_metrics: dict, is_home: bool, match_data: dict = None) -> float:
     """
     Extract xG with intelligent league-aware fallback logic.
+    NOW WITH RECENT FORM ANALYSIS to prevent stale season data overriding drought scenarios.
 
     Args:
         raw_xg: Raw xG value from Supreme Court (may be None)
@@ -983,7 +1034,7 @@ def get_xg_with_intelligent_fallback(raw_xg, team_metrics: dict, is_home: bool, 
         match_data: Full match data for additional context
 
     Returns:
-        float: Best available xG estimate
+        float: Best available xG estimate with recent form weighting
     """
     # Priority 1: Use Supreme Court's xG if provided
     if raw_xg is not None:
@@ -992,16 +1043,48 @@ def get_xg_with_intelligent_fallback(raw_xg, team_metrics: dict, is_home: bool, 
     # Priority 2: Extract from team's advanced tactical metrics
     xg_from_metrics = team_metrics.get("Expected goals (xG) per game")
     if xg_from_metrics is not None:
-        return float(xg_from_metrics)
+        season_xg = float(xg_from_metrics)
 
-    # Priority 3: Calculate from actual season data (goals / matches)
+        # CRITICAL FIX: Check recent form to detect goal droughts
+        if match_data:
+            form_data = match_data.get("home_form" if is_home else "away_form")
+            recent_goals_avg, recent_big_chances_avg, matches_analyzed = calculate_recent_form_xg(form_data, is_home)
+
+            if matches_analyzed >= 3:  # Need at least 3 recent matches
+                # Apply home/away adjustment to recent form
+                adjustment = 1.10 if is_home else 0.95
+                recent_xg = recent_goals_avg * adjustment
+
+                # FORM VARIANCE DETECTION: Detect if recent form contradicts season average
+                variance_ratio = abs(season_xg - recent_xg) / max(season_xg, 0.5)
+
+                if variance_ratio > 0.5:  # Significant divergence (50%+ difference)
+                    # Weight recent form more heavily (70% recent, 30% season)
+                    blended_xg = (recent_xg * 0.70) + (season_xg * 0.30)
+                    print(f"⚠️ [Form Variance Detected] Season xG: {season_xg:.2f}, Recent xG: {recent_xg:.2f} → Blended: {blended_xg:.2f}")
+                    return blended_xg
+
+        return season_xg
+
+    # Priority 3: Check RECENT FORM first before falling back to season averages
+    if match_data:
+        form_data = match_data.get("home_form" if is_home else "away_form")
+        recent_goals_avg, recent_big_chances_avg, matches_analyzed = calculate_recent_form_xg(form_data, is_home)
+
+        if matches_analyzed >= 3:  # Need at least 3 recent matches for reliability
+            adjustment = 1.10 if is_home else 0.95
+            recent_xg = recent_goals_avg * adjustment
+            print(f"⚙️ [Monte Carlo] Using RECENT FORM xG: {recent_xg:.2f} (from {matches_analyzed} recent matches, avg {recent_goals_avg:.2f} goals)")
+            return recent_xg
+
+    # Priority 4: Calculate from actual season data (goals / matches)
     goals_scored = team_metrics.get("Goals scored per game")
     if goals_scored is not None:
         # Apply home advantage adjustment
         adjustment = 1.10 if is_home else 0.95
         return float(goals_scored) * adjustment
 
-    # Priority 4: Try to extract from total season stats
+    # Priority 5: Try to extract from total season stats
     try:
         # Some APIs provide "Matches" and total goals
         total_matches = team_metrics.get("Matches", 0)
@@ -1019,7 +1102,7 @@ def get_xg_with_intelligent_fallback(raw_xg, team_metrics: dict, is_home: bool, 
     except (TypeError, ZeroDivisionError):
         pass
 
-    # Priority 5: League-aware neutral fallback
+    # Priority 6: League-aware neutral fallback
     # Try to detect league characteristics from match data
     league_avg_home = 1.3
     league_avg_away = 1.1
@@ -1049,6 +1132,336 @@ def get_xg_with_intelligent_fallback(raw_xg, team_metrics: dict, is_home: bool, 
 
     return fallback_value
 
+
+def check_dead_engine_veto(home_metrics: dict, away_metrics: dict, home_form: dict = None, away_form: dict = None) -> dict:
+    """
+    ALGORITHMIC RULE 35 (DEAD ENGINE VETO) VALIDATOR
+    Runs BEFORE Supreme Court ruling to catch Dead Engine scenarios that should veto high-variance rules.
+
+    Args:
+        home_metrics: Home team's advanced tactical metrics
+        away_metrics: Away team's advanced tactical metrics
+        home_form: Recent form data for home team
+        away_form: Recent form data for away team
+
+    Returns:
+        dict: {
+            "home_is_dead_engine": bool,
+            "away_is_dead_engine": bool,
+            "home_gpg": float,
+            "away_gpg": float,
+            "home_big_chances": float,
+            "away_big_chances": float,
+            "veto_active": bool,
+            "veto_message": str
+        }
+    """
+    result = {
+        "home_is_dead_engine": False,
+        "away_is_dead_engine": False,
+        "home_gpg": None,
+        "away_gpg": None,
+        "home_big_chances": None,
+        "away_big_chances": None,
+        "veto_active": False,
+        "veto_message": ""
+    }
+
+    # Check Home Team
+    home_gpg = home_metrics.get("Goals scored per game") or home_metrics.get("Goals per game")
+    if home_gpg is None and home_form:
+        # Calculate from recent form if season data missing
+        recent_goals_avg, _, matches_analyzed = calculate_recent_form_xg(home_form, is_home=True)
+        if matches_analyzed >= 3:
+            home_gpg = recent_goals_avg
+
+    home_big_chances_total = home_metrics.get("Big chances created", 0)
+    home_matches = home_metrics.get("Matches", 1)
+    home_big_chances_pg = home_big_chances_total / max(home_matches, 1) if home_big_chances_total else 0
+
+    result["home_gpg"] = home_gpg
+    result["home_big_chances"] = home_big_chances_pg
+
+    # Dead Engine Check: < 0.8 GPG AND < 1.5 Big Chances per game
+    if home_gpg is not None and home_gpg < 0.8 and home_big_chances_pg < 1.5:
+        result["home_is_dead_engine"] = True
+
+    # Check Away Team
+    away_gpg = away_metrics.get("Goals scored per game") or away_metrics.get("Goals per game")
+    if away_gpg is None and away_form:
+        # Calculate from recent form if season data missing
+        recent_goals_avg, _, matches_analyzed = calculate_recent_form_xg(away_form, is_home=False)
+        if matches_analyzed >= 3:
+            away_gpg = recent_goals_avg
+
+    away_big_chances_total = away_metrics.get("Big chances created", 0)
+    away_matches = away_metrics.get("Matches", 1)
+    away_big_chances_pg = away_big_chances_total / max(away_matches, 1) if away_big_chances_total else 0
+
+    result["away_gpg"] = away_gpg
+    result["away_big_chances"] = away_big_chances_pg
+
+    # Dead Engine Check: < 0.8 GPG AND < 1.5 Big Chances per game
+    if away_gpg is not None and away_gpg < 0.8 and away_big_chances_pg < 1.5:
+        result["away_is_dead_engine"] = True
+
+    # Set veto flag
+    if result["home_is_dead_engine"] or result["away_is_dead_engine"]:
+        result["veto_active"] = True
+        dead_team = "Home" if result["home_is_dead_engine"] else "Away"
+        result["veto_message"] = (
+            f"⚠️ RULE 35 VETO ACTIVE: {dead_team} team is a Dead Engine "
+            f"({dead_team.lower()}_gpg={result[f'{dead_team.lower()}_gpg']:.2f}, "
+            f"{dead_team.lower()}_big_chances={result[f'{dead_team.lower()}_big_chances']:.2f}). "
+            f"FORBIDDEN: Over 1.5/2.5/3.5 Goals, BTTS: Yes. "
+            f"REQUIRED: Pivot to Under 3.5 Goals or Match Control (1X/X2)."
+        )
+
+    return result
+
+
+def check_bilateral_dead_engine(home_metrics: dict, away_metrics: dict, home_form: dict = None, away_form: dict = None) -> dict:
+    """
+    BILATERAL DEAD ENGINE DETECTOR - Checks if BOTH teams are simultaneously in drought.
+
+    This catches scenarios like Hull 0-0 Coventry where BOTH offenses fail simultaneously.
+
+    Args:
+        home_metrics: Home team's advanced tactical metrics
+        away_metrics: Away team's advanced tactical metrics
+        home_form: Recent form data for home team
+        away_form: Recent form data for away team
+
+    Returns:
+        dict: {
+            "bilateral_drought": bool,
+            "both_teams_dead": bool,
+            "home_recent_gpg": float,
+            "away_recent_gpg": float,
+            "combined_recent_gpg": float,
+            "veto_message": str
+        }
+    """
+    result = {
+        "bilateral_drought": False,
+        "both_teams_dead": False,
+        "home_recent_gpg": None,
+        "away_recent_gpg": None,
+        "combined_recent_gpg": None,
+        "veto_message": ""
+    }
+
+    # Get recent form for both teams
+    home_recent_goals, _, home_matches = calculate_recent_form_xg(home_form, is_home=True)
+    away_recent_goals, _, away_matches = calculate_recent_form_xg(away_form, is_home=False)
+
+    # Need at least 3 recent matches for both teams
+    if home_matches < 3 or away_matches < 3:
+        return result
+
+    result["home_recent_gpg"] = home_recent_goals
+    result["away_recent_gpg"] = away_recent_goals
+    result["combined_recent_gpg"] = home_recent_goals + away_recent_goals
+
+    # Bilateral Dead Engine: BOTH teams < 0.8 GPG in recent form
+    if home_recent_goals < 0.8 and away_recent_goals < 0.8:
+        result["bilateral_drought"] = True
+        result["both_teams_dead"] = True
+        result["veto_message"] = (
+            f"⚠️ BILATERAL DEAD ENGINE DETECTED: Both teams in simultaneous drought. "
+            f"Home: {home_recent_goals:.2f} GPG, Away: {away_recent_goals:.2f} GPG (last {min(home_matches, away_matches)} matches). "
+            f"Combined: {result['combined_recent_gpg']:.2f} GPG. "
+            f"FORBIDDEN: Over 1.5/2.5/3.5 Goals, BTTS: Yes. "
+            f"REQUIRED: Force NO BET or Under 2.5 Goals. "
+            f"Rule 53 (Defensive Clown Show) is VETOED by bilateral offensive collapse."
+        )
+
+    # Partial bilateral drought: Combined < 1.5 GPG (e.g., 0.9 + 0.5 = 1.4)
+    elif result["combined_recent_gpg"] < 1.5:
+        result["bilateral_drought"] = True
+        result["both_teams_dead"] = False  # Not both dead individually, but combined output too low
+        result["veto_message"] = (
+            f"⚠️ BILATERAL LOW-SCORING DETECTED: Combined recent form < 1.5 GPG. "
+            f"Home: {home_recent_goals:.2f} GPG, Away: {away_recent_goals:.2f} GPG. "
+            f"Combined: {result['combined_recent_gpg']:.2f} GPG. "
+            f"HIGH RISK: Over 2.5/3.5 Goals. Consider Under 2.5 or NO BET."
+        )
+
+    return result
+
+
+def validate_supreme_court_pick(pick: str, home_ga: float, away_ga: float, dead_engine_check: dict, bilateral_check: dict = None, combined_xg: float = None) -> dict:
+    """
+    Validates Supreme Court pick against Rule 53 (Defensive Clown Show), Rule 35 (Dead Engine Veto),
+    and Bilateral Dead Engine scenarios.
+
+    Args:
+        pick: The Supreme Court's proposed Arbiter_Safe_Pick
+        home_ga: Home team goals conceded per game
+        away_ga: Away team goals conceded per game
+        dead_engine_check: Result from check_dead_engine_veto()
+        bilateral_check: Result from check_bilateral_dead_engine()
+        combined_xg: Combined expected goals (home_xg + away_xg) for xG-based validation
+
+    Returns:
+        dict: {
+            "is_valid": bool,
+            "violation": str or None,
+            "recommended_pivot": str or None
+        }
+    """
+    pick_lower = pick.lower()
+
+    # PRIORITY 1: Check Bilateral Dead Engine (most restrictive)
+    if bilateral_check and bilateral_check.get("bilateral_drought"):
+        if bilateral_check.get("both_teams_dead"):
+            # Both teams < 0.8 GPG - FORCE NO BET or Under 2.5 ONLY
+            if "over 1.5" in pick_lower or "over 2.5" in pick_lower or "over 3.5" in pick_lower or "btts: yes" in pick_lower:
+                return {
+                    "is_valid": False,
+                    "violation": f"BILATERAL DEAD ENGINE: {bilateral_check['veto_message']}",
+                    "recommended_pivot": "NO BET or Under 2.5 Goals"
+                }
+        elif bilateral_check.get("combined_recent_gpg", 999) < 1.5:
+            # Combined < 1.5 GPG - High risk for Over 2.5+
+            if "over 2.5" in pick_lower or "over 3.5" in pick_lower:
+                return {
+                    "is_valid": False,
+                    "violation": f"BILATERAL LOW-SCORING: {bilateral_check['veto_message']}",
+                    "recommended_pivot": "Under 2.5 Goals or Over 1.5 Goals (safer floor)"
+                }
+
+    # PRIORITY 2: Check Rule 53 with xG Context
+    # Rule 53 should only force Over markets when BOTH conditions are met:
+    # 1. Both defenses are bad (GA > 1.1)
+    # 2. Combined xG supports scoring (xG >= 2.8)
+    rule_53_active = home_ga > 1.1 and away_ga > 1.1
+
+    # NEW: Add xG-based validation
+    if rule_53_active and combined_xg is not None:
+        # If combined xG < 2.8, Rule 53 is "weak" - bad defenses but weak offenses
+        # Allow Under markets as safe bankers in this case
+        if combined_xg < 2.8:
+            # Weak Rule 53: Defenses bad, but offenses can't exploit it
+            # Over 1.5 is still valid (74%+ survival), but don't forbid Under 3.5
+            print(f"⚠️ [Rule 53 Context] Weak activation: GA > 1.1 but combined xG only {combined_xg:.2f}")
+            print(f"   Bad defenses + weak offenses = moderate scoring (not a shootout)")
+            # Allow both Over 1.5 AND Under 3.5 as valid safe picks
+            return {"is_valid": True, "violation": None, "recommended_pivot": None}
+
+    # PRIORITY 3: Check Rule 53 violation with Dead Engine override
+    if rule_53_active and dead_engine_check["veto_active"]:
+        # Rule 35 should VETO Rule 53's Over forcing logic
+        if "under 2.5" in pick_lower or "under 3.5" in pick_lower:
+            # Under picks are ALLOWED when Dead Engine vetoes Rule 53
+            return {"is_valid": True, "violation": None, "recommended_pivot": None}
+        elif "over 1.5" in pick_lower or "over 2.5" in pick_lower or "over 3.5" in pick_lower or "btts: yes" in pick_lower:
+            return {
+                "is_valid": False,
+                "violation": "Rule 53 (Defensive Clown Show) attempted to force Over/BTTS, but Rule 35 (Dead Engine Veto) VETOES this. Cannot use Over markets when one team cannot attack.",
+                "recommended_pivot": "Under 3.5 Goals or Match Control (1X/X2)"
+            }
+
+    # PRIORITY 3: Check Dead Engine with Over picks (regardless of Rule 53)
+    if dead_engine_check["veto_active"]:
+        if "over 1.5" in pick_lower or "over 2.5" in pick_lower or "over 3.5" in pick_lower or "btts: yes" in pick_lower:
+            return {
+                "is_valid": False,
+                "violation": f"Dead Engine Veto active. {dead_engine_check['veto_message']}",
+                "recommended_pivot": "Under 3.5 Goals or Match Control (1X/X2)"
+            }
+
+    return {"is_valid": True, "violation": None, "recommended_pivot": None}
+
+
+def enforce_rule_40_strict(home_metrics: dict, away_metrics: dict, combined_xg: float, league_name: str = "") -> dict:
+    """
+    RULE 40 STRICT ENFORCEMENT: Force NO BET when sample size too small or sport variant detected.
+
+    Triggers:
+    1. Either team < 5 matches
+    2. Combined xG > 6.0 (suggests sport variant like 6v6)
+    3. Non-standard format detected in league name
+
+    Args:
+        home_metrics: Home team metrics (must contain "Matches")
+        away_metrics: Away team metrics (must contain "Matches")
+        combined_xg: Combined expected goals
+        league_name: League/competition name for format detection
+
+    Returns:
+        dict: {
+            "force_no_bet": bool,
+            "reason": str,
+            "trigger": str
+        }
+    """
+    result = {
+        "force_no_bet": False,
+        "reason": "",
+        "trigger": ""
+    }
+
+    # Extract match counts (defensive programming to avoid false positives)
+    home_matches = home_metrics.get("Matches")
+    away_matches = away_metrics.get("Matches")
+
+    # CRITICAL FIX: Only enforce Rule 40 if we actually have valid match count data
+    # If data is missing (None), this is a data extraction issue, NOT an early-season scenario
+    if home_matches is None or away_matches is None:
+        print(f"⚠️ [Rule 40 Warning] Match count data missing. Home: {home_matches}, Away: {away_matches}")
+        print(f"   Skipping Rule 40 enforcement - cannot validate sample size without data.")
+        return result  # force_no_bet remains False
+
+    # Convert to integers for safety
+    home_matches = int(home_matches)
+    away_matches = int(away_matches)
+    min_matches = min(home_matches, away_matches)
+
+    # Trigger 1: Sample size too small (ONLY if we have valid data showing < 5 matches)
+    if min_matches < 5:
+        result["force_no_bet"] = True
+        result["trigger"] = "SAMPLE_SIZE"
+        result["reason"] = (
+            f"⛔ RULE 40 STRICT ENFORCEMENT: Minimum sample size violation. "
+            f"Home: {home_matches} matches, Away: {away_matches} matches. "
+            f"Minimum required: 5 matches per team. "
+            f"Statistical models are INVALID with N < 5. Forcing NO BET."
+        )
+        return result
+
+    # Trigger 2: Outlier combined xG (suggests sport variant)
+    if combined_xg > 6.0:
+        result["force_no_bet"] = True
+        result["trigger"] = "OUTLIER_XG"
+        result["reason"] = (
+            f"⛔ RULE 40 STRICT ENFORCEMENT: Outlier xG detected. "
+            f"Combined xG: {combined_xg:.2f} > 6.0. "
+            f"Standard 11v11 football rarely exceeds 4.0 combined xG. "
+            f"This suggests sport variant (6v6, 7v7, futsal) or data error. "
+            f"Standard models are NOT calibrated for this scenario. Forcing NO BET."
+        )
+        return result
+
+    # Trigger 3: Sport variant detection
+    sport_variants = ["6v6", "7v7", "5v5", "futsal", "beach soccer", "baller league", "indoor"]
+    league_lower = league_name.lower()
+
+    for variant in sport_variants:
+        if variant in league_lower:
+            result["force_no_bet"] = True
+            result["trigger"] = "SPORT_VARIANT"
+            result["reason"] = (
+                f"⛔ RULE 40 STRICT ENFORCEMENT: Sport variant detected. "
+                f"League: '{league_name}' contains '{variant}'. "
+                f"Standard 11v11 models (Poisson/Dixon-Coles) are NOT valid for {variant} format. "
+                f"Different goal dynamics require specialized models. Forcing NO BET."
+            )
+            return result
+
+    return result
+
+
 def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique: dict, match_id: int = None, job_id: str = None) -> dict:
     """
     The Final Risk Arbiter (Pipeline B - Phase 3).
@@ -1067,8 +1480,9 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - Rule 57: Sterility Supremacy Mandate (enforces Rules 48 & 53, subject to Rule 35 exception)
 
     TIER 1 - SAMPLE SIZE QUARANTINE (Overrides all goal-direction rules):
-    - Rule 40: Early-Season Quarantine (N < 8 matches)
+    - Rule 40: Early-Season Quarantine (N < 5 matches)
       → Overrides: Rules 16, 33, 35, all goal markets
+      → NOTE: The enforcement threshold is N < 5 (not 8). Matches with 5+ games have sufficient sample size.
 
     TIER 2 - STRUCTURAL OVERRIDES (Override tactical rules):
     - Rule 41: Playoff Paralysis (High-Stakes Fear)
@@ -1229,7 +1643,16 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     ✅ **RULE CONTRADICTION CHECK:**
        1. If selecting 'Over' pick: Verify Rule 48 (0-0 Ban) not violated
        2. If selecting 'Under' pick: Verify Rule 53 (Defensive Clown Show) not violated
-       3. If both teams concede > 1.1 GF/game: Rule 53 active → CANNOT use Under 2.5/3.5
+       3. **Rule 53 Context-Aware Activation**:
+          - STRONG Rule 53 (both teams concede > 1.1 GF/game AND combined_xG >= 2.8):
+            → Strictly FORBIDDEN: Under 2.5/3.5. MUST use Over 1.5/BTTS: Yes
+          - WEAK Rule 53 (both teams concede > 1.1 GF/game BUT combined_xG < 2.8):
+            → Bad defenses + weak offenses = moderate scoring (not a shootout)
+            → ALLOWED: Both Over 1.5 (~70-75% survival) AND Under 3.5 (~85-90% survival)
+            → **Decision logic for Weak Rule 53**:
+              • If combined_xG < 2.5: Under 3.5 is SAFER (higher survival %)
+              • If combined_xG 2.5-2.8: Over 1.5 and Under 3.5 roughly equal, choose based on odds
+              • Priority: Choose the market with HIGHEST expected survival rate for accumulator safety
        4. If invoking high-variance rule: Verify variance_multiplier >= 1.3
 
     ⚠️ CRITICAL VALIDATION: You MUST provide valid numeric values for home_xG, away_xG, and variance_multiplier. These fields are MANDATORY for the Monte Carlo simulation and cannot be null or omitted. If your validation checklist reveals a conflict, you MUST resolve it by applying the higher-priority veto rule.
@@ -1338,7 +1761,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     - **RULE 15: THE EV HARMONIZATION MANDATE**: If you or the Risk Manager downgrade the 'Primary Safe Pick' to a Double Chance (1X or X2) specifically because of a high Draw probability, defensive stalemates, or underdog resilience, your 'Alternative Value Pick (EV)' MUST NOT contradict this logic. You are STRICTLY FORBIDDEN from picking a straight Match Winner or aggressive Team Over Goals for the EV pick in these scenarios. Instead, the EV pick must aggressively embrace the tight game state. Acceptable EV pivots include: Outright Draw (X), Under 2.5 Goals, Underdog Asian Handicap (+1.5), or BTTS: Yes (if you project a 1-1 script). Align the risk.
 
-    - **RULE 16: THE STERILE OFFENSE TRAP**: You are strictly forbidden from backing ANY team (Home or Away) in the Match Winner (1X2), Double Chance (1X/X2), or Draw No Bet markets if they have scored FEWER total goals than total matches played in their recent venue or overall form (meaning they average < 1.0 goals per game). A strong defense is irrelevant if the team has zero "bounce-back" ability after conceding a lucky goal. If a team has an elite defense but a terrible offense, you MUST pivot your Banker away from team-dependent outcomes and strictly into structural markets (e.g., Under 2.5 Goals, Under 3.5 Goals, or BTTS: No). CRITICAL HIERARCHY: Rule 16 STRICTLY OVERRIDES Rule 4. If a dominant home team is a 'False Dominant' trap (Rule 4), but the away team suffers from a 'Sterile Offense' (Rule 16), you are STILL FORBIDDEN from backing the away team on a Double Chance (X2) or Match Winner. Do not trust a toothless underdog to win a fight. In the event of a Rule 4 and Rule 16 collision, you must abandon team-based markets entirely and default your Banker to Under 2.5 Goals or Under 3.5 Goals. THE RELEGATION FODDER EXCEPTION: You must waive the Sterile Offense Trap and you are FORBIDDEN from picking 'Under 2.5 Goals' ONLY IF the opponent possesses a catastrophically broken defense (conceding an average of >= 2.0 goals per game). Even a sterile offense can score 3 goals against a historically bad defense. In this specific scenario, abandon the Under and pivot to team-based markets (e.g., Home Win, Team Goals Over 1.5) or BTTS: No. THE SAMPLE SIZE MANDATE: The AI is strictly FORBIDDEN from triggering this rule if a team has played fewer than 8 matches in their current competition. Early-season metrics (Matchday 1 to 7) are statistically invalid. If the sample size is < 8, you CANNOT use this rule to override Agent 2's base projections.
+    - **RULE 16: THE STERILE OFFENSE TRAP**: You are strictly forbidden from backing ANY team (Home or Away) in the Match Winner (1X2), Double Chance (1X/X2), or Draw No Bet markets if they have scored FEWER total goals than total matches played in their recent venue or overall form (meaning they average < 1.0 goals per game). A strong defense is irrelevant if the team has zero "bounce-back" ability after conceding a lucky goal. If a team has an elite defense but a terrible offense, you MUST pivot your Banker away from team-dependent outcomes and strictly into structural markets (e.g., Under 2.5 Goals, Under 3.5 Goals, or BTTS: No). CRITICAL HIERARCHY: Rule 16 STRICTLY OVERRIDES Rule 4. If a dominant home team is a 'False Dominant' trap (Rule 4), but the away team suffers from a 'Sterile Offense' (Rule 16), you are STILL FORBIDDEN from backing the away team on a Double Chance (X2) or Match Winner. Do not trust a toothless underdog to win a fight. In the event of a Rule 4 and Rule 16 collision, you must abandon team-based markets entirely and default your Banker to Under 2.5 Goals or Under 3.5 Goals. THE RELEGATION FODDER EXCEPTION: You must waive the Sterile Offense Trap and you are FORBIDDEN from picking 'Under 2.5 Goals' ONLY IF the opponent possesses a catastrophically broken defense (conceding an average of >= 2.0 goals per game). Even a sterile offense can score 3 goals against a historically bad defense. In this specific scenario, abandon the Under and pivot to team-based markets (e.g., Home Win, Team Goals Over 1.5) or BTTS: No. THE SAMPLE SIZE MANDATE: The AI is strictly FORBIDDEN from triggering this rule if a team has played fewer than 5 matches in their current competition. Early-season metrics (Matchday 1 to 4) are statistically invalid. If the sample size is < 5, you CANNOT use this rule to override Agent 2's base projections.
 
     - **RULE 17: MANDATORY PRE-FLIGHT CHECK (SHOW YOUR WORK)**: Before you write your Final Ruling or select your Banker, you MUST internally calculate the Goal Ratio for both teams. You must start your 'View AI Internal Logic' or 'Final Ruling' section with a bracketed check, like this:
          [RULE 16 CHECK: Home Team Goals (X) vs Matches (Y) | Away Team Goals (A) vs Matches (B)]
@@ -1354,7 +1777,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     - **RULE 22: THE CUMULATIVE FATIGUE OVERRIDE (THE 120-MINUTE PENALTY - ASYMMETRIC FATIGUE)**: If a heavy underdog is entering a match following a 120-minute extra-time fixture within the last 7 days (and their opponent is NOT similarly fatigued), their defensive block will inevitably collapse late in the game due to physical exhaustion. You are strictly FORBIDDEN from relying on their defensive metrics to justify an 'Under' Match Goals banker, a positive Asian Handicap, or a low-scoring game script. You must heavily upgrade the superior opponent's offensive ceiling, specifically targeting 2nd-half goals, team totals, or high-variance goal markets to capitalize on the underdog's inevitable late-game physical collapse. If no safe offensive market exists, declare 'NO BET'. **CRITICAL:** This rule applies ONLY to asymmetric fatigue (one team fatigued, opponent fresh). If BOTH teams are fatigued, defer to Rule 51 or Rule 56.
 
-    - **RULE 23: THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 8 matches. Furthermore, you must NEVER assume a team's offensive output will drop to zero simply because starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance. If a match features a heavy favorite relying on a small-sample-size defense (< 8 games) facing an underdog with key suspensions, you must immediately ABANDON all team-based Banker markets (Match Winner, 1X2, Double Chance). You must pivot your Safe Banker to wide-margin, structural goal totals (e.g., Over 1.5 Goals or Under 3.5 Goals) to absorb this variance.
+    - **RULE 23: THE SMALL SAMPLE & WOUNDED ANIMAL OVERRIDE**: You are strictly FORBIDDEN from declaring any team's defense an 'absolute fortress' or fully reliable if the current season sample size is fewer than 5 matches. Furthermore, you must NEVER assume a team's offensive output will drop to zero simply because starting attackers are injured or suspended. Backup players introduce extreme, unpredictable variance. If a match features a heavy favorite relying on a small-sample-size defense (< 5 games) facing an underdog with key suspensions, you must immediately ABANDON all team-based Banker markets (Match Winner, 1X2, Double Chance). You must pivot your Safe Banker to wide-margin, structural goal totals (e.g., Over 1.5 Goals or Under 3.5 Goals) to absorb this variance.
 
     - **RULE 24: THE 17-MARKET HARMONIZATION MANDATE (ANTI-FRANKENSTEIN GRID)**:
       Before you output your final 17-market grid in `grid_corrections`, you MUST run a mandatory internal mathematical coherence pass. All 17 markets MUST tell the exact same story and align flawlessly with your predicted Correct Score. You are STRICTLY FORBIDDEN from outputting contradictory markets. Follow these absolute constraints:
@@ -1791,10 +2214,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE PIVOT:**
       The AI MUST pivot to high-event structural floors. Set the Safe Banker to 'Over 1.5 Match Goals', 'Over 4.5 Cards' (due to lazy tackles), or 'BTTS: Yes'.
 
-    - **RULE 40: THE EARLY-SEASON QUARANTINE (THE BOTTOM-FEEDER MIRAGE)**:
+    - **RULE 40: THE EARLY-SEASON QUARANTINE (STRICT SAMPLE SIZE VETO)**:
 
       **THE TRIGGER:**
-      If EITHER team has played fewer than 8 league matches in the current season, OR the AI identifies a match between two winless or relegation-threatened teams early in the campaign.
+      If EITHER team has played fewer than 5 league matches in the current season, the Supreme Court MUST invoke the Early-Season Quarantine protocol.
 
       **DATA HIERARCHY MANDATE — HOW TO DETERMINE MATCH COUNT:**
       Before you can apply Rule 40, you MUST determine the correct total season match count for each team. Use these sources in strict priority order:
@@ -1808,14 +2231,14 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **CRITICAL CROSS-COMPETITION RULE**: If a team has played 15+ league matches but this is only their 3rd match in a domestic cup, Rule 40 MUST be triggered for the cup match. Each competition has its own early-season phase. League experience does NOT eliminate cup variance.
 
       **THE TACTICAL REALITY:**
-      A sample size of fewer than 8 league matches is pure statistical noise. It cannot accurately model a sterile offense (Under) OR a leaky defense (Over). Early-season variance swings violently in BOTH directions — a team "averaging 0.3 goals per game" across 3-7 matches may simply not have had their high-scoring game yet. A team "conceding 2.5 per game" may have faced back-to-back elite opponents. Neither data point is statistically valid for a ceiling or floor bet in any direction.
+      A sample size of fewer than 5 league matches is pure statistical noise. It cannot accurately model a sterile offense (Under) OR a leaky defense (Over). Early-season variance swings violently in BOTH directions — a team "averaging 0.3 goals per game" across 1-4 matches may simply not have had their high-scoring game yet. A team "conceding 2.5 per game" may have faced back-to-back elite opponents. Neither data point is statistically valid for a ceiling or floor bet in any direction.
       Furthermore, when two poor teams meet, high GA averages are mirages — conceded against stronger opponents, NOT against fellow relegation candidates. Two desperate, winless managers will play 'not to lose,' producing a foul-heavy grind. The GA paper mirage evaporates when neither side has the offensive engine to punish it.
 
       **THE FORBIDDEN ACTION — MATCH GOALS QUARANTINE:**
-      When EITHER team has played fewer than 8 league matches, the Supreme Court is STRICTLY FORBIDDEN from using the following Match Goals markets as the Safe Banker:
-      - FORBIDDEN: 'Over 2.5', 'Over 3.5' — require reliable mid-season bilateral offensive data that a <8-match sample cannot provide.
+      When EITHER team has played fewer than 5 league matches, the Supreme Court is STRICTLY FORBIDDEN from using the following Match Goals markets as the Safe Banker:
+      - FORBIDDEN: 'Over 2.5', 'Over 3.5' — require reliable mid-season bilateral offensive data that a <5-match sample cannot provide.
       - FORBIDDEN: 'Under 2.5' — a precise ceiling that requires valid defensive data neither team has yet produced.
-      - FORBIDDEN: 'BTTS: Yes' or 'BTTS: No' — bilateral goal markets require reliable bilateral data that cannot exist in fewer than 8 matches.
+      - FORBIDDEN: 'BTTS: Yes' or 'BTTS: No' — bilateral goal markets require reliable bilateral data that cannot exist in fewer than 5 matches.
 
       **THE PERMITTED MENU — FOUR xG-ANCHORED STRUCTURAL MARKETS:**
       These four markets do NOT require team-result certainty or small-sample defensive averages. They are validated entirely by the Supreme Court's own xG projection, which is always available regardless of season length. The Supreme Court MUST evaluate all four and select the one its xG projection makes safest:
@@ -1825,7 +2248,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       - **'Under 4.5 Goals'** — an extremely wide ceiling. Valid when combined xG ≤ 2.5. Loses only if the match produces 5+ total goals — rare even in chaotic early-season fixtures.
       - **'Over 1.5 Goals'** — a wide floor requiring 2+ total goals. Valid when combined xG ≥ 2.0. Loses if the match ends 0-0 or 1-0 in either direction.
 
-      **THE CORE LOGIC:** These four markets are structurally anchored to xG, not to league averages. Every other goals market requires bilateral statistical precision that <8 matches cannot deliver and remains fully banned.
+      **THE CORE LOGIC:** These four markets are structurally anchored to xG, not to league averages. Every other goals market requires bilateral statistical precision that <5 matches cannot deliver and remains fully banned.
 
       **THE MANDATORY PIVOT — IN STRICT ORDER:**
       1. **xG-Anchored Structural Evaluation (always attempt first):**
@@ -1840,7 +2263,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       3. **Extreme Variance Veto (NO BET)**: If steps 1 and 2 both fail — no structural market is safe and no clear pedigree edge exists — you MUST invoke the NO BET protocol. Discard the match entirely. Protecting capital is always the correct output when no safe banker exists.
 
       **OVERRIDE HIERARCHY:**
-      Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption), Rule 16 (Sterile Offense), and ALL goal-direction rules when the sample size for either team is fewer than 8 matches. Rule 33 and Rule 16 were designed for mid-season data with large, reliable samples — they MUST NOT be triggered by a 3-7 match average, regardless of how large or small the numbers appear.
+      Rule 40 STRICTLY OVERRIDES Rule 33 (Mutual Collapse Exemption), Rule 16 (Sterile Offense), and ALL goal-direction rules when the sample size for either team is fewer than 5 matches. Rule 33 and Rule 16 were designed for mid-season data with large, reliable samples — they MUST NOT be triggered by a 1-4 match average, regardless of how large or small the numbers appear.
 
       **FINAL WARNING:**
       Do NOT confuse a bad defense with a porous one in a small sample. Do NOT confuse a quiet offense with a permanently sterile one. Both are mirages built on statistical noise. In an early-season quarantine, anchor first to the widest structural goal market your xG projection supports. Evaluate all four permitted markets before falling back to Double Chance. If nothing holds, declare NO BET and protect the accumulator.
@@ -2033,9 +2456,24 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       Rule 48 (0-0 Anchor Ban) and Rule 53 (Defensive Clown Show) are ABSOLUTE VETOES with ZERO exceptions.
       No other rule in the Supreme Court matrix — including Rule 40 (Desperation Grind), Rule 23 (Playoff Paralysis), or Rule 16 (Sterile Offense) — can override them.
       **THE FORBIDDEN ACTION:**
-      If you are about to select an 'Under' bet that relies on a 0-0 to survive, STOP. You are in VIOLATION of Rule 48. If both teams concede > 1.1 goals per game, you are in VIOLATION of Rule 53. Violations are ABSOLUTE FAILURES. No rationalization is permitted.
+      If you are about to select an 'Under' bet that relies on a 0-0 to survive, STOP. You are in VIOLATION of Rule 48.
+      **RULE 53 CONTEXT-AWARE ENFORCEMENT:**
+      Rule 53 has two activation levels:
+      - **STRONG Rule 53** (both teams concede > 1.1 GF/game AND combined_xG >= 2.8):
+        → This is a TRUE defensive clown show - bad defenses facing functional offenses.
+        → Strictly FORBIDDEN: Under 2.5/3.5. MUST use Over 1.5/BTTS: Yes.
+      - **WEAK Rule 53** (both teams concede > 1.1 GF/game BUT combined_xG < 2.8):
+        → Bad defenses BUT weak offenses cannot exploit them (moderate scoring expected).
+        → ALLOWED: Both Over 1.5 (~70-75% survival) AND Under 3.5 (~85-90% survival).
+        → **Prioritize the SAFER option**:
+          • If combined_xG < 2.5: Under 3.5 is SAFER (wider margin, higher survival %)
+          • If combined_xG 2.5-2.8: Either option valid, choose based on odds/confidence
+          • As Supreme Court, your duty is accumulator protection - choose highest survival rate
       **THE PIVOT:**
-      Obey Rule 48 and Rule 53 without question. Pivot immediately to 'Over 1.5 Goals', 'BTTS: Yes', or Match Control markets.
+      Obey Rule 48 without question. For Rule 53, check your calculated combined_xG (home_xG + away_xG):
+      - If xG >= 2.8: Pivot immediately to 'Over 1.5 Goals' or 'BTTS: Yes'.
+      - If xG < 2.5: Under 3.5 is SAFER (wider margin, ~85-90% expected survival).
+      - If xG 2.5-2.8: Either Over 1.5 or Under 3.5 valid, choose based on xG confidence and tactical factors.
 
     - **RULE 58: THE RATIONALIZATION VETO (MATH IS IMMUTABLE)**:
       **THE TRIGGER:**
@@ -2048,7 +2486,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       2. Artificially lowering the `home_xG` or `away_xG` values fed into the Monte Carlo Simulator to manufacture an 'Under' bet.
       3. Projecting a clean sheet for a team conceding > 1.2 goals per game based purely on the quality of the opposing attack.
       **THE PIVOT:**
-      If BOTH teams have GA > 1.2, Rule 53 (Defensive Clown Show) is automatically triggered and you MUST pivot to `Over 1.5 Goals` or `BTTS: Yes`. You must let the chaos happen. The math is immutable.
+      If BOTH teams have GA > 1.2, check your calculated combined_xG:
+      - If combined_xG >= 2.8: STRONG Rule 53 triggered → MUST pivot to `Over 1.5 Goals` or `BTTS: Yes`.
+      - If combined_xG < 2.8: WEAK Rule 53 triggered → May use Over 1.5 (safer) OR Under 3.5 (wider ceiling).
+      The math is immutable - bad defenses + weak offenses = moderate scoring, not guaranteed shootout.
 
     - **RULE 59: THE DESPERATION PARADOX (TACTICAL DESPERATION CEILING)**:
       **THE TRIGGER:**
@@ -2158,7 +2599,90 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("API Key is missing")
-            
+
+        # ============================================================================
+        # 🛡️ RULE 40 STRICT ENFORCEMENT - Check BEFORE generating Supreme Court pick
+        # ============================================================================
+
+        # CRITICAL FIX: Extract metrics correctly from the actual data structure
+        # Structure: match_data["metrics"]["Statistic Name"][team_name] = value
+        metrics_dict = match_data.get("metrics", {})
+        metadata = match_data.get("metadata", {})
+        home_team_name = metadata.get("home_team", "")
+        away_team_name = metadata.get("away_team", "")
+
+        # Build flat metrics dicts for each team
+        home_metrics = {}
+        away_metrics = {}
+
+        if metrics_dict and home_team_name and away_team_name:
+            for stat_name, team_values in metrics_dict.items():
+                if isinstance(team_values, dict):
+                    home_metrics[stat_name] = team_values.get(home_team_name)
+                    away_metrics[stat_name] = team_values.get(away_team_name)
+
+        # Calculate preliminary combined xG for Rule 40 check
+        home_xg_prelim = home_metrics.get("Expected goals (xG) per game", home_metrics.get("Goals scored per game", 1.3))
+        away_xg_prelim = away_metrics.get("Expected goals (xG) per game", away_metrics.get("Goals scored per game", 1.1))
+
+        # Handle None values (data might be missing)
+        home_xg_prelim = home_xg_prelim if home_xg_prelim is not None else 1.3
+        away_xg_prelim = away_xg_prelim if away_xg_prelim is not None else 1.1
+
+        combined_xg_prelim = float(home_xg_prelim) + float(away_xg_prelim)
+
+        # Extract league name for sport variant detection
+        league_name = match_data.get("league", {}).get("name", "")
+        if not league_name:
+            # Fallback to tournament name from metadata
+            league_name = metadata.get("tournament", "")
+
+        rule_40_result = enforce_rule_40_strict(
+            home_metrics=home_metrics,
+            away_metrics=away_metrics,
+            combined_xg=combined_xg_prelim,
+            league_name=league_name
+        )
+
+        if rule_40_result["force_no_bet"]:
+            print(f"⛔ [RULE 40 VETO] {rule_40_result['reason']}")
+
+            match_name = agent_1_pitch.get('match', 'Unknown Match')
+            return {
+                "match": match_name,
+                "Supreme_Court_Final_Ruling": (
+                    f"⛔ RULE 40 STRICT ENFORCEMENT VETO:\n\n"
+                    f"{rule_40_result['reason']}\n\n"
+                    f"VERDICT: NO BET. Statistical models require minimum 5 matches per team "
+                    f"and standard 11v11 format. Capital preservation is the only valid action."
+                ),
+                "Crucible_Simulation_Warning": (
+                    f"Rule 40 Trigger: {rule_40_result['trigger']}. "
+                    f"Statistical models are invalid for this scenario."
+                ),
+                "verdict_status": "NO_BET",
+                "Arbiter_Safe_Pick": {
+                    "market": "N/A",
+                    "tip": f"NO BET: Rule 40 - {rule_40_result['trigger']}",
+                    "confidence": 0,
+                    "odds": 0
+                },
+                "alternative_value_pick": {
+                    "market": "N/A",
+                    "tip": "NO BET",
+                    "confidence": 0,
+                    "odds": 0,
+                    "value_reasoning": "Rule 40 strict enforcement prevents all betting activity."
+                },
+                "home_xG": None,
+                "away_xG": None,
+                "variance_multiplier": None,
+                "simulation_audit": f"[RULE 40 VETO: {rule_40_result['trigger']}]",
+                "simulation_data": {},
+                "top_scorelines": []
+            }
+        # ============================================================================
+
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{get_active_model()}:generateContent?key={api_key}"
         payload = {
             "contents": [({"parts": [{"text": prompt}]})],
@@ -2252,10 +2776,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                     time.sleep(5)
                 else:
                     raise
-            
+
         try:
             from src.rag.simulator import run_crucible_simulation
-            
+
             # Robust extraction of xG stats to prevent float(None) crashes
             # NOTE: Supreme Court is instructed to provide these values (lines 928-931),
             # but LLMs occasionally omit them. This fallback ensures simulation always runs.
@@ -2264,8 +2788,22 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             raw_var = parsed.get("variance_multiplier")
 
             # Use intelligent fallback system for xG extraction
-            home_metrics = match_data.get("advanced_stats", {}).get("home_team", {}).get("metrics", {})
-            away_metrics = match_data.get("advanced_stats", {}).get("away_team", {}).get("metrics", {})
+            # (Re-use the metrics we already extracted for Rule 40)
+            # If they weren't extracted yet (shouldn't happen), extract them now
+            if not home_metrics or not away_metrics:
+                metrics_dict = match_data.get("metrics", {})
+                metadata = match_data.get("metadata", {})
+                home_team_name = metadata.get("home_team", "")
+                away_team_name = metadata.get("away_team", "")
+
+                home_metrics = {}
+                away_metrics = {}
+
+                if metrics_dict and home_team_name and away_team_name:
+                    for stat_name, team_values in metrics_dict.items():
+                        if isinstance(team_values, dict):
+                            home_metrics[stat_name] = team_values.get(home_team_name)
+                            away_metrics[stat_name] = team_values.get(away_team_name)
 
             h_xg = get_xg_with_intelligent_fallback(
                 raw_xg=raw_home_xg,
@@ -2282,6 +2820,109 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             )
 
             v_mult = float(raw_var) if raw_var is not None else 1.0
+
+            # ============================================================================
+            # 🛡️ VARIANCE MULTIPLIER SANITY CHECK
+            # ============================================================================
+            # Prevent chaos mode (variance > 1.2) when combined xG doesn't support it
+            combined_xg = h_xg + a_xg
+
+            if v_mult > 1.2 and combined_xg < 3.0:
+                print(f"⚙️ [VARIANCE CORRECTION] Variance {v_mult:.2f} too high for combined xG {combined_xg:.2f}")
+                print(f"   Chaos mode (NegBinom) should ONLY activate for high-scoring games (xG >= 3.0)")
+                print(f"   Forcing variance = 1.0 (Standard Poisson)")
+                v_mult = 1.0
+                parsed["variance_multiplier"] = 1.0
+
+            # Additional check: If variance > 1.0 but combined xG < 2.5, also force 1.0
+            elif v_mult > 1.0 and combined_xg < 2.5:
+                print(f"⚙️ [VARIANCE CORRECTION] Variance {v_mult:.2f} inappropriate for low-scoring match (xG {combined_xg:.2f})")
+                print(f"   Low-scoring matches (xG < 2.5) should use Standard Poisson")
+                print(f"   Forcing variance = 1.0")
+                v_mult = 1.0
+                parsed["variance_multiplier"] = 1.0
+            # ============================================================================
+
+            # ============================================================================
+            # 🛡️ RULE 35 (DEAD ENGINE) VALIDATION LAYER
+            # ============================================================================
+            # Check for Dead Engine scenarios BEFORE finalizing the pick
+            home_form_data = match_data.get("home_form")
+            away_form_data = match_data.get("away_form")
+
+            dead_engine_check = check_dead_engine_veto(
+                home_metrics=home_metrics,
+                away_metrics=away_metrics,
+                home_form=home_form_data,
+                away_form=away_form_data
+            )
+
+            # NEW: Check for bilateral drought (BOTH teams simultaneously)
+            bilateral_check = check_bilateral_dead_engine(
+                home_metrics=home_metrics,
+                away_metrics=away_metrics,
+                home_form=home_form_data,
+                away_form=away_form_data
+            )
+
+            if bilateral_check["bilateral_drought"]:
+                print(f"⚠️ [BILATERAL DROUGHT DETECTED] {bilateral_check['veto_message']}")
+
+            if dead_engine_check["veto_active"]:
+                print(f"⚠️ [DEAD ENGINE VETO] {dead_engine_check['veto_message']}")
+
+            # Run validation if ANY veto is active
+            if dead_engine_check["veto_active"] or bilateral_check["bilateral_drought"]:
+                # Extract GA data for Rule 53 check
+                home_ga = home_metrics.get("Goals conceded per game", 0)
+                away_ga = away_metrics.get("Goals conceded per game", 0)
+
+                # Calculate combined xG for context-aware Rule 53 validation
+                combined_xg_for_validation = h_xg + a_xg
+
+                # Validate the Supreme Court's pick
+                arbiter_pick = parsed.get("Arbiter_Safe_Pick", {}).get("tip", "")
+                validation_result = validate_supreme_court_pick(
+                    pick=arbiter_pick,
+                    home_ga=home_ga,
+                    away_ga=away_ga,
+                    dead_engine_check=dead_engine_check,
+                    bilateral_check=bilateral_check,
+                    combined_xg=combined_xg_for_validation
+                )
+
+                if not validation_result["is_valid"]:
+                    print(f"🚨 [VALIDATION FAILURE] {validation_result['violation']}")
+                    print(f"📋 [AUTO-CORRECTION] Forcing pivot to: {validation_result['recommended_pivot']}")
+
+                    # Determine corrected pick based on scenario
+                    if bilateral_check.get("both_teams_dead"):
+                        # Bilateral dead engine → Force NO BET or Under 2.5
+                        if "NO BET" in validation_result["recommended_pivot"]:
+                            parsed["Arbiter_Safe_Pick"]["tip"] = "NO BET: Bilateral Dead Engine detected"
+                            parsed["Arbiter_Safe_Pick"]["market"] = "N/A"
+                            parsed["verdict_status"] = "NO_BET"
+                        else:
+                            parsed["Arbiter_Safe_Pick"]["tip"] = "Under 2.5 Goals"
+                            parsed["Arbiter_Safe_Pick"]["market"] = "Match_Goals"
+                    else:
+                        # Single dead engine or low-scoring → Under 3.5
+                        parsed["Arbiter_Safe_Pick"]["tip"] = "Under 3.5 Goals"
+                        parsed["Arbiter_Safe_Pick"]["market"] = "Match_Goals"
+
+                    parsed["Supreme_Court_Final_Ruling"] = (
+                        f"⚠️ AUTOMATIC CORRECTION APPLIED:\n\n"
+                        f"{validation_result['violation']}\n\n"
+                        f"CORRECTED PICK: {validation_result['recommended_pivot']}\n\n"
+                        f"ORIGINAL RULING:\n{parsed.get('Supreme_Court_Final_Ruling', '')}"
+                    )
+
+                    # Force variance multiplier to 1.0 (standard Poisson, no chaos mode)
+                    if v_mult > 1.0:
+                        print(f"⚙️ [VARIANCE CORRECTION] Reducing variance_multiplier from {v_mult:.2f} to 1.0 (Dead Engine detected)")
+                        v_mult = 1.0
+                        parsed["variance_multiplier"] = 1.0
+            # ============================================================================
 
             # Robust extraction of Agent 2's pick (handling fallback to Agent 1's safe_bet_tip)
             primary_obj = agent_2_critique.get("primary_pick", {})
