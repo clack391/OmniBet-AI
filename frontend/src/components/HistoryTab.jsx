@@ -187,6 +187,35 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
         }
     };
 
+    const handleClearTier = async (tierKey) => {
+        if (!window.confirm(`Are you sure you want to permanently delete ${tierKey === 'tier2' ? 'Tier 2' : 'Tier 3'}?`)) {
+            return;
+        }
+
+        try {
+            // Call backend to persist the deletion
+            await api.patch(`/best-picks/clear-tier`, { tier: tierKey });
+
+            // Update local state to reflect the deletion immediately
+            setBestPicks(prevPicks => {
+                if (!prevPicks) return null;
+
+                const newPicks = { ...prevPicks };
+
+                if (tierKey === 'tier2') {
+                    delete newPicks.tier_2_picks;
+                } else if (tierKey === 'tier3') {
+                    delete newPicks.tier_3_picks;
+                }
+
+                return newPicks;
+            });
+        } catch (err) {
+            console.error("Failed to clear tier:", err);
+            alert("Failed to delete tier. Please try again.");
+        }
+    };
+
     const calcTotalOdds = (picks) => {
         if (!picks || picks.length === 0) return null;
         const total = picks.reduce((acc, pick) => {
@@ -467,9 +496,14 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
                                 These picks carry too much variance for a long parlay. Use in 2–3 leg secondary tickets only — never in the master accumulator.
                             </p>
                         </div>
-                        <button onClick={() => handleAddAllToSlip(bestPicks.tier_2_picks)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all shadow-lg active:scale-95 text-xs uppercase tracking-tight border-b-4 border-blue-800 hover:border-blue-700">
-                            <PlusCircle className="w-4 h-4" /> Add to slip
-                        </button>
+                        <div className="flex gap-2 relative z-20">
+                            <button onClick={() => handleAddAllToSlip(bestPicks.tier_2_picks)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl transition-all shadow-lg active:scale-95 text-xs uppercase tracking-tight border-b-4 border-blue-800 hover:border-blue-700">
+                                <PlusCircle className="w-4 h-4" /> Add to slip
+                            </button>
+                            <button onClick={() => handleClearTier('tier2')} className="p-2 text-blue-500/50 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors" title="Clear Tier 2">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 relative z-10">
                         {bestPicks.tier_2_picks.map((pick) => renderPickCard(pick, 'tier2'))}
@@ -500,9 +534,14 @@ const HistoryTab = ({ onSelectHistoryItem, isActive, latestPredictions }) => {
                                 High variance or coin-flip territory. Banned from all accumulators. Play as standalone singles only — or discard.
                             </p>
                         </div>
-                        <button onClick={() => handleAddAllToSlip(bestPicks.tier_3_picks)} className="flex items-center gap-2 px-5 py-2.5 bg-rose-700 hover:bg-rose-600 text-white font-black rounded-xl transition-all shadow-lg active:scale-95 text-xs uppercase tracking-tight border-b-4 border-rose-900 hover:border-rose-800">
-                            <PlusCircle className="w-4 h-4" /> Add to slip
-                        </button>
+                        <div className="flex gap-2 relative z-20">
+                            <button onClick={() => handleAddAllToSlip(bestPicks.tier_3_picks)} className="flex items-center gap-2 px-5 py-2.5 bg-rose-700 hover:bg-rose-600 text-white font-black rounded-xl transition-all shadow-lg active:scale-95 text-xs uppercase tracking-tight border-b-4 border-rose-900 hover:border-rose-800">
+                                <PlusCircle className="w-4 h-4" /> Add to slip
+                            </button>
+                            <button onClick={() => handleClearTier('tier3')} className="p-2 text-rose-500/50 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors" title="Clear Tier 3">
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 relative z-10">
                         {bestPicks.tier_3_picks.map((pick) => renderPickCard(pick, 'tier3'))}

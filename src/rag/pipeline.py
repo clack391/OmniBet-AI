@@ -691,6 +691,42 @@ def generate_best_picks(saved_predictions: list, target_odds: float = None) -> d
     ## THE "NO NARRATIVE" RULE
     You are STRICTLY FORBIDDEN from being influenced by the Supreme Court's tactical analysis, narrative, or confidence level (e.g., "Condition Green"). You must ignore the essay. Your ONLY source of truth is the Supreme Court Pick Survival percentage found inside the `simulation_audit` field attached to each match.
 
+    ## VALIDATED ALTERNATIVE MARKETS (MULTI-PICK OPTIMIZATION)
+    **CRITICAL NEW FEATURE**: Some matches now include `alternative_results` — a list of validated alternative markets that were tested by the Monte Carlo Simulator alongside the Supreme Court's main pick.
+
+    **YOUR OPTIMIZATION MANDATE:**
+    1. **Check for Alternative Results**: For each match, look for the `alternative_results` field in the prediction data.
+    2. **Compare Survival Rates**: If alternative results exist, compare the survival rates of:
+       - Supreme Court's main pick (from `simulation_audit`)
+       - All alternative validated markets (from `alternative_results`)
+    3. **Choose the Safest Option**: Select the market with the HIGHEST survival rate, regardless of which one the Supreme Court originally chose.
+       - If "Over 0.5 Goals" has 94.2% survival and "Over 1.5 Goals" (Supreme Court pick) has 85.4%, you MUST choose "Over 0.5 Goals"
+       - If Supreme Court's pick is already the highest, keep it
+    4. **Market Integrity**: All alternative markets are from the SAME correlation bucket, so they maintain tactical coherence
+    5. **Update chosen_tip AND odds**: When selecting an alternative market:
+       - Find the alternative in the `validated_alternative_markets` array from the prediction data
+       - Use the alternative's exact `tip` name
+       - **CRITICAL**: Use the alternative's `odds` value (NOT the Supreme Court's original odds)
+       - Update the `market` field to match the alternative's market type
+       - Update `confidence` to match the alternative's confidence level
+
+    **EXAMPLE:**
+    Match has:
+    - Supreme Court Pick: "Over 1.5 Goals" (85.4% survival, odds: 1.50)
+    - Alternative Results: {{"Over 0.5 Goals": 94.2%, "BTTS Yes": 81.3%, "Over 2.5 Goals": 73.1%}}
+    - validated_alternative_markets: [
+        {{"tip": "Over 0.5 Goals", "odds": 1.15, "confidence": 95, "market": "Match_Goals"}},
+        {{"tip": "BTTS: Yes", "odds": 1.85, "confidence": 82, "market": "BTTS"}},
+        {{"tip": "Over 2.5 Goals", "odds": 2.10, "confidence": 72, "market": "Match_Goals"}}
+      ]
+
+    **Your Action:**
+    - Choose "Over 0.5 Goals" (94.2%) instead of Supreme Court's "Over 1.5 Goals" (85.4%)
+    - Use odds: 1.15 (from validated_alternative_markets, NOT 1.50)
+    - Use confidence: 95 (from validated_alternative_markets)
+    - Place it in Tier 1 (94.2% exceeds 85% threshold)
+    - Reasoning: "Over 0.5 Goals upgraded from Supreme Court's validated alternatives (94.2% vs 85.4%)"
+
     ## THE TRI-TIER PORTFOLIO SORTING PROTOCOL
     You must extract the Survival Rate percentage and assign every match to EXACTLY ONE of the following three tiers based on strict mathematical boundaries:
 
@@ -1671,6 +1707,15 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
         "confidence": "integer (0-100)",
         "odds": 1.55
       }},
+      "validated_alternative_markets": [
+        {{
+          "market": "string (MUST be from the SAME BUCKET as Arbiter_Safe_Pick)",
+          "tip": "string (CRITICAL: MUST be a fully qualified market name. NEVER use just 'Yes' or 'No' - use 'BTTS: Yes', 'BTTS: No', '10 Minute Draw: Yes', etc. Examples: 'Over 0.5 Goals', 'BTTS: Yes', 'Home Win', 'Under 4.5 Goals')",
+          "confidence": "integer (0-100)",
+          "odds": 1.25,
+          "structural_reasoning": "string (Why this alternative might be safer/better)"
+        }}
+      ],
       "alternative_value_pick": {{
         "market": "string",
         "tip": "string",
@@ -1718,6 +1763,46 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
          **CRITICAL RULE:** You CANNOT override the Monte Carlo with subjective reasoning. The simulation is the mathematical ground truth. If Over 1.5 wins in only 82.7% of scenarios, it does NOT qualify as a Safe Banker for an 8+ leg accumulator — this is a statistical fraud. Your confidence level MUST align with the simulator's survival rate AND the accumulator context. If you cannot find a market with 85%+ survival, you MUST declare NO_BET to protect the accumulator.
       5. The Ultimate Veto (No Bet): If, after downgrading, you determine that absolutely NONE of the 17 markets can safely survive the game's variance without risking the accumulator, you must strike the match from the record. In the Safe Pick field, output exactly: 'NO BET: Market too volatile for Accumulator survival.' Protect the capital at all costs.
+
+    - **RULE 3.5: VALIDATED ALTERNATIVE MARKETS MANDATE (MULTI-PICK SIMULATION)**:
+      In addition to your main `Arbiter_Safe_Pick`, you MUST provide 1-3 alternative markets from the SAME BUCKET for the Python Monte Carlo Simulator to validate. This allows the AI Accumulator Builder to choose the safest option from multiple validated picks.
+
+      **ALTERNATIVE MARKET SELECTION RULES:**
+      1. **Same Bucket Requirement**: All alternatives MUST be from the same correlation bucket as your main pick.
+         - If main pick is "Over 1.5 Goals" (Bucket 2: Attack vs Defense), alternatives must be: "Over 0.5", "Over 2.5", "BTTS Yes", "Under 3.5", "Away Team Over 0.5", "Home Team Over 1.5", etc.
+         - If main pick is "Home Win" (Bucket 1: Match Control), alternatives must be: "1X", "Home DNB", "Home -0.5 AH", etc.
+         - **CRITICAL**: Bucket 2 includes BOTH "Match Goals" (total goals) AND "Team Goals" (specific team scoring).
+         - **MANDATORY**: If your main pick is a Match Goals market AND either team has xG ≥ 1.5, you MUST include at least one Team Goals alternative for that team:
+           * If Away xG ≥ 1.5: MUST include "Away Team Over 0.5 Goals" or "Away Team Over 1.5 Goals"
+           * If Home xG ≥ 1.5: MUST include "Home Team Over 0.5 Goals" or "Home Team Over 1.5 Goals"
+           * If BOTH teams have xG ≥ 1.5: Include Team Goals alternatives for BOTH teams
+         - **EXAMPLE**: Main pick "Over 1.5 Goals" with Away xG = 2.4, Home xG = 1.4 → MUST include both "Away Team Over 0.5 Goals" AND "Home Team Over 0.5 Goals" as alternatives
+
+      2. **Safety Gradient**: Arrange alternatives by expected safety (safest to riskiest):
+         - Alternative 1: SAFER than main pick (wider floor/ceiling)
+         - Alternative 2: SIMILAR safety to main pick (adjacent line)
+         - Alternative 3: RISKIER than main pick (tighter line, higher EV)
+
+      3. **Structural Reasoning**: For each alternative, explain WHY it might be safer/better:
+         - "Over 0.5 Goals is structurally safer than Over 1.5 (only loses on 0-0)"
+         - "First Half Under 0.5 Goals survives if match starts cautiously"
+         - "Under 3.5 Goals has wider ceiling than Under 2.5 (absorbs 3-0, 2-1, 3-0)"
+
+      4. **CRITICAL: Fully Qualified Tip Names**: You MUST provide complete, unambiguous tip names:
+         - ✅ CORRECT: "BTTS: Yes", "BTTS: No", "10 Minute Draw: Yes", "Over 0.5 Goals"
+         - ❌ WRONG: "Yes", "No" (ambiguous - simulator cannot evaluate these)
+         - ✅ CORRECT: "Home Win", "Away Win", "Draw"
+         - ❌ WRONG: "1", "2", "X" (use full names)
+
+      **EXAMPLE:**
+      Main Pick: "Over 1.5 Goals" (Combined xG = 3.8, Away xG = 2.4, Home xG = 1.4)
+      Validated Alternatives (MANDATORY - both teams have xG ≥ 1.5):
+      1. "Home Team Over 0.5 Goals" (Safer - home has 1.4 xG, 95% likely to score)  ← Team Goals REQUIRED
+      2. "Away Team Over 0.5 Goals" (Safer - away has 2.4 xG, 95% likely to score)  ← Team Goals REQUIRED
+      3. "Over 2.5 Goals" (Riskier - combined xG 3.8 supports higher line for more EV)
+      4. "BTTS: Yes" (Similar safety - both teams capable of scoring)  ← NOT just "Yes"
+
+      **SIMULATION BENEFIT**: The Python simulator will calculate survival rates for ALL 4 picks (main + 3 alternatives). The AI Accumulator Builder will then choose the pick with the highest survival rate, optimizing safety without manual guessing.
 
     - **RULE 4: THE ANTI-BIAS MANDATE**:
       1. **REJECT THE "FIRST-LEG" FALLACY**: Do not allow Agent 2 to overturn a goal market based on "first-leg caution" if the tactical metrics (possession, big chances) show two attacking systems colliding.
@@ -2932,16 +3017,61 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             elif isinstance(primary_obj, str):
                 a2_pick = primary_obj
 
+            # NEW: Phase 1 - Extract corners and cards data for simulation
+            # Default values: ~5 corners per team, ~2 cards per team (typical football averages)
+            home_corners = home_metrics.get("Corner kicks per game", 5.0)
+            away_corners = away_metrics.get("Corner kicks per game", 5.0)
+
+            # Calculate cards per game from yellow/red cards
+            home_matches = home_metrics.get("Matches", 1) or 1
+            away_matches = away_metrics.get("Matches", 1) or 1
+            home_yellow = home_metrics.get("Yellow cards", 0) or 0
+            home_red = home_metrics.get("Red cards", 0) or 0
+            away_yellow = away_metrics.get("Yellow cards", 0) or 0
+            away_red = away_metrics.get("Red cards", 0) or 0
+
+            # Total cards per game (yellows + reds, weighted by 1)
+            home_cards = (home_yellow + home_red) / home_matches
+            away_cards = (away_yellow + away_red) / away_matches
+
+            # Safety: Ensure we have valid numbers
+            if home_corners is None or not isinstance(home_corners, (int, float)):
+                home_corners = 5.0
+            if away_corners is None or not isinstance(away_corners, (int, float)):
+                away_corners = 5.0
+            if home_cards < 0: home_cards = 2.0
+            if away_cards < 0: away_cards = 2.0
+
+            print(f"📊 [Phase 1] Corners: Home={home_corners:.1f}, Away={away_corners:.1f}. Cards: Home={home_cards:.1f}, Away={away_cards:.1f}")
+
+            # NEW: Extract alternative markets from Supreme Court response
+            alternative_markets_list = []
+            validated_alternatives = parsed.get("validated_alternative_markets", [])
+            if validated_alternatives and isinstance(validated_alternatives, list):
+                for alt_market in validated_alternatives:
+                    if isinstance(alt_market, dict) and "tip" in alt_market:
+                        alternative_markets_list.append(alt_market["tip"])
+                print(f"🔍 [Alternative Markets] Testing {len(alternative_markets_list)} additional picks: {alternative_markets_list}")
+
             sim_res = run_crucible_simulation(
                 home_xG=h_xg,
                 away_xG=a_xg,
                 variance_multiplier=v_mult,
                 agent_2_pick=a2_pick,
-                supreme_court_pick=parsed.get("Arbiter_Safe_Pick", {}).get("tip", "N/A")
+                supreme_court_pick=parsed.get("Arbiter_Safe_Pick", {}).get("tip", "N/A"),
+                home_corners_avg=home_corners,  # NEW: Phase 1
+                away_corners_avg=away_corners,  # NEW: Phase 1
+                home_cards_avg=home_cards,      # NEW: Phase 1
+                away_cards_avg=away_cards,       # NEW: Phase 1
+                alternative_picks=alternative_markets_list if alternative_markets_list else None  # NEW: Pass alternative markets
             )
             parsed["simulation_audit"] = sim_res["audit_string"]
             parsed["simulation_data"] = sim_res["distribution"]
             parsed["top_scorelines"] = sim_res["top_scorelines"]
+
+            # NEW: Store alternative results if present
+            if "alternative_results" in sim_res:
+                parsed["alternative_results"] = sim_res["alternative_results"]
         except Exception as sim_e:
             print(f"Crucible Simulator Execution Failed: {sim_e}")
             parsed["simulation_audit"] = "[SIMULATION AUDIT: Failed to run mathematical simulation.]"

@@ -441,6 +441,9 @@ def restore_prediction_to_history(prediction_id: int, current_user: dict = Depen
 class BestPicksRequest(BaseModel):
     target_odds: float | None = None
 
+class ClearTierRequest(BaseModel):
+    tier: str  # "tier2" or "tier3"
+
 @app.post("/generate-best-picks")
 def create_best_picks(req: BestPicksRequest = None, current_user: dict = Depends(get_admin_user)):
     # 1. Get all saved history
@@ -480,6 +483,31 @@ def read_best_picks():
 def delete_best_picks(current_user: dict = Depends(get_admin_user)):
     clear_best_picks()
     return {"status": "cleared"}
+
+@app.patch("/best-picks/clear-tier")
+def clear_tier_from_best_picks(req: ClearTierRequest, current_user: dict = Depends(get_admin_user)):
+    """
+    Remove a specific tier (tier2 or tier3) from the saved AI Accumulator.
+    This makes tier deletions persistent across page refreshes.
+    """
+    # 1. Get current best picks
+    picks = get_best_picks()
+    if not picks:
+        raise HTTPException(status_code=404, detail="No AI Accumulator found.")
+
+    # 2. Delete the specified tier
+    if req.tier == "tier2" and "tier_2_picks" in picks:
+        del picks["tier_2_picks"]
+    elif req.tier == "tier3" and "tier_3_picks" in picks:
+        del picks["tier_3_picks"]
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid tier: {req.tier}")
+
+    # 3. Save updated picks back to database
+    from src.database.db import update_best_picks
+    update_best_picks(picks)
+
+    return {"status": "success", "tier_removed": req.tier}
 
 # --- Groups API ---
 

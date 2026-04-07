@@ -757,7 +757,9 @@ def get_sofascore_match_stats(sofascore_match_id: int):
         ("Goal kicks per game", "goalKicks", True),
         ("Throw-ins per game", "throwIns", True),
         ("Yellow cards", "yellowCards", False),
-        ("Red cards", "redCards", False)
+        ("Red cards", "redCards", False),
+        ("Corner kicks per game", "cornerKicks", True),  # NEW: Added for corners simulation
+        ("Total corners", "cornerKicks", False)  # NEW: Raw corner count
     ]
 
     def _build_comparison(h_stats, a_stats, h_label, a_label):

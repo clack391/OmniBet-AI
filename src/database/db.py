@@ -421,6 +421,30 @@ def get_best_picks():
     finally:
         conn.close()
 
+def update_best_picks(data: dict):
+    """
+    Update the most recent AI Accumulator with modified data.
+    Used for persisting tier deletions.
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        # Remove created_at if it exists (it's auto-generated)
+        data_copy = data.copy()
+        data_copy.pop('created_at', None)
+
+        # Update the most recent accumulator
+        cursor.execute('''
+            UPDATE ai_best_picks
+            SET accumulator_json = ?
+            WHERE id = (SELECT id FROM ai_best_picks ORDER BY created_at DESC LIMIT 1)
+        ''', (json.dumps(data_copy),))
+        conn.commit()
+    except Exception as e:
+        print(f"Error updating accumulator: {e}")
+    finally:
+        conn.close()
+
 def clear_best_picks():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
