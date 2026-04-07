@@ -214,6 +214,17 @@ def run_crucible_simulation(
         elif "draw" in pick or pick == "x":
             return home_score == away_score
 
+        # Team Goals — must come BEFORE Match Goals so "home team over 0.5 goals"
+        # is caught here rather than falling into the bare "over 0.5" match check below
+        elif "home over 0.5" in pick or "home team over 0.5" in pick or "home to score" in pick: return home_score > 0.5
+        elif "home over 1.5" in pick or "home team over 1.5" in pick: return home_score > 1.5
+        elif "away over 0.5" in pick or "away team over 0.5" in pick or "away to score" in pick: return away_score > 0.5
+        elif "away over 1.5" in pick or "away team over 1.5" in pick: return away_score > 1.5
+        elif "home under 0.5" in pick or "home team under 0.5" in pick: return home_score < 0.5
+        elif "home under 1.5" in pick or "home team under 1.5" in pick: return home_score < 1.5
+        elif "away under 0.5" in pick or "away team under 0.5" in pick: return away_score < 0.5
+        elif "away under 1.5" in pick or "away team under 1.5" in pick: return away_score < 1.5
+
         # Match Goals
         elif "over 0.5" in pick: return (home_score + away_score) > 0.5
         elif "over 1.5" in pick: return (home_score + away_score) > 1.5
@@ -231,16 +242,6 @@ def run_crucible_simulation(
             return home_score > 0 and away_score > 0
         elif "btts: no" in pick or "both teams to score: no" in pick or ("no" in pick and "btts" in pick):
             return home_score == 0 or away_score == 0
-
-        # Team Goals
-        elif "home over 0.5" in pick or "home team over 0.5" in pick or "home to score" in pick: return home_score > 0.5
-        elif "home over 1.5" in pick or "home team over 1.5" in pick: return home_score > 1.5
-        elif "away over 0.5" in pick or "away team over 0.5" in pick or "away to score" in pick: return away_score > 0.5
-        elif "away over 1.5" in pick or "away team over 1.5" in pick: return away_score > 1.5
-        elif "home under 0.5" in pick or "home team under 0.5" in pick: return home_score < 0.5
-        elif "home under 1.5" in pick or "home team under 1.5" in pick: return home_score < 1.5
-        elif "away under 0.5" in pick or "away team under 0.5" in pick: return away_score < 0.5
-        elif "away under 1.5" in pick or "away team under 1.5" in pick: return away_score < 1.5
 
         # Draw No Bet
         elif "draw no bet: home" in pick or "dnb: home" in pick or "dnb 1" in pick:
