@@ -1008,6 +1008,95 @@ def audit_match(initial_prediction: dict, user_selected_bet: str, match_date: st
             "verdict_reasoning": "Could not extract statistical data to verify bet safety."
         }
 
+def get_threshold_for_league(league_name: str, manual_threshold: float = None) -> tuple:
+    """
+    Automatically determine the optimal Rule 64 threshold based on league characteristics.
+
+    Args:
+        league_name: Name of the league/competition
+        manual_threshold: User's manual threshold setting (if auto-detection is OFF)
+
+    Returns:
+        tuple: (threshold, is_auto_detected, league_tier_description)
+    """
+    from src.database.db import get_app_setting
+
+    # Check if auto-detection is enabled
+    auto_detect = get_app_setting("rule64_auto_detect", "true") == "true"
+
+    if not auto_detect or not league_name:
+        # Use manual threshold
+        from src.database.db import get_rule64_threshold
+        threshold = manual_threshold if manual_threshold is not None else get_rule64_threshold()
+        return (threshold, False, "Manual Setting")
+
+    league_lower = league_name.lower()
+
+    # TIER 1: Elite Consistent Leagues (30-40% threshold - STRICT)
+    elite_leagues = [
+        "premier league", "premiership", "epl", "english premier",
+        "la liga", "primera división", "spanish la liga",
+        "bundesliga", "german bundesliga",
+        "serie a", "italian serie a",
+        "ligue 1", "french ligue 1",
+        "champions league", "uefa champions league", "ucl"
+    ]
+
+    for elite in elite_leagues:
+        if elite in league_lower:
+            return (0.35, True, "Elite League (Tier 1)")
+
+    # TIER 2: Moderate Consistency Leagues (40-50% threshold - BALANCED)
+    moderate_leagues = [
+        "eredivisie", "netherlands", "dutch",
+        "primeira liga", "portugal", "portuguese",
+        "pro league", "belgium", "belgian",
+        "süper lig", "super lig", "turkey", "turkish",
+        "championship", "english championship",
+        "segunda división", "la liga 2",
+        "serie b", "2. bundesliga",
+        "europa league", "uefa europa league", "uel",
+        "scottish premiership", "scotland"
+    ]
+
+    for moderate in moderate_leagues:
+        if moderate in league_lower:
+            return (0.45, True, "Moderate League (Tier 2)")
+
+    # TIER 3: High Variance Leagues (60-70% threshold - LENIENT)
+    high_variance_leagues = [
+        "azerbaijan", "premier liqası",
+        "kazakhstan", "premier league",
+        "georgia", "erovnuli liga",
+        "armenia", "premier league",
+        "uzbekistan", "super league",
+        "moldova", "divizia națională",
+        "league one", "league two", "national league",
+        "regionalliga", "oberliga",
+        "tercera división", "serie c",
+        "youth", "u21", "u19", "u18", "u17",
+        "reserve", "second team", "b team"
+    ]
+
+    for high_var in high_variance_leagues:
+        if high_var in league_lower:
+            return (0.65, True, "High Variance League (Tier 3)")
+
+    # TIER 4: Special Cases
+
+    # Cup competitions (domestic cups, not continental)
+    if any(cup in league_lower for cup in ["cup", "copa", "coupe", "pokal"]) and \
+       not any(elite in league_lower for elite in ["champions", "europa", "uefa"]):
+        return (0.50, True, "Domestic Cup (Neutral)")
+
+    # Friendly/Exhibition matches
+    if any(friendly in league_lower for friendly in ["friendly", "friendlies", "exhibition", "testimonial"]):
+        return (0.70, True, "Friendly Match (High Variance)")
+
+    # DEFAULT: Use balanced threshold for unknown leagues
+    return (0.50, True, "Unknown League (Default)")
+
+
 def calculate_recent_form_xg(form_data: dict, is_home: bool) -> tuple:
     """
     Calculate recent form metrics from last 5 matches.
@@ -1092,13 +1181,23 @@ def get_xg_with_intelligent_fallback(raw_xg, team_metrics: dict, is_home: bool, 
                 recent_xg = recent_goals_avg * adjustment
 
                 # FORM VARIANCE DETECTION: Detect if recent form contradicts season average
+                # Use auto-detected threshold based on league OR manual setting
+                league_name = match_data.get("league", {}).get("name", "") if match_data else ""
+                variance_threshold, is_auto, league_tier = get_threshold_for_league(league_name)
+
                 variance_ratio = abs(season_xg - recent_xg) / max(season_xg, 0.5)
 
-                if variance_ratio > 0.5:  # Significant divergence (50%+ difference)
+                if variance_ratio > variance_threshold:  # Significant divergence based on league-specific or user setting
                     # Weight recent form more heavily (70% recent, 30% season)
                     blended_xg = (recent_xg * 0.70) + (season_xg * 0.30)
-                    print(f"⚠️ [Form Variance Detected] Season xG: {season_xg:.2f}, Recent xG: {recent_xg:.2f} → Blended: {blended_xg:.2f}")
+                    print(f"⚠️ [Rule 64 Triggered] Variance: {variance_ratio:.1%} > Threshold: {variance_threshold:.1%}")
+                    print(f"   League: '{league_name}' ({league_tier}) | {'Auto-detected' if is_auto else 'Manual'}")
+                    print(f"   Season xG: {season_xg:.2f}, Recent xG: {recent_xg:.2f} → Blended: {blended_xg:.2f}")
                     return blended_xg
+                else:
+                    print(f"✅ [Form Alignment] Variance: {variance_ratio:.1%} ≤ Threshold: {variance_threshold:.1%} (No penalty)")
+                    print(f"   League: '{league_name}' ({league_tier}) | {'Auto-detected' if is_auto else 'Manual'}")
+
 
         return season_xg
 

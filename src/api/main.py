@@ -199,6 +199,9 @@ class TelegramModeRequest(BaseModel):
 class AutomationSettingRequest(BaseModel):
     enabled: bool
 
+class Rule64ThresholdRequest(BaseModel):
+    threshold: float  # 0.20 to 0.80
+
 class BookingCodeRequest(BaseModel):
     booking_code: str
 
@@ -640,12 +643,98 @@ def api_set_telegram_mode(req: TelegramModeRequest, current_user: dict = Depends
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not chat_id:
         raise HTTPException(status_code=500, detail="TELEGRAM_CHAT_ID missing in .env")
-    
+
     if req.mode not in ["text", "image"]:
         raise HTTPException(status_code=400, detail="Invalid mode. Must be 'text' or 'image'.")
-    
+
     set_user_preference(chat_id, req.mode)
     return {"status": "success", "mode": req.mode}
+
+@app.get("/settings/rule64-threshold")
+def api_get_rule64_threshold():
+    """
+    Get the current Rule 64 xG variance threshold setting.
+    This controls how sensitive the AI is to form variance.
+    """
+    from src.database.db import get_rule64_threshold
+    threshold = get_rule64_threshold()
+    return {
+        "threshold": threshold,
+        "percentage": int(threshold * 100),
+        "description": get_threshold_description(threshold)
+    }
+
+@app.put("/settings/rule64-threshold")
+def api_set_rule64_threshold(req: Rule64ThresholdRequest, current_user: dict = Depends(get_admin_user)):
+    """
+    Set the Rule 64 xG variance threshold setting.
+    This makes the threshold customization persistent across all predictions.
+
+    Threshold ranges:
+    - 0.20 to 0.40: Conservative (stricter penalties, safer picks)
+    - 0.50: Balanced (default)
+    - 0.60 to 0.80: Aggressive (lenient penalties, higher odds)
+    """
+    from src.database.db import set_rule64_threshold
+
+    # Validate range
+    if not (0.20 <= req.threshold <= 0.80):
+        raise HTTPException(
+            status_code=400,
+            detail="Threshold must be between 0.20 (20%) and 0.80 (80%)"
+        )
+
+    set_rule64_threshold(req.threshold)
+
+    return {
+        "status": "success",
+        "threshold": req.threshold,
+        "percentage": int(req.threshold * 100),
+        "description": get_threshold_description(req.threshold)
+    }
+
+def get_threshold_description(threshold: float) -> str:
+    """Helper function to provide user-friendly threshold descriptions."""
+    if threshold <= 0.35:
+        return "Very Conservative - Applies penalties aggressively for maximum safety"
+    elif threshold <= 0.45:
+        return "Conservative - Stricter analysis, safer picks, lower odds"
+    elif threshold <= 0.55:
+        return "Balanced - Default setting, recommended for most users"
+    elif threshold <= 0.65:
+        return "Aggressive - More lenient analysis, higher odds"
+    else:
+        return "Very Aggressive - Only penalizes extreme variance, maximum odds"
+
+@app.get("/settings/rule64-auto-detect")
+def api_get_rule64_auto_detect():
+    """
+    Get the Rule 64 auto-detection setting.
+    When enabled, AI automatically adjusts threshold based on league.
+    """
+    from src.database.db import get_app_setting
+    enabled = get_app_setting("rule64_auto_detect", "true") == "true"
+    return {"enabled": enabled}
+
+@app.put("/settings/rule64-auto-detect")
+def api_set_rule64_auto_detect(req: AutomationSettingRequest, current_user: dict = Depends(get_admin_user)):
+    """
+    Enable/disable Rule 64 auto-detection.
+
+    When enabled (ON):
+    - AI automatically detects league and applies optimal threshold
+    - EPL → 35%, Azerbaijan → 65%, etc.
+
+    When disabled (OFF):
+    - AI uses your manual threshold setting for all matches
+    """
+    from src.database.db import set_app_setting
+    set_app_setting("rule64_auto_detect", "true" if req.enabled else "false")
+    return {
+        "status": "success",
+        "enabled": req.enabled,
+        "mode": "Auto-detect by league" if req.enabled else "Manual threshold"
+    }
 
 @app.post("/share-betslip")
 def share_betslip(request: TelegramShareRequest, current_user: dict = Depends(get_admin_user)):

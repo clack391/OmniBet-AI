@@ -863,5 +863,90 @@ def get_job(job_id: str):
     finally:
         conn.close()
 
+
+# --- App Settings Functions ---
+
+def get_app_setting(key: str, default: str = None):
+    """
+    Get an application setting value from the app_settings table.
+
+    Args:
+        key: Setting key (e.g., "rule64_threshold")
+        default: Default value if setting doesn't exist
+
+    Returns:
+        str: Setting value or default
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT value FROM app_settings WHERE key = ?', (key,))
+        row = cursor.fetchone()
+        if row:
+            return row[0]
+        return default
+    except Exception as e:
+        print(f"Error reading setting '{key}': {e}")
+        return default
+    finally:
+        conn.close()
+
+
+def set_app_setting(key: str, value: str) -> bool:
+    """
+    Set an application setting value in the app_settings table.
+    Uses INSERT OR REPLACE to handle both new and existing settings.
+
+    Args:
+        key: Setting key (e.g., "rule64_threshold")
+        value: Setting value (stored as string)
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    try:
+        cursor.execute('''
+            INSERT OR REPLACE INTO app_settings (key, value)
+            VALUES (?, ?)
+        ''', (key, value))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error setting '{key}': {e}")
+        return False
+    finally:
+        conn.close()
+
+
+def get_rule64_threshold() -> float:
+    """
+    Get the Rule 64 xG variance threshold setting.
+
+    Returns:
+        float: Threshold value (0.20 to 0.80), defaults to 0.50
+    """
+    value = get_app_setting("rule64_threshold", "0.50")
+    try:
+        threshold = float(value)
+        # Clamp to safe range (20% to 80%)
+        return max(0.20, min(0.80, threshold))
+    except (ValueError, TypeError):
+        return 0.50  # Default if invalid value
+
+
+def set_rule64_threshold(threshold: float):
+    """
+    Set the Rule 64 xG variance threshold setting.
+
+    Args:
+        threshold: Threshold value (0.20 to 0.80)
+    """
+    # Clamp to safe range
+    threshold = max(0.20, min(0.80, threshold))
+    set_app_setting("rule64_threshold", str(threshold))
+
+
 # Initialize on module load (simple for now)
 init_db()

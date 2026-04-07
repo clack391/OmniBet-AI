@@ -21,6 +21,9 @@ const SettingsTab = () => {
     const [geminiModel, setGeminiModel] = useState('gemini-3-pro-preview');
     const [automationEnabled, setAutomationEnabled] = useState(true);
     const [telegramMode, setTelegramMode] = useState('text');
+    const [rule64Threshold, setRule64Threshold] = useState(50); // Default 50%
+    const [rule64Description, setRule64Description] = useState('Balanced');
+    const [rule64AutoDetect, setRule64AutoDetect] = useState(true); // Default ON
     const [cronKillSignalActive, setCronKillSignalActive] = useState(false);
     const [analysisKillSignalActive, setAnalysisKillSignalActive] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -47,6 +50,13 @@ const SettingsTab = () => {
 
                 const analysisKillRes = await api.get('/settings/kill-active-analysis');
                 setAnalysisKillSignalActive(analysisKillRes.data.kill_signal === "1");
+
+                const rule64Res = await api.get('/settings/rule64-threshold');
+                setRule64Threshold(rule64Res.data.percentage);
+                setRule64Description(rule64Res.data.description);
+
+                const rule64AutoRes = await api.get('/settings/rule64-auto-detect');
+                setRule64AutoDetect(rule64AutoRes.data.enabled);
             } catch (err) {
                 console.error("Failed to fetch settings", err);
             } finally {
@@ -64,7 +74,9 @@ const SettingsTab = () => {
                 api.put('/settings/provider', { provider }),
                 api.put('/settings/gemini-model', { model: geminiModel }),
                 api.put('/settings/automation', { enabled: automationEnabled }),
-                api.put('/settings/telegram-mode', { mode: telegramMode })
+                api.put('/settings/telegram-mode', { mode: telegramMode }),
+                api.put('/settings/rule64-threshold', { threshold: rule64Threshold / 100 }),
+                api.put('/settings/rule64-auto-detect', { enabled: rule64AutoDetect })
             ]);
             setMessage({ type: 'success', text: 'Settings updated successfully!' });
         } catch (err) {
@@ -72,6 +84,22 @@ const SettingsTab = () => {
             console.error(err);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleThresholdChange = (value) => {
+        setRule64Threshold(value);
+        // Update description based on threshold
+        if (value <= 35) {
+            setRule64Description('Very Conservative - Applies penalties aggressively for maximum safety');
+        } else if (value <= 45) {
+            setRule64Description('Conservative - Stricter analysis, safer picks, lower odds');
+        } else if (value <= 55) {
+            setRule64Description('Balanced - Default setting, recommended for most users');
+        } else if (value <= 65) {
+            setRule64Description('Aggressive - More lenient analysis, higher odds');
+        } else {
+            setRule64Description('Very Aggressive - Only penalizes extreme variance, maximum odds');
         }
     };
 
@@ -237,6 +265,134 @@ const SettingsTab = () => {
                                     </div>
                                 </div>
                             </label>
+                        </div>
+                    </div>
+
+                    {/* Rule 64: xG Variance Threshold Section */}
+                    <div className="bg-gray-900/50 p-5 rounded-lg border border-gray-700">
+                        <div className="mb-5">
+                            <div className="flex items-start justify-between mb-3">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-200 mb-1 flex items-center gap-2">
+                                        <span className="text-amber-400">⚡</span> Rule 64: xG Variance Threshold
+                                    </h3>
+                                    <p className="text-sm text-gray-400">
+                                        Controls how sensitive the AI is to form variance when analyzing matches.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs text-gray-400 uppercase tracking-wider">Auto-Detect</span>
+                                    <button
+                                        onClick={() => setRule64AutoDetect(!rule64AutoDetect)}
+                                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${rule64AutoDetect ? 'bg-amber-600' : 'bg-gray-700'}`}
+                                    >
+                                        <span
+                                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${rule64AutoDetect ? 'translate-x-6' : 'translate-x-1'}`}
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+                            {rule64AutoDetect && (
+                                <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-3">
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-amber-400 text-sm">🤖</span>
+                                        <div>
+                                            <p className="text-xs text-amber-200 font-semibold mb-1">Auto-Detection Enabled</p>
+                                            <p className="text-xs text-amber-300/80">
+                                                AI automatically adjusts threshold per league: EPL → 35%, Azerbaijan → 65%, etc.
+                                                Manual threshold below is ignored when auto-detection is ON.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            {!rule64AutoDetect && (
+                                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-blue-400 text-sm">✋</span>
+                                        <div>
+                                            <p className="text-xs text-blue-200 font-semibold mb-1">Manual Mode</p>
+                                            <p className="text-xs text-blue-300/80">
+                                                Your manual threshold below will be used for ALL leagues.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Slider */}
+                        <div className="mb-6">
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-sm font-medium text-gray-300">Sensitivity Level</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl font-black text-white">{rule64Threshold}%</span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase ${
+                                        rule64Threshold <= 35 ? 'bg-blue-500/20 text-blue-300' :
+                                        rule64Threshold <= 45 ? 'bg-green-500/20 text-green-300' :
+                                        rule64Threshold <= 55 ? 'bg-amber-500/20 text-amber-300' :
+                                        rule64Threshold <= 65 ? 'bg-orange-500/20 text-orange-300' :
+                                        'bg-red-500/20 text-red-300'
+                                    }`}>
+                                        {rule64Threshold <= 35 ? 'Very Safe' :
+                                         rule64Threshold <= 45 ? 'Safe' :
+                                         rule64Threshold <= 55 ? 'Balanced' :
+                                         rule64Threshold <= 65 ? 'Risky' : 'Very Risky'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <input
+                                type="range"
+                                min="20"
+                                max="80"
+                                step="5"
+                                value={rule64Threshold}
+                                onChange={(e) => handleThresholdChange(parseInt(e.target.value))}
+                                disabled={rule64AutoDetect}
+                                className={`w-full h-2 bg-gray-700 rounded-lg appearance-none slider ${rule64AutoDetect ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                style={{
+                                    background: `linear-gradient(to right,
+                                        #3b82f6 0%,
+                                        #10b981 ${((30-20)/(80-20))*100}%,
+                                        #f59e0b ${((50-20)/(80-20))*100}%,
+                                        #f97316 ${((65-20)/(80-20))*100}%,
+                                        #ef4444 100%)`
+                                }}
+                            />
+
+                            <div className="flex justify-between text-xs text-gray-500 mt-2">
+                                <span>20% (Strict)</span>
+                                <span>50% (Default)</span>
+                                <span>80% (Lenient)</span>
+                            </div>
+                        </div>
+
+                        {/* Description Box */}
+                        <div className="bg-gray-950/50 p-4 rounded-lg border border-gray-700">
+                            <div className="flex items-start gap-3">
+                                <span className="text-lg">ℹ️</span>
+                                <div>
+                                    <p className="text-sm text-gray-300 font-medium mb-1">What this means:</p>
+                                    <p className="text-xs text-gray-400 leading-relaxed">{rule64Description}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Examples */}
+                        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                                <div className="text-xs font-bold text-blue-300 mb-1">30% (Conservative)</div>
+                                <div className="text-[10px] text-gray-400">Best for: Premier League, La Liga, Bundesliga</div>
+                            </div>
+                            <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
+                                <div className="text-xs font-bold text-amber-300 mb-1">50% (Balanced)</div>
+                                <div className="text-[10px] text-gray-400">Best for: Most leagues, mixed slates</div>
+                            </div>
+                            <div className="bg-orange-900/20 border border-orange-500/30 rounded-lg p-3">
+                                <div className="text-xs font-bold text-orange-300 mb-1">70% (Aggressive)</div>
+                                <div className="text-[10px] text-gray-400">Best for: Lower leagues, volatile markets</div>
+                            </div>
                         </div>
                     </div>
 
