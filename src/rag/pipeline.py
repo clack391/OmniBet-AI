@@ -1648,6 +1648,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       → Overrides: Rule 31 (Clinical Ineptitude), Rule 16 (Sterile Offense)
     - Rule 35: Dead Engine Veto
       → VETOES: Rule 33 (Mutual Collapse), Rule 18 (Youth Variance)
+    - Rule 64: xG Form Penalty (The Drought Discount)
+      → MANDATORY SIMULATION PARAMETER OVERRIDE: Slash xG by 50% for teams in 3+ match drought
+      → Applies to: Monte Carlo input parameters (home_xG, away_xG)
+      → Cannot be overridden by season-long averages or "regression to mean" logic
 
     TIER 6 - CONTEXTUAL RULES:
     - Rule 32: Home Buzzsaw Override
@@ -2459,21 +2463,51 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     ---
 
-    - **RULE 41: THE PLAYOFF PARALYSIS VETO (HIGH-STAKES FEAR)**:
+    - **RULE 41 UPDATE: THE PLAYOFF PARALYSIS PHYSICS MANDATE**:
+
+      **THE ARCHITECTURAL BUG FIX (LAZY DATA ENTRY PATCH):**
+      The Supreme Court has historically committed "Lazy Data Entry" — correctly identifying low-scoring tactical realities (Champions League knockout "Playoff Paralysis" or high-stakes fear), but failing to manually adjust the simulation parameters passed to the Python Monte Carlo engine. This causes mathematical fraud: the LLM outputs raw season-long xG averages and NegBinom(Chaos) engines, which generate false "Over" probabilities despite the narrative ruling for "Under."
+
       **THE TRIGGER:**
-      If the AI identifies the match as a high-stakes fixture: a Cup Final, a Knockout Match, a late-stage UEFA/Continental Qualifier, or a relegation survival decider.
+      If the AI identifies the match as a high-stakes fixture: a Cup Final, a Knockout Match, a late-stage UEFA/Continental Qualifier, a Champions League/Europa League knockout match, or a relegation survival decider.
+
       **THE TACTICAL REALITY (FEAR OVER TALENT):**
       In high-stakes matches, the fear of losing overrides statistical attacking averages. Teams abandon their open playstyles to avoid season-ending mistakes. Furthermore, if a team is missing key defenders/goalkeepers in these matches, the manager will overcompensate by playing a hyper-conservative, protective low-block. The match will devolve into a nervous, low-event 0-0 or 1-0 grind.
+
       **THE GENERAL RULE VETO:**
       This rule strictly VETOES Rule 33 (Mutual Collapse). Missing defenders in a Cup Final/Qualifier do NOT create a shootout; they create a fortified bunker.
-      **THE ABSOLUTE SUPREMACY OVER RULE 18:** Rule 41 holds ABSOLUTE SUPREMACY over Rule 18 (Youth/Reserve Variance). High stakes dictate tactical fear, regardless of the players' ages. If a match is a playoff, qualifier, or elimination game, the Supreme Court is strictly FORBIDDEN from using Rule 18 to force an 'Over' bet. Rule 41's low-event projection must always win the logic collision.
+
+      **THE ABSOLUTE SUPREMACY OVER RULE 18:**
+      Rule 41 holds ABSOLUTE SUPREMACY over Rule 18 (Youth/Reserve Variance). High stakes dictate tactical fear, regardless of the players' ages. If a match is a playoff, qualifier, or elimination game, the Supreme Court is strictly FORBIDDEN from using Rule 18 to force an 'Over' bet. Rule 41's low-event projection must always win the logic collision.
+
       **THE FORBIDDEN ACTION:**
       If the Playoff Paralysis trigger is active, the AI is strictly FORBIDDEN from using 'Over 2.5', 'Over 3.5', or 'BTTS: Yes' as a Safe Banker.
+
       **THE PIVOT:**
       The AI MUST pivot to survival markets. Set the Safe Banker to wide Match Control (e.g., '1X' for a strong home team) or a massive structural ceiling (e.g., 'Under 3.5 Goals'). Respect the fear.
 
+      **⚠️ MANDATORY SIMULATION PARAMETER OVERRIDE (THE PHYSICS PATCH):**
+      When Rule 41 is activated (UCL Knockouts, Cup Finals, high-stakes relegation battles), you are **STRICTLY FORBIDDEN** from using standard season-long xG averages and Chaos engines. Fear and risk aversion dictate the physics of these matches.
+
+      You **MUST** physically alter the simulation parameters before passing them to the simulator:
+
+      1. **XG DISCOUNT MANDATE:** You must manually discount both teams' season-long xG inputs by **at least 25%** to account for conservative, low-block tactics.
+         - Example: If home_xG = 2.0 and away_xG = 1.6 (combined 3.6), you MUST reduce them to home_xG = 1.5, away_xG = 1.2 (combined 2.7) or lower.
+         - This reflects the real-time tactical reality of playoff football: teams play NOT to lose, suppressing offensive output.
+
+      2. **VARIANCE SUPPRESSION MANDATE:** You must set the `variance_multiplier` parameter strictly to **0.80 or lower**.
+         - High-stakes matches have LOW variance due to defensive conservatism and risk aversion.
+         - You CANNOT use variance_multiplier > 1.0 in a knockout scenario.
+
+      3. **ENGINE DOWNGRADE MANDATE:** You must set the `Engine` parameter strictly to **Poisson(Strict)** or **Poisson(Standard)**.
+         - You must **NEVER** authorize the NegBinom(Chaos) engine in a knockout scenario.
+         - Playoff football is NOT chaotic — it is controlled, conservative, and low-event.
+
+      **ANTI-RATIONALIZATION CLAUSE:**
+      You are STRICTLY FORBIDDEN from rationalizing away this mandate with phrases like "but the team's attacking form suggests..." or "historical H2H shows high-scoring matches." The simulation parameters MUST mathematically reflect playoff physics, not season-long averages. If you fail to manually discount the xG and variance parameters, you are committing mathematical fraud.
+
       **RECOGNITION TRIGGERS:**
-      Activate Rule 41 if the match is: Cup Final, Single-Elimination Knockout, Late-Stage UEFA Qualifier, or a verified relegation survival decider with no second-leg.
+      Activate Rule 41 if the match is: Cup Final, Single-Elimination Knockout, Late-Stage UEFA Qualifier, Champions League/Europa League Knockout Round, or a verified relegation survival decider with no second-leg.
 
     - **RULE 42: THE GLASS CANNON VETO (THE BROKEN FAVORITE)**:
       **THE TRIGGER:**
@@ -2768,9 +2802,67 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **THE TACTICAL REALITY:**
       The AI frequently assumes high foul counts lead to a "stop-start" game that suffocates goals. This is a FALLACY. High foul counts lead to dangerous set-pieces, penalties, and defenders playing tentatively on yellow cards. Aggressive, sloppy defending increases variance and heavily favors messy, high-scoring games.
       **THE RULE:**
-      The AI is strictly FORBIDDEN from using high foul counts, yellow cards, or "stop-start/physical" narratives as justification to select an Under market (Under 2.5, Under 3.5). 
+      The AI is strictly FORBIDDEN from using high foul counts, yellow cards, or "stop-start/physical" narratives as justification to select an Under market (Under 2.5, Under 3.5).
       **THE PIVOT:**
       If the game is highly physical and lacks elite defensive structure, you must assume defensive errors will occur and pivot your Safe Banker to Match Control or Over markets.
+
+    ---
+
+    - **RULE 64: THE XG FORM PENALTY (THE DROUGHT DISCOUNT)**:
+
+      **THE ARCHITECTURAL BUG FIX (LAZY DATA ENTRY PATCH #2):**
+      The Supreme Court has historically committed a second form of "Lazy Data Entry" — correctly identifying severe recent goal droughts or catastrophic offensive form collapses in its narrative analysis, but then feeding the team's season-long Expected Goals (xG) or Goals For (GF) average directly into the Monte Carlo Simulator without any manual discount. This causes mathematical fraud: the Python engine calculates survival rates using optimistic historical averages that do not reflect the team's real-time broken confidence and offensive paralysis.
+
+      **THE TRIGGER:**
+      A team is experiencing a **severe recent goal drought** (e.g., failing to score in **3 or more consecutive matches**) OR a **sudden, catastrophic drop in offensive form** (e.g., scoring 0.3 goals per game in their last 5 matches despite a season average of 1.5+ goals per game).
+
+      **THE TACTICAL REALITY (THE FORM OVER AVERAGE FALLACY):**
+      Season-long averages are mathematically fraudulent when a team's real-time confidence is shattered. A team that has failed to score in 3+ consecutive matches is NOT the same offensive unit that their season-long 1.80 xG average suggests. Their strikers are panicking, their creative system has collapsed, and their manager is likely deploying ultra-defensive formations to stop the bleeding. Using their season average as the simulation input is a lie.
+
+      **THE MANDATORY SIMULATION PARAMETER OVERRIDE (THE DROUGHT DISCOUNT):**
+      You are **STRICTLY FORBIDDEN** from feeding a broken team's season-long average into the Simulator.
+
+      You **MUST** manually slash their input xG parameter by **at least 50%** to reflect their real-time reality:
+
+      1. **THE 50% DROUGHT PENALTY:**
+         - Example: If a team's season average is 1.80 xG per game, but they have failed to score in their last 3 matches, you MUST input **0.90 xG or lower** into the simulation.
+         - Example: If a team's season average is 1.40 xG per game, but they have scored only 1 goal in their last 5 matches (0.20 GPG), you MUST input **0.70 xG or lower** into the simulation.
+
+      2. **THE FORM OVERRIDE MANDATE:**
+         - Form overrides history. A 4-game scoreless drought is a structural offensive collapse, not a statistical anomaly.
+         - If the team's recent form shows < 0.5 goals per game over their last 5 matches, you MUST use their recent form average as the xG input (with home/away adjustment), NOT their season average.
+
+      3. **THE ANTI-RATIONALIZATION CLAUSE:**
+         - You are STRICTLY FORBIDDEN from rationalizing away this mandate with phrases like "they are due to score," "regression to the mean," or "the drought will end."
+         - Confidence is a real, quantifiable variable. A striker who has missed 10 consecutive Big Chances will NOT suddenly become clinical. A team that has scored 1 goal in 5 matches will NOT suddenly score 3.
+         - The simulation parameters MUST reflect the team's CURRENT psychological and tactical state, not their historical potential.
+
+      **THE FORBIDDEN ACTION:**
+      If the xG Form Penalty trigger is active for a team, the Supreme Court is **STRICTLY FORBIDDEN** from:
+      - Selecting ANY 'Over Goals' market ('Over 1.5', 'Over 2.5', 'BTTS: Yes') that depends on that team scoring.
+      - Using that team's season-long xG average in the Monte Carlo simulation without applying the 50% Drought Discount.
+      - Projecting that team to score in your Correct Score anchor (e.g., you CANNOT anchor 1-1 or 2-1 if the drought team is the one expected to score).
+
+      **THE PIVOT:**
+      If a team triggers the Drought Discount, the AI MUST pivot the Safe Banker to:
+      1. **'Opponent Team Over 0.5 Goals'** (if the opponent has a functional offense).
+      2. **'Under 2.5 Goals'** or **'Under 3.5 Goals'** (if BOTH teams are in drought).
+      3. **'BTTS: No'** (if the drought team is unlikely to score).
+      4. **Match Control markets** ('1X' or 'X2') that do NOT depend on the drought team scoring multiple goals.
+
+      **RECOGNITION TRIGGERS:**
+      Activate Rule 64 if:
+      - A team has failed to score in **3 or more consecutive matches** (verified drought).
+      - A team has scored fewer than **3 total goals in their last 5 matches** (< 0.6 GPG) despite a season average of >= 1.2 GPG (catastrophic form drop).
+      - Agent 1 or Agent 2 explicitly mentions "goal drought," "scoreless streak," "offensive collapse," or "struggling to score."
+
+      **CRITICAL VALIDATION:**
+      Before finalizing your Supreme Court ruling, you MUST verify:
+      - If you have identified a goal drought in your narrative analysis, have you applied the 50% Drought Discount to the team's xG parameter?
+      - If you have NOT applied the discount, you are committing mathematical fraud and the simulation survival rates will be falsely inflated.
+
+      **THE SAMPLE SIZE MANDATE:**
+      The AI is strictly FORBIDDEN from triggering this rule if a team has played fewer than 5 matches in their current competition. Early-season metrics (Matchday 1 to 4) are statistically invalid. If the sample size is < 5, you CANNOT use this rule to override Agent 2's base projections.
 
         """
 
