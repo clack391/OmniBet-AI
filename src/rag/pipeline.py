@@ -3125,10 +3125,20 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                 "playoff paralysis" in _sc_ruling_text
             )
 
+            # Rule 30 (Shootout Exemption / Titan Clash) explicitly overrides Rule 41.
+            # When two elite teams with fully operational attacks collide, the SC can
+            # legitimately void the chess-match assumption. Respect that decision.
+            RULE30_OVERRIDE_KEYWORDS = [
+                "rule 30", "shootout exemption", "titan clash", "titan protocol",
+                "fully operational", "fully intact supply", "shootout dynamic",
+                "both teams have elite", "both elite"
+            ]
+            is_rule30_override = any(kw in _sc_ruling_text for kw in RULE30_OVERRIDE_KEYWORDS)
+
             RULE41_XG_DISCOUNT = 0.75    # 25% reduction as specified in Rule 41 prompt
             RULE41_MAX_VARIANCE = 0.80   # NegBinom/Chaos forbidden in knockout fixtures
 
-            if is_knockout:
+            if is_knockout and not is_rule30_override:
                 _combined_raw = h_xg + a_xg
                 # Only apply discount if LLM has NOT already discounted
                 # (if LLM complied, combined xG would already be well below season average)
