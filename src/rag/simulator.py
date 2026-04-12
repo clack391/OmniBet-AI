@@ -254,22 +254,28 @@ def run_crucible_simulation(
             match = re.search(r'([+-]\d+(?:\.\d+)?)', pick)
             if match:
                 handicap = float(match.group(1))
+                # Push-aware helper: returns None on whole-number push (adjusted == 0),
+                # True for win, False for loss. Half-ball handicaps (±0.5, ±1.5, etc.)
+                # can never push since adjusted score is always non-integer.
+                def _ah_result(team_score, opp_score, h):
+                    adjusted = team_score + h - opp_score
+                    if adjusted == 0:
+                        return None  # push / refund — exclude from survival denominator
+                    return adjusted > 0
                 # Check if "home" or "away" is explicitly mentioned
                 if "home" in pick or " 1 " in pick or pick.endswith(" 1"):
-                    return (home_score + handicap) >= away_score
+                    return _ah_result(home_score, away_score, handicap)
                 elif "away" in pick or " 2 " in pick or pick.endswith(" 2"):
-                    return (away_score + handicap) >= home_score
+                    return _ah_result(away_score, home_score, handicap)
                 # If neither home/away mentioned, infer from handicap sign convention:
                 # Negative handicap typically means favorite (if at start of string, assume home)
                 # Positive handicap typically means underdog
                 elif handicap > 0:
                     # Positive handicap usually for underdog (commonly away, but context-dependent)
-                    # Default to away getting the handicap
-                    return (away_score + handicap) >= home_score
+                    return _ah_result(away_score, home_score, handicap)
                 elif handicap < 0:
                     # Negative handicap for favorite (commonly home, but context-dependent)
-                    # Default to home giving the handicap (home score adjusted)
-                    return (home_score + handicap) >= away_score
+                    return _ah_result(home_score, away_score, handicap)
 
         # === NEW: PHASE 1 MARKETS ===
 
@@ -484,12 +490,16 @@ def run_crucible_simulation(
     # 3. High-Speed Execution Loop — with Dixon-Coles reweighting (Upgrade 1)
     agent_2_wins = 0
     sc_wins = 0
+    agent_2_pushes = 0
+    sc_pushes = 0
 
     # NEW: Track wins for alternative picks as well
     alternative_wins = {}
+    alternative_pushes = {}
     if alternative_picks:
         for alt_pick in alternative_picks:
             alternative_wins[alt_pick] = 0
+            alternative_pushes[alt_pick] = 0
 
     distribution = {"0": 0, "1": 0, "2": 0, "3": 0, "4": 0, "5+": 0}
     scoreline_counts = {}
@@ -536,16 +546,27 @@ def run_crucible_simulation(
         # If using NegBinom (variance > 1.2), skip Dixon-Coles entirely and accept raw sample
 
         # Evaluate Picks (NEW: Pass corners, cards, half-time, and 10-minute data)
-        if evaluate_pick(h, a, h_corners, a_corners, h_cards, a_cards, h_1h, a_1h, h_2h, a_2h, h_10m, a_10m, agent_2_pick):
+        # Use explicit `is True` / `is None` checks to correctly handle AH push (None return).
+        _a2_result = evaluate_pick(h, a, h_corners, a_corners, h_cards, a_cards, h_1h, a_1h, h_2h, a_2h, h_10m, a_10m, agent_2_pick)
+        if _a2_result is True:
             agent_2_wins += 1
-        if evaluate_pick(h, a, h_corners, a_corners, h_cards, a_cards, h_1h, a_1h, h_2h, a_2h, h_10m, a_10m, supreme_court_pick):
+        elif _a2_result is None:
+            agent_2_pushes += 1
+
+        _sc_result = evaluate_pick(h, a, h_corners, a_corners, h_cards, a_cards, h_1h, a_1h, h_2h, a_2h, h_10m, a_10m, supreme_court_pick)
+        if _sc_result is True:
             sc_wins += 1
+        elif _sc_result is None:
+            sc_pushes += 1
 
         # NEW: Evaluate alternative picks
         if alternative_picks:
             for alt_pick in alternative_picks:
-                if evaluate_pick(h, a, h_corners, a_corners, h_cards, a_cards, h_1h, a_1h, h_2h, a_2h, h_10m, a_10m, alt_pick):
+                _alt_result = evaluate_pick(h, a, h_corners, a_corners, h_cards, a_cards, h_1h, a_1h, h_2h, a_2h, h_10m, a_10m, alt_pick)
+                if _alt_result is True:
                     alternative_wins[alt_pick] += 1
+                elif _alt_result is None:
+                    alternative_pushes[alt_pick] += 1
 
         # Build Goal Distribution
         total = h + a
@@ -561,14 +582,19 @@ def run_crucible_simulation(
         scoreline_counts[score_str] = scoreline_counts.get(score_str, 0) + 1
 
     # 4. Final Math Calculations
-    a2_win_rate = (agent_2_wins / N) * 100
-    sc_win_rate = (sc_wins / N) * 100
+    # Exclude push iterations from denominator so AH whole-number pushes don't inflate survival.
+    # For non-AH picks (Over/Under, BTTS, 1X2, etc.) pushes == 0, so this is identical to / N.
+    a2_effective_N = max(N - agent_2_pushes, 1)
+    sc_effective_N = max(N - sc_pushes, 1)
+    a2_win_rate = (agent_2_wins / a2_effective_N) * 100
+    sc_win_rate = (sc_wins / sc_effective_N) * 100
 
     # NEW: Calculate win rates for alternative picks
     alternative_results = {}
     if alternative_picks:
         for alt_pick in alternative_picks:
-            alt_win_rate = (alternative_wins[alt_pick] / N) * 100
+            alt_effective_N = max(N - alternative_pushes.get(alt_pick, 0), 1)
+            alt_win_rate = (alternative_wins[alt_pick] / alt_effective_N) * 100
             alternative_results[alt_pick] = alt_win_rate
 
     # Describe the engine used for transparency

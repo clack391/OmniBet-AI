@@ -3098,6 +3098,92 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             v_mult = float(raw_var) if raw_var is not None else 1.0
 
             # ============================================================================
+            # ⚖️ RULE 41 CODE ENFORCEMENT (Playoff Paralysis / Knockout Fixtures)
+            # ============================================================================
+            # The prompt instructs the LLM to apply a ≥25% xG discount and suppress
+            # variance for knockout/cup matches. This gate enforces it when the LLM
+            # outputs un-discounted season-average xG values.
+            KNOCKOUT_TOURNAMENT_KEYWORDS = [
+                "champions league", "europa league", "conference league",
+                "fa cup", "carabao cup", "copa del rey", "dfb-pokal",
+                "coupe de france", "coppa italia", "league cup", "super cup",
+                "world cup", "euro ", "nations league knockout"
+            ]
+            KNOCKOUT_ROUND_KEYWORDS = [
+                "knockout", "quarter", "semi", "final", "round of 16", "last 16",
+                "round of 32", "last 32", "elimination", "play-off", "playoff"
+            ]
+
+            _tournament_text = (metadata.get("tournament", "") or "").lower()
+            _round_text = (metadata.get("round", "") or "").lower()
+            _sc_ruling_text = (parsed.get("Supreme_Court_Final_Ruling", "") or "").lower()
+
+            is_knockout = (
+                any(kw in _tournament_text for kw in KNOCKOUT_TOURNAMENT_KEYWORDS) or
+                any(kw in _round_text for kw in KNOCKOUT_ROUND_KEYWORDS) or
+                "rule 41" in _sc_ruling_text or
+                "playoff paralysis" in _sc_ruling_text
+            )
+
+            # Rule 30 (Shootout Exemption / Titan Clash) explicitly overrides Rule 41.
+            # When two elite teams with fully operational attacks collide, the SC can
+            # legitimately void the chess-match assumption. Respect that decision.
+            RULE30_OVERRIDE_KEYWORDS = [
+                "rule 30", "shootout exemption", "titan clash", "titan protocol",
+                "fully operational", "fully intact supply", "shootout dynamic",
+                "both teams have elite", "both elite"
+            ]
+            is_rule30_override = any(kw in _sc_ruling_text for kw in RULE30_OVERRIDE_KEYWORDS)
+
+            RULE41_XG_DISCOUNT = 0.75    # 25% reduction as specified in Rule 41 prompt
+            RULE41_MAX_VARIANCE = 0.80   # NegBinom/Chaos forbidden in knockout fixtures
+
+            if is_knockout and not is_rule30_override:
+                _combined_raw = h_xg + a_xg
+                # Only apply discount if LLM has NOT already discounted
+                # (if LLM complied, combined xG would already be well below season average)
+                if _combined_raw > 2.5:
+                    _orig_h, _orig_a = h_xg, a_xg
+                    h_xg = round(h_xg * RULE41_XG_DISCOUNT, 2)
+                    a_xg = round(a_xg * RULE41_XG_DISCOUNT, 2)
+                    print(f"⚖️  [Rule 41] Knockout fixture — 25% xG discount applied: "
+                          f"Home {_orig_h}→{h_xg}, Away {_orig_a}→{a_xg}")
+                if v_mult > RULE41_MAX_VARIANCE:
+                    _orig_v = v_mult
+                    v_mult = RULE41_MAX_VARIANCE
+                    parsed["variance_multiplier"] = v_mult
+                    print(f"⚖️  [Rule 41] Variance suppressed: {_orig_v:.2f}→{v_mult:.2f} "
+                          f"(NegBinom/Chaos forbidden in knockout)")
+            # ============================================================================
+
+            # ============================================================================
+            # 🛡️ DEFENSIVE MATCHUP xG ADJUSTMENT
+            # ============================================================================
+            # Scale each team's attacking xG by the opponent's defensive strength.
+            # e.g. Arsenal concedes 0.5 goals/game away → Sporting's 2.20 xG becomes
+            # 2.20 × (0.5 / 1.20) = 0.92 — much more realistic for this specific matchup.
+            LEAGUE_AVG_GOALS_CONCEDED = 1.20   # typical European league average
+            DEF_MATCHUP_MIN_MULTIPLIER = 0.50  # cap: never reduce by more than 50%
+
+            _home_ga = home_metrics.get("Goals conceded per game") or 0
+            _away_ga = away_metrics.get("Goals conceded per game") or 0
+
+            if _home_ga > 0 and _away_ga > 0:
+                # Home attack vs Away team's defensive record
+                _h_def_mult = max(_away_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MIN_MULTIPLIER)
+                # Away attack vs Home team's defensive record
+                _a_def_mult = max(_home_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MIN_MULTIPLIER)
+
+                _h_pre, _a_pre = h_xg, a_xg
+                h_xg = round(h_xg * _h_def_mult, 2)
+                a_xg = round(a_xg * _a_def_mult, 2)
+                print(f"🛡️  [Defensive Matchup] Home xG {_h_pre}→{h_xg} "
+                      f"(opp GA/game {_away_ga:.2f}, mult {_h_def_mult:.2f}), "
+                      f"Away xG {_a_pre}→{a_xg} "
+                      f"(opp GA/game {_home_ga:.2f}, mult {_a_def_mult:.2f})")
+            # ============================================================================
+
+            # ============================================================================
             # 🛡️ VARIANCE MULTIPLIER SANITY CHECK
             # ============================================================================
             # Prevent chaos mode (variance > 1.2) when combined xG doesn't support it
