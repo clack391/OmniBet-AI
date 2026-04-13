@@ -3330,12 +3330,38 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                         alternative_markets_list.append(alt_market["tip"])
                 print(f"🔍 [Alternative Markets] Testing {len(alternative_markets_list)} additional picks: {alternative_markets_list}")
 
+            # Normalize team-name picks to generic Home/Away Team format before simulator call.
+            # e.g. "Como 1907 Over 0.5 Goals" → "Home Team Over 0.5 Goals"
+            # Prevents team-name picks falling through to match-level "over 0.5" check (96.9% bug).
+            def _normalize_pick_for_sim(pick, ht, at):
+                p = pick.lower().strip()
+                ht_l = ht.lower().strip() if ht else ""
+                at_l = at.lower().strip() if at else ""
+                for threshold, side, normalized in [
+                    ("over 0.5",  "home", "Home Team Over 0.5 Goals"),
+                    ("over 1.5",  "home", "Home Team Over 1.5 Goals"),
+                    ("under 0.5", "home", "Home Team Under 0.5 Goals"),
+                    ("under 1.5", "home", "Home Team Under 1.5 Goals"),
+                    ("over 0.5",  "away", "Away Team Over 0.5 Goals"),
+                    ("over 1.5",  "away", "Away Team Over 1.5 Goals"),
+                    ("under 0.5", "away", "Away Team Under 0.5 Goals"),
+                    ("under 1.5", "away", "Away Team Under 1.5 Goals"),
+                ]:
+                    team = ht_l if side == "home" else at_l
+                    if team and team in p and threshold in p:
+                        return normalized
+                return pick
+
+            a2_pick = _normalize_pick_for_sim(a2_pick, home_team_name, away_team_name)
+            sc_pick = _normalize_pick_for_sim(parsed.get("Arbiter_Safe_Pick", {}).get("tip", "N/A"), home_team_name, away_team_name)
+            alternative_markets_list = [_normalize_pick_for_sim(p, home_team_name, away_team_name) for p in alternative_markets_list]
+
             sim_res = run_crucible_simulation(
                 home_xG=h_xg,
                 away_xG=a_xg,
                 variance_multiplier=v_mult,
                 agent_2_pick=a2_pick,
-                supreme_court_pick=parsed.get("Arbiter_Safe_Pick", {}).get("tip", "N/A"),
+                supreme_court_pick=sc_pick,
                 home_corners_avg=home_corners,  # NEW: Phase 1
                 away_corners_avg=away_corners,  # NEW: Phase 1
                 home_cards_avg=home_cards,      # NEW: Phase 1
