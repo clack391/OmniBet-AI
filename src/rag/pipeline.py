@@ -1821,6 +1821,22 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - 1.25 = Opponent's goalkeeper + key defender(s) both absent (stacked defensive crisis)
     A code gate enforces this — it CANNOT exceed 1.25.
 
+    🚨 RELEGATION MOTIVATION MANDATE:
+    When a team is fighting relegation (bottom 3-4 positions, within 3-4 points of the drop zone),
+    their survival desperation boosts their effective attacking output ABOVE their season average.
+    Season stats include low-motivation fixtures — a survival match is categorically different.
+    Set these fields for the THREATENED team's own xG uplift:
+    - relegation_pressure_boost_home: boost to HOME team's xG when HOME team faces relegation
+    - relegation_pressure_boost_away: boost to AWAY team's xG when AWAY team faces relegation
+    Benchmarks:
+    - 1.00 = No relegation pressure (default — mid-table or safe position)
+    - 1.08 = Bottom half, moderate pressure (within 6 points of drop zone)
+    - 1.12 = Bottom 4, serious danger (within 3 points of drop zone)
+    - 1.18 = Bottom 3, must-win or risk dropping (0-2 points above drop zone)
+    A code gate enforces this — it CANNOT exceed 1.20.
+    IMPORTANT: Only apply this when the team is GENUINELY in the relegation fight. A mid-table
+    team is NOT relegated — do not manufacture pressure where none exists.
+
     Return your ruling STRICTLY in JSON:
     {{
       "Crucible_Simulation_Warning": "string (Identify the worst-case scenario where the tentative bet dies. Be brutal. If you find a trap, you MUST explain how it kills the original pick.)",
@@ -1832,6 +1848,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "injury_xg_multiplier_away": 1.0,
       "defensive_injury_xg_boost_home": 1.0,
       "defensive_injury_xg_boost_away": 1.0,
+      "rule41_exempt_home": false,
+      "rule41_exempt_away": false,
+      "relegation_pressure_boost_home": 1.0,
+      "relegation_pressure_boost_away": 1.0,
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
       "Arbiter_Safe_Pick": {{
         "market": "string",
@@ -2175,7 +2195,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       **A) Intact Supply Lines:** Both teams have their primary offensive orchestrators and elite strikers confirmed starting. Elite finishing + elite passing = Goals. If both attacking engines are fully operational, the chess-match assumption is void.
       ⚠️ STRICT REQUIREMENT: Condition A is only valid if injury_xg_multiplier_home = 1.00 AND injury_xg_multiplier_away = 1.00. If you set either multiplier below 1.00 for a key attacker (star striker, primary winger, main playmaker), you CANNOT claim Intact Supply Lines — that team's supply line is demonstrably broken. A code gate will automatically void this exemption and enforce Rule 41 if injury multipliers contradict the supply line claim.
 
-      **B) Competition Desperation:** It is a knockout tournament 2nd-leg where one team is trailing on aggregate, OR a must-win league title decider where a draw is mathematically useless to at least one side. Desperation kills conservative tactics — teams cannot afford to protect a result.
+      **B) Competition Desperation:** It is a knockout tournament 2nd-leg where (i) one team is trailing on aggregate, OR (ii) the aggregate is LEVEL (e.g. 1-1, 0-0, 2-2) — meaning BOTH teams must attack to avoid extra time/penalties. A level aggregate 2nd leg is maximum mutual desperation: neither team can afford to be passive. Claim this exemption by stating "level aggregate" or "tied on aggregate" in your ruling. This also covers must-win league title deciders where a draw is mathematically useless to at least one side. Desperation kills conservative tactics — teams cannot afford to protect a result.
 
       **C) High-Line Clash:** Both managers are mathematically proven to refuse low-blocks (e.g., Ange Postecoglou vs. Pep Guardiola). If historical data confirms both teams consistently play aggressive, high-pressing, high-defensive-line football regardless of opponent, the stalemate baseline does not apply.
 
@@ -2524,6 +2544,15 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       1. **XG DISCOUNT MANDATE:** You must manually discount both teams' season-long xG inputs by **at least 25%** to account for conservative, low-block tactics.
          - Example: If home_xG = 2.0 and away_xG = 1.6 (combined 3.6), you MUST reduce them to home_xG = 1.5, away_xG = 1.2 (combined 2.7) or lower.
          - This reflects the real-time tactical reality of playoff football: teams play NOT to lose, suppressing offensive output.
+
+         ⚠️ **ASYMMETRIC DISCOUNT MANDATE (2nd Leg Aggregate Context):**
+         Rule 41 discounts apply ONLY to teams with actual incentive to be conservative.
+         In 2nd-leg ties, game state determines which team is safe vs desperate:
+         - If the HOME team is trailing by 2+ goals on aggregate: set `rule41_exempt_home = true` — they MUST attack at full intensity, do NOT discount their xG.
+         - If the AWAY team is trailing by 2+ goals on aggregate: set `rule41_exempt_away = true` — they MUST attack at full intensity, do NOT discount their xG.
+         - If aggregate is LEVEL (e.g. 1-1, 0-0): use Rule 30 Condition B instead — set BOTH exempt flags to true and invoke "level aggregate" in your ruling.
+         - If this is a 1st leg or neither team is desperate: both flags remain false (standard symmetric discount applies).
+         A code gate enforces this: the 25% xG discount is SKIPPED for any exempt team.
 
       2. **VARIANCE SUPPRESSION MANDATE:** You must set the `variance_multiplier` parameter strictly to **0.80 or lower**.
          - High-stakes matches have LOW variance due to defensive conservatism and risk aversion.
@@ -3165,7 +3194,9 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             RULE30_OVERRIDE_KEYWORDS = [
                 "rule 30", "shootout exemption", "titan clash", "titan protocol",
                 "fully operational", "fully intact supply", "shootout dynamic",
-                "both teams have elite", "both elite"
+                "both teams have elite", "both elite",
+                "level aggregate", "tied on aggregate", "aggregate is level",
+                "aggregate tied", "level after first leg"
             ]
             is_rule30_override = any(kw in _sc_ruling_text for kw in RULE30_OVERRIDE_KEYWORDS)
 
@@ -3190,21 +3221,31 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             RULE41_MAX_VARIANCE = 0.80   # NegBinom/Chaos forbidden in knockout fixtures
 
             if is_knockout and not is_rule30_override:
+                # Read asymmetric exemption flags — desperate teams are NOT discounted
+                _r41_exempt_h = bool(parsed.get("rule41_exempt_home") or False)
+                _r41_exempt_a = bool(parsed.get("rule41_exempt_away") or False)
+
                 _combined_raw = h_xg + a_xg
                 # Only apply discount if LLM has NOT already discounted
                 # (if LLM complied, combined xG would already be well below season average)
                 if _combined_raw > 2.5:
                     _orig_h, _orig_a = h_xg, a_xg
-                    h_xg = round(h_xg * RULE41_XG_DISCOUNT, 2)
-                    a_xg = round(a_xg * RULE41_XG_DISCOUNT, 2)
-                    print(f"⚖️  [Rule 41] Knockout fixture — 25% xG discount applied: "
-                          f"Home {_orig_h}→{h_xg}, Away {_orig_a}→{a_xg}")
+                    if not _r41_exempt_h:
+                        h_xg = round(h_xg * RULE41_XG_DISCOUNT, 2)
+                    if not _r41_exempt_a:
+                        a_xg = round(a_xg * RULE41_XG_DISCOUNT, 2)
+                    if h_xg != _orig_h or a_xg != _orig_a:
+                        print(f"⚖️  [Rule 41] Asymmetric discount: "
+                              f"Home {_orig_h}→{h_xg} {'(exempt-attacking)' if _r41_exempt_h else '(discounted)'}, "
+                              f"Away {_orig_a}→{a_xg} {'(exempt-attacking)' if _r41_exempt_a else '(discounted)'}")
+                # Only suppress variance if at least one team is conservatively managed
                 if v_mult > RULE41_MAX_VARIANCE:
-                    _orig_v = v_mult
-                    v_mult = RULE41_MAX_VARIANCE
-                    parsed["variance_multiplier"] = v_mult
-                    print(f"⚖️  [Rule 41] Variance suppressed: {_orig_v:.2f}→{v_mult:.2f} "
-                          f"(NegBinom/Chaos forbidden in knockout)")
+                    if not (_r41_exempt_h and _r41_exempt_a):
+                        _orig_v = v_mult
+                        v_mult = RULE41_MAX_VARIANCE
+                        parsed["variance_multiplier"] = v_mult
+                        print(f"⚖️  [Rule 41] Variance suppressed: {_orig_v:.2f}→{v_mult:.2f} "
+                              f"(NegBinom/Chaos forbidden in knockout)")
             # ============================================================================
 
             # ============================================================================
@@ -3265,6 +3306,26 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                 print(f"🏥  [Injury Gate - Defense] Home {_def_h_pre}→{h_xg} "
                       f"(opp def crisis {_def_boost_h:.2f}), "
                       f"Away {_def_a_pre}→{a_xg} (opp def crisis {_def_boost_a:.2f})")
+            # ============================================================================
+
+            # ============================================================================
+            # 🚨 RELEGATION MOTIVATION xG BOOST
+            # ============================================================================
+            # Teams fighting relegation (bottom 3-4, within 3-4 points of drop zone)
+            # drastically overperform season averages in survival matches. Season stats
+            # include low-motivation fixtures; this gate corrects for survival desperation.
+            _RELG_MAX_BOOST = 1.20
+            _relg_boost_h = float(parsed.get("relegation_pressure_boost_home") or 1.0)
+            _relg_boost_a = float(parsed.get("relegation_pressure_boost_away") or 1.0)
+            _relg_boost_h = min(_relg_boost_h, _RELG_MAX_BOOST)
+            _relg_boost_a = min(_relg_boost_a, _RELG_MAX_BOOST)
+            if _relg_boost_h > 1.0 or _relg_boost_a > 1.0:
+                _relg_h_pre, _relg_a_pre = h_xg, a_xg
+                h_xg = round(h_xg * _relg_boost_h, 2)
+                a_xg = round(a_xg * _relg_boost_a, 2)
+                print(f"🚨  [Relegation Gate] Home {_relg_h_pre}→{h_xg} "
+                      f"(survival boost {_relg_boost_h:.2f}), "
+                      f"Away {_relg_a_pre}→{a_xg} (survival boost {_relg_boost_a:.2f})")
             # ============================================================================
 
             # ============================================================================
