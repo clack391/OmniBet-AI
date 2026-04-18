@@ -244,9 +244,9 @@ def run_crucible_simulation(
             return home_score == 0 or away_score == 0
 
         # Draw No Bet
-        elif "draw no bet: home" in pick or "dnb: home" in pick or "dnb 1" in pick:
+        elif "draw no bet: home" in pick or "dnb: home" in pick or "dnb 1" in pick or "home dnb" in pick:
             return home_score >= away_score
-        elif "draw no bet: away" in pick or "dnb: away" in pick or "dnb 2" in pick:
+        elif "draw no bet: away" in pick or "dnb: away" in pick or "dnb 2" in pick or "away dnb" in pick:
             return away_score >= home_score
 
         # Asian Handicap
@@ -479,13 +479,10 @@ def run_crucible_simulation(
             print(f"⚠️ [SIMULATOR WARNING] Ambiguous pick detected: '{pick}'. Cannot evaluate. Returning False (0% survival).")
             return False
 
-        # Default fallback for markets not yet implemented
-        # Only return True if the pick looks like a valid market name
-        if len(pick) > 3:  # Valid market names are usually longer than 3 characters
-            return True
-        else:
-            # Short, unrecognized picks are likely errors
-            return False
+        # Default fallback — unrecognized pick format
+        # Return False (0%) and log a warning so the bug is visible rather than silently inflating to 100%
+        print(f"⚠️ [SIMULATOR WARNING] Unrecognized pick: '{pick}'. Returning False (0% survival).")
+        return False
 
     # 3. High-Speed Execution Loop — with Dixon-Coles reweighting (Upgrade 1)
     agent_2_wins = 0
