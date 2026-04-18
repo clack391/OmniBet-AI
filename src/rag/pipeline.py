@@ -1796,6 +1796,31 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     ⚠️ CRITICAL VALIDATION: You MUST provide valid numeric values for home_xG, away_xG, and variance_multiplier. These fields are MANDATORY for the Monte Carlo simulation and cannot be null or omitted. If your validation checklist reveals a conflict, you MUST resolve it by applying the higher-priority veto rule.
 
+    🏥 INJURY xG MANDATE — TWO SEPARATE FIELDS:
+
+    FIELD 1 — injury_xg_multiplier_home / injury_xg_multiplier_away (ATTACKING injuries only):
+    Reduces a team's OWN attacking xG when THEIR OWN attacking/creative players are absent.
+    Use ONLY for missing strikers, forwards, attacking midfielders, or primary playmakers.
+    Do NOT use for missing defenders or goalkeepers — use Field 2 for those.
+    - 1.00 = No significant attacking absences (default)
+    - 0.90 = 1 key attacking starter absent (important but not a star)
+    - 0.85 = Star striker OR primary playmaker/assist leader absent
+    - 0.80 = Multiple (2+) key attacking players absent
+    - 0.70 = Full attacking crisis (team severely depleted offensively)
+    IMPORTANT: Only go below 0.85 for genuinely key attackers. Squad rotation = 1.00.
+    A code gate enforces this — it CANNOT inflate xG above 1.00.
+
+    FIELD 2 — defensive_injury_xg_boost_home / defensive_injury_xg_boost_away (DEFENSIVE injuries):
+    Boosts the OPPONENT's attacking xG when a team is missing key DEFENDERS or GOALKEEPER.
+    e.g. Away team missing their GK → set defensive_injury_xg_boost_home = 1.20 (home scores more easily).
+    e.g. Home team missing 2 key CBs → set defensive_injury_xg_boost_away = 1.15 (away scores more easily).
+    - 1.00 = No significant defensive absences on opponent side (default)
+    - 1.10 = Opponent missing 1 key outfield defender (regular starting CB or FB)
+    - 1.15 = Opponent missing multiple key defenders
+    - 1.20 = Opponent's starting goalkeeper absent (backup GK meaningfully worse)
+    - 1.25 = Opponent's goalkeeper + key defender(s) both absent (stacked defensive crisis)
+    A code gate enforces this — it CANNOT exceed 1.25.
+
     Return your ruling STRICTLY in JSON:
     {{
       "Crucible_Simulation_Warning": "string (Identify the worst-case scenario where the tentative bet dies. Be brutal. If you find a trap, you MUST explain how it kills the original pick.)",
@@ -1803,6 +1828,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "home_xG": 1.5,
       "away_xG": 1.1,
       "variance_multiplier": 1.0,
+      "injury_xg_multiplier_home": 1.0,
+      "injury_xg_multiplier_away": 1.0,
+      "defensive_injury_xg_boost_home": 1.0,
+      "defensive_injury_xg_boost_away": 1.0,
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
       "Arbiter_Safe_Pick": {{
         "market": "string",
@@ -3097,6 +3126,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
             v_mult = float(raw_var) if raw_var is not None else 1.0
 
+            # Save original LLM xG before any gate adjustments (used by overall gate cap)
+            _h_xg_llm = h_xg
+            _a_xg_llm = a_xg
+
             # ============================================================================
             # ⚖️ RULE 41 CODE ENFORCEMENT (Playoff Paralysis / Knockout Fixtures)
             # ============================================================================
@@ -3163,16 +3196,17 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             # e.g. Arsenal concedes 0.5 goals/game away → Sporting's 2.20 xG becomes
             # 2.20 × (0.5 / 1.20) = 0.92 — much more realistic for this specific matchup.
             LEAGUE_AVG_GOALS_CONCEDED = 1.20   # typical European league average
-            DEF_MATCHUP_MIN_MULTIPLIER = 0.50  # cap: never reduce by more than 50%
+            DEF_MATCHUP_MIN_MULTIPLIER = 0.50  # floor: never reduce by more than 50%
+            DEF_MATCHUP_MAX_MULTIPLIER = 1.30  # ceiling: LLM already accounts for known defensive weakness
 
             _home_ga = home_metrics.get("Goals conceded per game") or 0
             _away_ga = away_metrics.get("Goals conceded per game") or 0
 
             if _home_ga > 0 and _away_ga > 0:
                 # Home attack vs Away team's defensive record
-                _h_def_mult = max(_away_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MIN_MULTIPLIER)
+                _h_def_mult = max(min(_away_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MAX_MULTIPLIER), DEF_MATCHUP_MIN_MULTIPLIER)
                 # Away attack vs Home team's defensive record
-                _a_def_mult = max(_home_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MIN_MULTIPLIER)
+                _a_def_mult = max(min(_home_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MAX_MULTIPLIER), DEF_MATCHUP_MIN_MULTIPLIER)
 
                 _h_pre, _a_pre = h_xg, a_xg
                 h_xg = round(h_xg * _h_def_mult, 2)
@@ -3181,6 +3215,57 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                       f"(opp GA/game {_away_ga:.2f}, mult {_h_def_mult:.2f}), "
                       f"Away xG {_a_pre}→{a_xg} "
                       f"(opp GA/game {_home_ga:.2f}, mult {_a_def_mult:.2f})")
+            # ============================================================================
+
+            # ============================================================================
+            # 🏥 INJURY IMPACT xG GATE
+            # ============================================================================
+            # Part A: Attacking injuries — reduce own team's attacking xG
+            _INJURY_MIN_MULT = 0.70
+            _INJURY_MAX_MULT = 1.00
+            _inj_mult_h = float(parsed.get("injury_xg_multiplier_home") or 1.0)
+            _inj_mult_a = float(parsed.get("injury_xg_multiplier_away") or 1.0)
+            _inj_mult_h = max(min(_inj_mult_h, _INJURY_MAX_MULT), _INJURY_MIN_MULT)
+            _inj_mult_a = max(min(_inj_mult_a, _INJURY_MAX_MULT), _INJURY_MIN_MULT)
+            if _inj_mult_h < 1.0 or _inj_mult_a < 1.0:
+                _inj_h_pre, _inj_a_pre = h_xg, a_xg
+                h_xg = round(h_xg * _inj_mult_h, 2)
+                a_xg = round(a_xg * _inj_mult_a, 2)
+                print(f"🏥  [Injury Gate - Attack] Home {_inj_h_pre}→{h_xg} (mult {_inj_mult_h:.2f}), "
+                      f"Away {_inj_a_pre}→{a_xg} (mult {_inj_mult_a:.2f})")
+
+            # Part B: Defensive injuries — boost opponent's attacking xG
+            _DEF_INJ_MAX_BOOST = 1.25
+            _def_boost_h = float(parsed.get("defensive_injury_xg_boost_home") or 1.0)
+            _def_boost_a = float(parsed.get("defensive_injury_xg_boost_away") or 1.0)
+            _def_boost_h = min(_def_boost_h, _DEF_INJ_MAX_BOOST)
+            _def_boost_a = min(_def_boost_a, _DEF_INJ_MAX_BOOST)
+            if _def_boost_h > 1.0 or _def_boost_a > 1.0:
+                _def_h_pre, _def_a_pre = h_xg, a_xg
+                h_xg = round(h_xg * _def_boost_h, 2)
+                a_xg = round(a_xg * _def_boost_a, 2)
+                print(f"🏥  [Injury Gate - Defense] Home {_def_h_pre}→{h_xg} "
+                      f"(opp def crisis {_def_boost_h:.2f}), "
+                      f"Away {_def_a_pre}→{a_xg} (opp def crisis {_def_boost_a:.2f})")
+            # ============================================================================
+
+            # ============================================================================
+            # 🔒 TOTAL GATE xG CAP
+            # ============================================================================
+            # Safety net: all upward gate adjustments combined cannot exceed 40% above the
+            # original LLM estimate. The LLM already has full match context when setting xG —
+            # gates add marginal corrections, not wholesale replacements of LLM judgment.
+            _TOTAL_GATE_MAX_BOOST = 1.40
+            _h_gate_cap = round(_h_xg_llm * _TOTAL_GATE_MAX_BOOST, 2)
+            _a_gate_cap = round(_a_xg_llm * _TOTAL_GATE_MAX_BOOST, 2)
+            if h_xg > _h_gate_cap:
+                print(f"🔒  [Gate Cap] Home xG capped: {h_xg}→{_h_gate_cap} "
+                      f"(max {_TOTAL_GATE_MAX_BOOST}× LLM estimate {_h_xg_llm})")
+                h_xg = _h_gate_cap
+            if a_xg > _a_gate_cap:
+                print(f"🔒  [Gate Cap] Away xG capped: {a_xg}→{_a_gate_cap} "
+                      f"(max {_TOTAL_GATE_MAX_BOOST}× LLM estimate {_a_xg_llm})")
+                a_xg = _a_gate_cap
             # ============================================================================
 
             # ============================================================================
