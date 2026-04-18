@@ -3126,6 +3126,10 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
             v_mult = float(raw_var) if raw_var is not None else 1.0
 
+            # Save original LLM xG before any gate adjustments (used by overall gate cap)
+            _h_xg_llm = h_xg
+            _a_xg_llm = a_xg
+
             # ============================================================================
             # ⚖️ RULE 41 CODE ENFORCEMENT (Playoff Paralysis / Knockout Fixtures)
             # ============================================================================
@@ -3192,16 +3196,17 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             # e.g. Arsenal concedes 0.5 goals/game away → Sporting's 2.20 xG becomes
             # 2.20 × (0.5 / 1.20) = 0.92 — much more realistic for this specific matchup.
             LEAGUE_AVG_GOALS_CONCEDED = 1.20   # typical European league average
-            DEF_MATCHUP_MIN_MULTIPLIER = 0.50  # cap: never reduce by more than 50%
+            DEF_MATCHUP_MIN_MULTIPLIER = 0.50  # floor: never reduce by more than 50%
+            DEF_MATCHUP_MAX_MULTIPLIER = 1.30  # ceiling: LLM already accounts for known defensive weakness
 
             _home_ga = home_metrics.get("Goals conceded per game") or 0
             _away_ga = away_metrics.get("Goals conceded per game") or 0
 
             if _home_ga > 0 and _away_ga > 0:
                 # Home attack vs Away team's defensive record
-                _h_def_mult = max(_away_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MIN_MULTIPLIER)
+                _h_def_mult = max(min(_away_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MAX_MULTIPLIER), DEF_MATCHUP_MIN_MULTIPLIER)
                 # Away attack vs Home team's defensive record
-                _a_def_mult = max(_home_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MIN_MULTIPLIER)
+                _a_def_mult = max(min(_home_ga / LEAGUE_AVG_GOALS_CONCEDED, DEF_MATCHUP_MAX_MULTIPLIER), DEF_MATCHUP_MIN_MULTIPLIER)
 
                 _h_pre, _a_pre = h_xg, a_xg
                 h_xg = round(h_xg * _h_def_mult, 2)
@@ -3242,6 +3247,25 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                 print(f"🏥  [Injury Gate - Defense] Home {_def_h_pre}→{h_xg} "
                       f"(opp def crisis {_def_boost_h:.2f}), "
                       f"Away {_def_a_pre}→{a_xg} (opp def crisis {_def_boost_a:.2f})")
+            # ============================================================================
+
+            # ============================================================================
+            # 🔒 TOTAL GATE xG CAP
+            # ============================================================================
+            # Safety net: all upward gate adjustments combined cannot exceed 40% above the
+            # original LLM estimate. The LLM already has full match context when setting xG —
+            # gates add marginal corrections, not wholesale replacements of LLM judgment.
+            _TOTAL_GATE_MAX_BOOST = 1.40
+            _h_gate_cap = round(_h_xg_llm * _TOTAL_GATE_MAX_BOOST, 2)
+            _a_gate_cap = round(_a_xg_llm * _TOTAL_GATE_MAX_BOOST, 2)
+            if h_xg > _h_gate_cap:
+                print(f"🔒  [Gate Cap] Home xG capped: {h_xg}→{_h_gate_cap} "
+                      f"(max {_TOTAL_GATE_MAX_BOOST}× LLM estimate {_h_xg_llm})")
+                h_xg = _h_gate_cap
+            if a_xg > _a_gate_cap:
+                print(f"🔒  [Gate Cap] Away xG capped: {a_xg}→{_a_gate_cap} "
+                      f"(max {_TOTAL_GATE_MAX_BOOST}× LLM estimate {_a_xg_llm})")
+                a_xg = _a_gate_cap
             # ============================================================================
 
             # ============================================================================
