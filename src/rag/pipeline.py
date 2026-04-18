@@ -1796,14 +1796,30 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     ⚠️ CRITICAL VALIDATION: You MUST provide valid numeric values for home_xG, away_xG, and variance_multiplier. These fields are MANDATORY for the Monte Carlo simulation and cannot be null or omitted. If your validation checklist reveals a conflict, you MUST resolve it by applying the higher-priority veto rule.
 
-    🏥 INJURY xG MULTIPLIER MANDATE: Based on your Google Search findings for injuries, suspensions, and confirmed absences, you MUST set injury_xg_multiplier_home and injury_xg_multiplier_away using these benchmarks:
-    - 1.00 = No significant absences (default — use this if no injury information found)
-    - 0.90 = 1 key outfield player absent (important starter, not a star)
-    - 0.85 = Star striker OR key creative player (primary playmaker/assist leader) absent
-    - 0.80 = Multiple (2+) key players absent
-    - 0.75 = Goalkeeper absent (severe — goalkeepers directly affect goals conceded)
-    - 0.70 = Multiple stars + goalkeeper absent (catastrophic injury crisis)
-    IMPORTANT: Only go below 0.85 for genuinely key players (regular starters, top scorers, primary creators). Squad rotation, minor knock, or unconfirmed absence = 1.00. A code gate will enforce this multiplier — it CANNOT be used to inflate xG above 1.00.
+    🏥 INJURY xG MANDATE — TWO SEPARATE FIELDS:
+
+    FIELD 1 — injury_xg_multiplier_home / injury_xg_multiplier_away (ATTACKING injuries only):
+    Reduces a team's OWN attacking xG when THEIR OWN attacking/creative players are absent.
+    Use ONLY for missing strikers, forwards, attacking midfielders, or primary playmakers.
+    Do NOT use for missing defenders or goalkeepers — use Field 2 for those.
+    - 1.00 = No significant attacking absences (default)
+    - 0.90 = 1 key attacking starter absent (important but not a star)
+    - 0.85 = Star striker OR primary playmaker/assist leader absent
+    - 0.80 = Multiple (2+) key attacking players absent
+    - 0.70 = Full attacking crisis (team severely depleted offensively)
+    IMPORTANT: Only go below 0.85 for genuinely key attackers. Squad rotation = 1.00.
+    A code gate enforces this — it CANNOT inflate xG above 1.00.
+
+    FIELD 2 — defensive_injury_xg_boost_home / defensive_injury_xg_boost_away (DEFENSIVE injuries):
+    Boosts the OPPONENT's attacking xG when a team is missing key DEFENDERS or GOALKEEPER.
+    e.g. Away team missing their GK → set defensive_injury_xg_boost_home = 1.20 (home scores more easily).
+    e.g. Home team missing 2 key CBs → set defensive_injury_xg_boost_away = 1.15 (away scores more easily).
+    - 1.00 = No significant defensive absences on opponent side (default)
+    - 1.10 = Opponent missing 1 key outfield defender (regular starting CB or FB)
+    - 1.15 = Opponent missing multiple key defenders
+    - 1.20 = Opponent's starting goalkeeper absent (backup GK meaningfully worse)
+    - 1.25 = Opponent's goalkeeper + key defender(s) both absent (stacked defensive crisis)
+    A code gate enforces this — it CANNOT exceed 1.25.
 
     Return your ruling STRICTLY in JSON:
     {{
@@ -1814,6 +1830,8 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "variance_multiplier": 1.0,
       "injury_xg_multiplier_home": 1.0,
       "injury_xg_multiplier_away": 1.0,
+      "defensive_injury_xg_boost_home": 1.0,
+      "defensive_injury_xg_boost_away": 1.0,
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
       "Arbiter_Safe_Pick": {{
         "market": "string",
@@ -3197,24 +3215,33 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
             # ============================================================================
             # 🏥 INJURY IMPACT xG GATE
             # ============================================================================
-            # The SC already searches Google for injuries. This gate reads the structured
-            # multiplier it reported and enforces it in code so it cannot be silently skipped.
-            _INJURY_MIN_MULT = 0.70   # catastrophic crisis cap — never reduce by more than 30%
-            _INJURY_MAX_MULT = 1.00   # cannot inflate xG via this field
-
+            # Part A: Attacking injuries — reduce own team's attacking xG
+            _INJURY_MIN_MULT = 0.70
+            _INJURY_MAX_MULT = 1.00
             _inj_mult_h = float(parsed.get("injury_xg_multiplier_home") or 1.0)
             _inj_mult_a = float(parsed.get("injury_xg_multiplier_away") or 1.0)
-
             _inj_mult_h = max(min(_inj_mult_h, _INJURY_MAX_MULT), _INJURY_MIN_MULT)
             _inj_mult_a = max(min(_inj_mult_a, _INJURY_MAX_MULT), _INJURY_MIN_MULT)
-
             if _inj_mult_h < 1.0 or _inj_mult_a < 1.0:
                 _inj_h_pre, _inj_a_pre = h_xg, a_xg
                 h_xg = round(h_xg * _inj_mult_h, 2)
                 a_xg = round(a_xg * _inj_mult_a, 2)
-                print(f"🏥  [Injury Gate] xG adjusted — "
-                      f"Home {_inj_h_pre}→{h_xg} (mult {_inj_mult_h:.2f}), "
+                print(f"🏥  [Injury Gate - Attack] Home {_inj_h_pre}→{h_xg} (mult {_inj_mult_h:.2f}), "
                       f"Away {_inj_a_pre}→{a_xg} (mult {_inj_mult_a:.2f})")
+
+            # Part B: Defensive injuries — boost opponent's attacking xG
+            _DEF_INJ_MAX_BOOST = 1.25
+            _def_boost_h = float(parsed.get("defensive_injury_xg_boost_home") or 1.0)
+            _def_boost_a = float(parsed.get("defensive_injury_xg_boost_away") or 1.0)
+            _def_boost_h = min(_def_boost_h, _DEF_INJ_MAX_BOOST)
+            _def_boost_a = min(_def_boost_a, _DEF_INJ_MAX_BOOST)
+            if _def_boost_h > 1.0 or _def_boost_a > 1.0:
+                _def_h_pre, _def_a_pre = h_xg, a_xg
+                h_xg = round(h_xg * _def_boost_h, 2)
+                a_xg = round(a_xg * _def_boost_a, 2)
+                print(f"🏥  [Injury Gate - Defense] Home {_def_h_pre}→{h_xg} "
+                      f"(opp def crisis {_def_boost_h:.2f}), "
+                      f"Away {_def_a_pre}→{a_xg} (opp def crisis {_def_boost_a:.2f})")
             # ============================================================================
 
             # ============================================================================
