@@ -2173,6 +2173,7 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       The AI is fully authorized to target 'Over 2.5', 'BTTS: Yes', and high-scoring Correct Scores in Elite vs. Elite matchups ONLY IF at least one of the following three conditions is met:
 
       **A) Intact Supply Lines:** Both teams have their primary offensive orchestrators and elite strikers confirmed starting. Elite finishing + elite passing = Goals. If both attacking engines are fully operational, the chess-match assumption is void.
+      ⚠️ STRICT REQUIREMENT: Condition A is only valid if injury_xg_multiplier_home = 1.00 AND injury_xg_multiplier_away = 1.00. If you set either multiplier below 1.00 for a key attacker (star striker, primary winger, main playmaker), you CANNOT claim Intact Supply Lines — that team's supply line is demonstrably broken. A code gate will automatically void this exemption and enforce Rule 41 if injury multipliers contradict the supply line claim.
 
       **B) Competition Desperation:** It is a knockout tournament 2nd-leg where one team is trailing on aggregate, OR a must-win league title decider where a draw is mathematically useless to at least one side. Desperation kills conservative tactics — teams cannot afford to protect a result.
 
@@ -3167,6 +3168,23 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                 "both teams have elite", "both elite"
             ]
             is_rule30_override = any(kw in _sc_ruling_text for kw in RULE30_OVERRIDE_KEYWORDS)
+
+            # Validate "Intact Supply Lines" claim against actual injury multipliers.
+            # Rule 30 Condition A requires BOTH teams to have no key attacker absent.
+            # If the SC claims intact supply lines but injury_xg_multiplier < 0.90 for
+            # either team (star striker / primary playmaker missing), the claim is factually
+            # wrong and the override is voided — Rule 41 must stand.
+            if is_rule30_override:
+                _supply_claim_kws = ["fully intact supply", "fully operational", "intact supply lines", "intact supply line"]
+                _is_supply_line_claim = any(kw in _sc_ruling_text for kw in _supply_claim_kws)
+                if _is_supply_line_claim:
+                    _inj_h_r30 = float(parsed.get("injury_xg_multiplier_home") or 1.0)
+                    _inj_a_r30 = float(parsed.get("injury_xg_multiplier_away") or 1.0)
+                    if _inj_h_r30 < 0.90 or _inj_a_r30 < 0.90:
+                        is_rule30_override = False
+                        print(f"⚖️  [Rule 41 Gate] Rule 30 'Intact Supply Lines' claim VOID — "
+                              f"key attacker absent (inj_h={_inj_h_r30:.2f}, inj_a={_inj_a_r30:.2f}). "
+                              f"Rule 41 enforced.")
 
             RULE41_XG_DISCOUNT = 0.75    # 25% reduction as specified in Rule 41 prompt
             RULE41_MAX_VARIANCE = 0.80   # NegBinom/Chaos forbidden in knockout fixtures
