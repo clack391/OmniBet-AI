@@ -1821,21 +1821,28 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - 1.25 = Opponent's goalkeeper + key defender(s) both absent (stacked defensive crisis)
     A code gate enforces this — it CANNOT exceed 1.25.
 
-    🚨 RELEGATION MOTIVATION MANDATE:
-    When a team is fighting relegation (bottom 3-4 positions, within 3-4 points of the drop zone),
-    their survival desperation boosts their effective attacking output ABOVE their season average.
-    Season stats include low-motivation fixtures — a survival match is categorically different.
-    Set these fields for the THREATENED team's own xG uplift:
-    - relegation_pressure_boost_home: boost to HOME team's xG when HOME team faces relegation
-    - relegation_pressure_boost_away: boost to AWAY team's xG when AWAY team faces relegation
-    Benchmarks:
-    - 1.00 = No relegation pressure (default — mid-table or safe position)
-    - 1.08 = Bottom half, moderate pressure (within 6 points of drop zone)
-    - 1.12 = Bottom 4, serious danger (within 3 points of drop zone)
-    - 1.18 = Bottom 3, must-win or risk dropping (0-2 points above drop zone)
-    A code gate enforces this — it CANNOT exceed 1.20.
-    IMPORTANT: Only apply this when the team is GENUINELY in the relegation fight. A mid-table
-    team is NOT relegated — do not manufacture pressure where none exists.
+    🚨 RELEGATION MOTIVATION MANDATE — MANDATORY, NOT OPTIONAL:
+    Relegation-zone teams dramatically overperform their season averages in survival matches.
+    Season stats are polluted by low-motivation fixtures; a must-survive match is categorically different.
+
+    ⚠️ RULE 8 WARNING: Failing to set this field when a team is in the relegation zone is a
+    hallucination — you are treating a survival match the same as a mid-table game. This is
+    factually wrong and will cause the simulation to underestimate goals for the desperate team.
+
+    HARD RULES BY LEAGUE POSITION (apply to the threatened team's OWN boost field):
+    - Team in BOTTOM 2 (must-win or almost certainly relegated): set boost = 1.18 MINIMUM
+    - Team in BOTTOM 3–4 (within 1–2 points of drop zone): set boost = 1.12 MINIMUM
+    - Team in BOTTOM 5–6 (within 3–5 points of drop zone): set boost = 1.08 MINIMUM
+    - Team SAFE (6+ points above drop zone, or top half of table): set boost = 1.00
+
+    These are MANDATORY minimums — not suggestions. If Agent 1 or Agent 2 identifies a team
+    as "fighting relegation", "in the bottom 3", "desperate for points", "must not lose", or
+    "in a survival battle", you MUST set the corresponding boost field above 1.00.
+    Fields:
+    - relegation_pressure_boost_home: boost HOME team's own xG when HOME team is threatened
+    - relegation_pressure_boost_away: boost AWAY team's own xG when AWAY team is threatened
+    A code gate enforces this — boost CANNOT exceed 1.20 regardless of what you set.
+    Safe / mid-table teams: set 1.00. Do NOT apply pressure where none genuinely exists.
 
     Return your ruling STRICTLY in JSON:
     {{
