@@ -1796,6 +1796,15 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     ⚠️ CRITICAL VALIDATION: You MUST provide valid numeric values for home_xG, away_xG, and variance_multiplier. These fields are MANDATORY for the Monte Carlo simulation and cannot be null or omitted. If your validation checklist reveals a conflict, you MUST resolve it by applying the higher-priority veto rule.
 
+    🏥 INJURY xG MULTIPLIER MANDATE: Based on your Google Search findings for injuries, suspensions, and confirmed absences, you MUST set injury_xg_multiplier_home and injury_xg_multiplier_away using these benchmarks:
+    - 1.00 = No significant absences (default — use this if no injury information found)
+    - 0.90 = 1 key outfield player absent (important starter, not a star)
+    - 0.85 = Star striker OR key creative player (primary playmaker/assist leader) absent
+    - 0.80 = Multiple (2+) key players absent
+    - 0.75 = Goalkeeper absent (severe — goalkeepers directly affect goals conceded)
+    - 0.70 = Multiple stars + goalkeeper absent (catastrophic injury crisis)
+    IMPORTANT: Only go below 0.85 for genuinely key players (regular starters, top scorers, primary creators). Squad rotation, minor knock, or unconfirmed absence = 1.00. A code gate will enforce this multiplier — it CANNOT be used to inflate xG above 1.00.
+
     Return your ruling STRICTLY in JSON:
     {{
       "Crucible_Simulation_Warning": "string (Identify the worst-case scenario where the tentative bet dies. Be brutal. If you find a trap, you MUST explain how it kills the original pick.)",
@@ -1803,6 +1812,8 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       "home_xG": 1.5,
       "away_xG": 1.1,
       "variance_multiplier": 1.0,
+      "injury_xg_multiplier_home": 1.0,
+      "injury_xg_multiplier_away": 1.0,
       "verdict_status": "CONFIRMED | OVERTURNED | NO_BET",
       "Arbiter_Safe_Pick": {{
         "market": "string",
@@ -3181,6 +3192,29 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
                       f"(opp GA/game {_away_ga:.2f}, mult {_h_def_mult:.2f}), "
                       f"Away xG {_a_pre}→{a_xg} "
                       f"(opp GA/game {_home_ga:.2f}, mult {_a_def_mult:.2f})")
+            # ============================================================================
+
+            # ============================================================================
+            # 🏥 INJURY IMPACT xG GATE
+            # ============================================================================
+            # The SC already searches Google for injuries. This gate reads the structured
+            # multiplier it reported and enforces it in code so it cannot be silently skipped.
+            _INJURY_MIN_MULT = 0.70   # catastrophic crisis cap — never reduce by more than 30%
+            _INJURY_MAX_MULT = 1.00   # cannot inflate xG via this field
+
+            _inj_mult_h = float(parsed.get("injury_xg_multiplier_home") or 1.0)
+            _inj_mult_a = float(parsed.get("injury_xg_multiplier_away") or 1.0)
+
+            _inj_mult_h = max(min(_inj_mult_h, _INJURY_MAX_MULT), _INJURY_MIN_MULT)
+            _inj_mult_a = max(min(_inj_mult_a, _INJURY_MAX_MULT), _INJURY_MIN_MULT)
+
+            if _inj_mult_h < 1.0 or _inj_mult_a < 1.0:
+                _inj_h_pre, _inj_a_pre = h_xg, a_xg
+                h_xg = round(h_xg * _inj_mult_h, 2)
+                a_xg = round(a_xg * _inj_mult_a, 2)
+                print(f"🏥  [Injury Gate] xG adjusted — "
+                      f"Home {_inj_h_pre}→{h_xg} (mult {_inj_mult_h:.2f}), "
+                      f"Away {_inj_a_pre}→{a_xg} (mult {_inj_mult_a:.2f})")
             # ============================================================================
 
             # ============================================================================
