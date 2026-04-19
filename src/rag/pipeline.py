@@ -1821,21 +1821,28 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
     - 1.25 = Opponent's goalkeeper + key defender(s) both absent (stacked defensive crisis)
     A code gate enforces this — it CANNOT exceed 1.25.
 
-    🚨 RELEGATION MOTIVATION MANDATE:
-    When a team is fighting relegation (bottom 3-4 positions, within 3-4 points of the drop zone),
-    their survival desperation boosts their effective attacking output ABOVE their season average.
-    Season stats include low-motivation fixtures — a survival match is categorically different.
-    Set these fields for the THREATENED team's own xG uplift:
-    - relegation_pressure_boost_home: boost to HOME team's xG when HOME team faces relegation
-    - relegation_pressure_boost_away: boost to AWAY team's xG when AWAY team faces relegation
-    Benchmarks:
-    - 1.00 = No relegation pressure (default — mid-table or safe position)
-    - 1.08 = Bottom half, moderate pressure (within 6 points of drop zone)
-    - 1.12 = Bottom 4, serious danger (within 3 points of drop zone)
-    - 1.18 = Bottom 3, must-win or risk dropping (0-2 points above drop zone)
-    A code gate enforces this — it CANNOT exceed 1.20.
-    IMPORTANT: Only apply this when the team is GENUINELY in the relegation fight. A mid-table
-    team is NOT relegated — do not manufacture pressure where none exists.
+    🚨 RELEGATION MOTIVATION MANDATE — MANDATORY, NOT OPTIONAL:
+    Relegation-zone teams dramatically overperform their season averages in survival matches.
+    Season stats are polluted by low-motivation fixtures; a must-survive match is categorically different.
+
+    ⚠️ RULE 8 WARNING: Failing to set this field when a team is in the relegation zone is a
+    hallucination — you are treating a survival match the same as a mid-table game. This is
+    factually wrong and will cause the simulation to underestimate goals for the desperate team.
+
+    HARD RULES BY LEAGUE POSITION (apply to the threatened team's OWN boost field):
+    - Team in BOTTOM 2 (must-win or almost certainly relegated): set boost = 1.18 MINIMUM
+    - Team in BOTTOM 3–4 (within 1–2 points of drop zone): set boost = 1.12 MINIMUM
+    - Team in BOTTOM 5–6 (within 3–5 points of drop zone): set boost = 1.08 MINIMUM
+    - Team SAFE (6+ points above drop zone, or top half of table): set boost = 1.00
+
+    These are MANDATORY minimums — not suggestions. If Agent 1 or Agent 2 identifies a team
+    as "fighting relegation", "in the bottom 3", "desperate for points", "must not lose", or
+    "in a survival battle", you MUST set the corresponding boost field above 1.00.
+    Fields:
+    - relegation_pressure_boost_home: boost HOME team's own xG when HOME team is threatened
+    - relegation_pressure_boost_away: boost AWAY team's own xG when AWAY team is threatened
+    A code gate enforces this — boost CANNOT exceed 1.20 regardless of what you set.
+    Safe / mid-table teams: set 1.00. Do NOT apply pressure where none genuinely exists.
 
     Return your ruling STRICTLY in JSON:
     {{
@@ -1998,11 +2005,13 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
 
     - **RULE 15: THE EV HARMONIZATION MANDATE**: If you or the Risk Manager downgrade the 'Primary Safe Pick' to a Double Chance (1X or X2) specifically because of a high Draw probability, defensive stalemates, or underdog resilience, your 'Alternative Value Pick (EV)' MUST NOT contradict this logic. You are STRICTLY FORBIDDEN from picking a straight Match Winner or aggressive Team Over Goals for the EV pick in these scenarios. Instead, the EV pick must aggressively embrace the tight game state. Acceptable EV pivots include: Outright Draw (X), Under 2.5 Goals, Underdog Asian Handicap (+1.5), or BTTS: Yes (if you project a 1-1 script). Align the risk.
 
-    - **RULE 16: THE STERILE OFFENSE TRAP**: You are strictly forbidden from backing ANY team (Home or Away) in the Match Winner (1X2), Double Chance (1X/X2), or Draw No Bet markets if they have scored FEWER total goals than total matches played in their recent venue or overall form (meaning they average < 1.0 goals per game). A strong defense is irrelevant if the team has zero "bounce-back" ability after conceding a lucky goal. If a team has an elite defense but a terrible offense, you MUST pivot your Banker away from team-dependent outcomes and strictly into structural markets (e.g., Under 2.5 Goals, Under 3.5 Goals, or BTTS: No). CRITICAL HIERARCHY: Rule 16 STRICTLY OVERRIDES Rule 4. If a dominant home team is a 'False Dominant' trap (Rule 4), but the away team suffers from a 'Sterile Offense' (Rule 16), you are STILL FORBIDDEN from backing the away team on a Double Chance (X2) or Match Winner. Do not trust a toothless underdog to win a fight. In the event of a Rule 4 and Rule 16 collision, you must abandon team-based markets entirely and default your Banker to Under 2.5 Goals or Under 3.5 Goals. THE RELEGATION FODDER EXCEPTION: You must waive the Sterile Offense Trap and you are FORBIDDEN from picking 'Under 2.5 Goals' ONLY IF the opponent possesses a catastrophically broken defense (conceding an average of >= 2.0 goals per game). Even a sterile offense can score 3 goals against a historically bad defense. In this specific scenario, abandon the Under and pivot to team-based markets (e.g., Home Win, Team Goals Over 1.5) or BTTS: No. THE SAMPLE SIZE MANDATE: The AI is strictly FORBIDDEN from triggering this rule if a team has played fewer than 5 matches in their current competition. Early-season metrics (Matchday 1 to 4) are statistically invalid. If the sample size is < 5, you CANNOT use this rule to override Agent 2's base projections.
+    - **RULE 16: THE STERILE OFFENSE TRAP**: You are strictly forbidden from backing ANY team (Home or Away) in the Match Winner (1X2), Double Chance (1X/X2), or Draw No Bet markets if they have scored FEWER total goals than total matches played in their recent venue or overall form (meaning they average < 1.0 goals per game). A strong defense is irrelevant if the team has zero "bounce-back" ability after conceding a lucky goal. If a team has an elite defense but a terrible offense, you MUST pivot your Banker away from team-dependent outcomes and strictly into structural markets (e.g., Under 2.5 Goals, Under 3.5 Goals, or BTTS: No). CRITICAL HIERARCHY: Rule 16 STRICTLY OVERRIDES Rule 4. If a dominant home team is a 'False Dominant' trap (Rule 4), but the away team suffers from a 'Sterile Offense' (Rule 16), you are STILL FORBIDDEN from backing the away team on a Double Chance (X2) or Match Winner. Do not trust a toothless underdog to win a fight. In the event of a Rule 4 and Rule 16 collision, you must abandon team-based markets entirely and default your Banker to Under 2.5 Goals or Under 3.5 Goals. THE RELEGATION FODDER EXCEPTION: You must waive the Sterile Offense Trap and you are FORBIDDEN from picking 'Under 2.5 Goals' ONLY IF the opponent possesses a catastrophically broken defense (conceding an average of >= 2.0 goals per game). Even a sterile offense can score 3 goals against a historically bad defense. In this specific scenario, abandon the Under and pivot to team-based markets (e.g., Home Win, Team Goals Over 1.5) or BTTS: No. THE SAMPLE SIZE MANDATE: The AI is strictly FORBIDDEN from triggering this rule if a team has played fewer than 5 matches in their current competition. Early-season metrics (Matchday 1 to 4) are statistically invalid. If the sample size is < 5, you CANNOT use this rule to override Agent 2's base projections. ⚠️ SET PIECE EXCEPTION — X2/DNB SURVIVAL CLAUSE: When the STERILE OFFENSE team is the HOME team and the primary pick is X2 (Away Win or Draw) or Away DNB, Rule 16 does NOT mandate a pivot to Under Goals. X2 does not require the home team to score — it survives draws (including 1-1 or 2-2 scored via set pieces) AND away wins. Sterile Offense home teams score almost exclusively from SET PIECES (corners, free kicks, penalties), NOT open play. Their xG understates their actual goal threat from dead balls. A 2-2 draw via set pieces KILLS Under 3.5 Goals but SURVIVES X2. Therefore: if the superior away team is clearly non-sterile and the pick is X2 or Away DNB, MAINTAIN that market — do NOT replace it with Under 3.5 Goals. The Under pivot is only mandatory when the sterile team is the AWAY team (backing them on 1X) or when neither team has a clear structural advantage.
 
     - **RULE 17: MANDATORY PRE-FLIGHT CHECK (SHOW YOUR WORK)**: Before you write your Final Ruling or select your Banker, you MUST internally calculate the Goal Ratio for both teams. You must start your 'View AI Internal Logic' or 'Final Ruling' section with a bracketed check, like this:
          [RULE 16 CHECK: Home Team Goals (X) vs Matches (Y) | Away Team Goals (A) vs Matches (B)]
-         If either team has fewer goals than matches, you MUST explicitly state 'STERILE OFFENSE DETECTED' and immediately pivot your Banker to Under Goals, completely overriding any False Dominance narratives.
+         If either team has fewer goals than matches, you MUST explicitly state 'STERILE OFFENSE DETECTED' and pivot your Banker as follows:
+         - If the STERILE OFFENSE team is the HOME team AND the current pick is X2 (Away Win or Draw) or Away DNB → KEEP X2/DNB. Do NOT pivot to Under Goals. X2 survives draws including set-piece-driven 1-1 or 2-2 results that would kill Under 3.5.
+         - In all other cases → pivot to Under Goals, completely overriding any False Dominance narratives.
 
     - **RULE 18: THE YOUTH/RESERVE VARIANCE MANDATE**: When analyzing matches involving youth, academy, or reserve teams (e.g., U19, U20, U21, U23, Primavera, or 'B' teams), you MUST apply a High-Variance Discount to all defensive metrics. Youth football is inherently volatile, emotional, and tactically porous. You are STRICTLY FORBIDDEN from predicting "cagey tactical stalemates," "risk-averse low blocks," or "midfield grinds" in top-of-the-table youth clashes. Even if both youth teams concede < 1.0 goals per game, you must assume defensive structures will fail under pressure. You may ONLY select 'Under 2.5 Goals' or 'First Half Under 1.5' in a youth/reserve match IF one or both teams explicitly trigger Rule 16 (The Sterile Offense Trap). Otherwise, you must default your Banker to Over Goals, BTTS, or Double Chance.
 
