@@ -89,7 +89,7 @@ def fetch_result_with_ai_fallback(team_a: str, team_b: str, match_date: str, saf
         client = genai.Client(api_key=api_key)
         
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.5-flash',
             contents=prompt,
             config={"tools": [{"googleSearch": {}}]}
         )
