@@ -2235,7 +2235,26 @@ def supreme_court_judge(match_data: dict, agent_1_pitch: dict, agent_2_critique:
       This rule strictly OVERRIDES generalized high-scoring league mandates (e.g., Rule 18 Youth/Reserve Variance). Specific team ineptitude always cancels out general league trends.
 
       **THE PIVOT:**
-      The AI MUST pivot away from goal floors. Accept the ugly reality of the 0-0 or 1-0 grind. Pivot the Banker to wide-margin structural ceilings like 'Under 3.5 Goals', 'Under 4.5 Goals', or 'Underdog +2.5 Asian Handicap'.
+      The AI MUST pivot away from goal floors. Accept the ugly reality of the 0-0 or 1-0 grind.
+      Pivot the Banker to wide-margin structural ceilings.
+
+      ⚠️ CEILING SELECTION HIERARCHY — ALWAYS PREFER THE WIDEST CEILING FIRST:
+      Under 4.5 Goals is ALWAYS preferable to Under 3.5 Goals. Under 4.5 absorbs every game
+      state that Under 3.5 absorbs (0-0, 1-0, 1-1, 2-1, 0-2) AND additionally absorbs
+      4-goal matches (2-2, 1-3, 3-1) that Under 3.5 would bust. A clinically inept team
+      does not prevent 4-goal matches when BOTH teams are leaky. Only downgrade to Under 3.5
+      if Under 4.5 survival is below 80% AND Under 3.5 remains above 70%.
+
+      ⚠️ SURVIVAL FLOOR GUARDRAIL — NEVER DEGRADE SURVIVAL PROBABILITY:
+      Rule 31 intervention MUST improve survival probability, not degrade it. Calculate the
+      survival % of the Under market you intend to select. If that survival % is LOWER than
+      the market you are replacing, Rule 31 is BLOCKED for this match — keep the original pick.
+      Example: You were considering Over 1.5 Goals at 85% survival. Rule 31 says pivot to Under.
+      Under 3.5 = 65% survival. Under 4.5 = 82% survival. Since neither Under market exceeds
+      85%, and Under 4.5 is within 5% of the original pick, you may use Under 4.5 as an
+      acceptable ceiling bet. But you MUST NOT select Under 3.5 (65%) — that is strictly worse.
+      If no Under market achieves survival within 5% of the current pick, MAINTAIN the original
+      pick. Clinical ineptitude does not justify replacing a good bet with a worse one.
 
       **RECOGNITION TRIGGERS:**
       You MUST activate the Clinical Ineptitude Override if:
